@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- Clean background -->
+  <rect width="400" height="400" fill="white" opacity="0"/>
+  
+  <!-- Tree Structure Lines - Adjusted position -->
+  <path d="M200 180 L160 130" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  <path d="M200 180 L240 130" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  <path d="M160 130 L140 90" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  <path d="M160 130 L180 90" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  <path d="M240 130 L220 90" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  <path d="M240 130 L260 90" stroke="#2a7de1" stroke-width="2.5" fill="none"/>
+  
+  <!-- Replaced trunk with a data connection line -->
+  <path d="M200 180 L200 240" stroke="#2a7de1" stroke-width="2.5" stroke-dasharray="5,3" fill="none"/>
+  
+  <!-- Cute Lemons -->
+  <!-- Root Lemon -->
+  <ellipse cx="200" cy="180" rx="20" ry="16" fill="#FFEB3B"/>
+  <ellipse cx="200" cy="180" rx="17" ry="13" fill="#FFF59D"/>
+  <path d="M198 165 L202 165 L202 169 L200 173 L198 169 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M193 176 Q200 186, 207 176" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <!-- Secondary Lemons -->
+  <ellipse cx="160" cy="130" rx="16" ry="13" fill="#FFEB3B"/>
+  <ellipse cx="160" cy="130" rx="13" ry="10" fill="#FFF59D"/>
+  <path d="M158 118 L162 118 L162 122 L160 125 L158 122 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M155 127 Q160 135, 165 127" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <ellipse cx="240" cy="130" rx="16" ry="13" fill="#FFEB3B"/>
+  <ellipse cx="240" cy="130" rx="13" ry="10" fill="#FFF59D"/>
+  <path d="M238 118 L242 118 L242 122 L240 125 L238 122 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M235 127 Q240 135, 245 127" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <!-- Leaf Lemons -->
+  <ellipse cx="140" cy="90" rx="14" ry="11" fill="#FFEB3B"/>
+  <ellipse cx="140" cy="90" rx="11" ry="8" fill="#FFF59D"/>
+  <path d="M138 80 L142 80 L142 84 L140 87 L138 84 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M136 88 Q140 94, 144 88" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <ellipse cx="180" cy="90" rx="14" ry="11" fill="#FFEB3B"/>
+  <ellipse cx="180" cy="90" rx="11" ry="8" fill="#FFF59D"/>
+  <path d="M178 80 L182 80 L182 84 L180 87 L178 84 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M176 88 Q180 94, 184 88" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <ellipse cx="220" cy="90" rx="14" ry="11" fill="#FFEB3B"/>
+  <ellipse cx="220" cy="90" rx="11" ry="8" fill="#FFF59D"/>
+  <path d="M218 80 L222 80 L222 84 L220 87 L218 84 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M216 88 Q220 94, 224 88" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <ellipse cx="260" cy="90" rx="14" ry="11" fill="#FFEB3B"/>
+  <ellipse cx="260" cy="90" rx="11" ry="8" fill="#FFF59D"/>
+  <path d="M258 80 L262 80 L262 84 L260 87 L258 84 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+  <path d="M256 88 Q260 94, 264 88" stroke="#F9A825" stroke-width="1" fill="none"/>
+  
+  <!-- Database cylinders - now with a subtle gradient -->
+  <ellipse cx="200" cy="240" rx="40" ry="10" fill="#E3F2FD" stroke="#2a7de1" stroke-width="2"/>
+  <path d="M160 240 L160 260" stroke="#2a7de1" stroke-width="2" fill="none"/>
+  <path d="M240 240 L240 260" stroke="#2a7de1" stroke-width="2" fill="none"/>
+  <ellipse cx="200" cy="260" rx="40" ry="10" fill="#BBDEFB" stroke="#2a7de1" stroke-width="2"/>
+  <path d="M160 260 L160 280" stroke="#2a7de1" stroke-width="2" fill="none"/>
+  <path d="M240 260 L240 280" stroke="#2a7de1" stroke-width="2" fill="none"/>
+  <ellipse cx="200" cy="280" rx="40" ry="10" fill="#90CAF9" stroke="#2a7de1" stroke-width="2"/>
+  
+  <!-- dBtree Logo Text with correct capitalization -->
+  <text x="200" y="330" font-family="Arial, sans-serif" font-size="32" font-weight="bold" text-anchor="middle">
+    <tspan fill="#555">d</tspan><tspan fill="#2a7de1">B</tspan><tspan fill="#555">tree</tspan>
+  </text>
+</svg>
