@@ -4,7 +4,6 @@ import "time"
 
 type User struct {
 	ID             string
-	Username       string
 	Email          string
 	LemonBalance   float64
 	TotalHarvested float64

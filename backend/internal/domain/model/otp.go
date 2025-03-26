@@ -17,14 +17,14 @@ func NewOTP(email string, code string, expiryMinutes int) *OTP {
 	return &OTP{
 		Email:      email,
 		Code:       code,
-		ExpiresAt:  time.Now().Add(time.Duration(expiryMinutes) * time.Minute),
+		ExpiresAt:  time.Now().UTC().Add(time.Duration(expiryMinutes) * time.Minute),
 		IsVerified: false,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 }
 
 func (o *OTP) Verify(code string) bool {
-	if time.Now().After(o.ExpiresAt) {
+	if time.Now().UTC().After(o.ExpiresAt) {
 		return false
 	}
 
@@ -37,5 +37,5 @@ func (o *OTP) Verify(code string) bool {
 }
 
 func (o *OTP) IsExpired() bool {
-	return time.Now().After(o.ExpiresAt)
+	return time.Now().UTC().After(o.ExpiresAt)
 }

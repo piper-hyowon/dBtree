@@ -23,7 +23,7 @@ type AuthSession struct {
 
 // AuthSession 생성자
 func NewAuthSession(email string, otp *OTP) *AuthSession {
-	now := time.Now()
+	now := time.Now().UTC()
 	return &AuthSession{
 		Email:        email,
 		Status:       AuthPending,
