@@ -12,7 +12,7 @@ const Home: React.FC = () => {
   };
 
   const handleSendOtp = () => {
-    // OTP 요청 로직 구현
+    // TODO: OTP 요청 로직 구현
     alert(`${email}로 인증 코드가 발송되었습니다!`);
   };
 
