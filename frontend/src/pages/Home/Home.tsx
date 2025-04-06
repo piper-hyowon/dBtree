@@ -3,23 +3,27 @@ import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
 import LemonTree from "../../components/LemonTree/LemonTree";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
+import LoginModal from "../../components/auth/LoginModal";
+import { useAuth } from "../../hooks/useAuth";
 
 const Home: React.FC = () => {
-  const [email, setEmail] = useState("");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const { isLoggedIn, user } = useAuth();
 
   const handleStartNow = () => {
     setShowLoginModal(true);
   };
 
-  const handleSendOtp = () => {
-    // TODO: OTP 요청 로직 구현
-    alert(`${email}로 인증 코드가 발송되었습니다!`);
+  const handleCloseModal = () => {
+    setShowLoginModal(false);
+  };
+
+  const handleNavigateToDashboard = () => {
+    window.location.href = "/dashboard";
   };
 
   return (
     <div className="home-container">
-      {/* 헤더 */}
       <header className="header">
         <div className="logo-container">
           <img src={dbtreeLogo} alt="dBtree Logo" className="logo" />
@@ -27,12 +31,18 @@ const Home: React.FC = () => {
         <nav className="nav">
           <ToggleThemeButton />
 
-          <button
-            className="login-button"
-            onClick={() => setShowLoginModal(true)}
-          >
-            로그인
-          </button>
+          {isLoggedIn ? (
+            <button
+              className="dashboard-button"
+              onClick={handleNavigateToDashboard}
+            >
+              대시보드
+            </button>
+          ) : (
+            <button className="login-button" onClick={handleStartNow}>
+              로그인
+            </button>
+          )}
         </nav>
       </header>
 
@@ -52,10 +62,7 @@ const Home: React.FC = () => {
           </button>
         </div>
 
-        <div
-          className="lemon-tree-container"
-          style={{ backgroundColor: "#dbf4d8" }}
-        >
+        <div className="lemon-tree-container">
           <LemonTree />
         </div>
       </section>
@@ -64,35 +71,7 @@ const Home: React.FC = () => {
         <p>© 2025 dBtree</p>
       </footer>
 
-      {showLoginModal && (
-        <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
-          <div className="login-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="close-button"
-              onClick={() => setShowLoginModal(false)}
-            >
-              ×
-            </button>
-            <img src={dbtreeLogo} alt="dBtree Logo" className="logo" />
-
-            <h2 className="modal-title">시작하기</h2>
-
-            <div className="input-group">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="이메일 입력"
-                className="email-input"
-              />
-            </div>
-
-            <button className="cta-button modal-button" onClick={handleSendOtp}>
-              인증 코드 받기
-            </button>
-          </div>
-        </div>
-      )}
+      {showLoginModal && <LoginModal onClose={handleCloseModal} />}
     </div>
   );
 };

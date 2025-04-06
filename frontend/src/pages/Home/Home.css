@@ -19,7 +19,7 @@
 }
 
 .logo {
-    height: 40px;
+    height: 210px;
     transition: transform var(--transition-standard);
 }
 
@@ -223,6 +223,27 @@
     justify-content: center;
     color: var(--text-secondary);
     font-size: 0.9rem;
+}
+
+.error-message {
+    color: #ff3333;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.email-display {
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.resend-button {
+    background: none;
+    border: none;
+    color: #3498db;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: underline;
 }
 
 @media (max-width: 992px) {
