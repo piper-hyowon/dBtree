@@ -34,3 +34,8 @@ export interface LogoutResponse {
   message: string;
 }
 
+export interface GlobalStatsResponse {
+  totalHarvested: number;
+  totalDbInstances: number;
+  activeUsers: number;
+}

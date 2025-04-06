@@ -1,0 +1,24 @@
+.global-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 2rem 0;
+    max-width: 500px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}

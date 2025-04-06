@@ -6,6 +6,7 @@ import {
   VerifyOtpRequest,
   VerifyOtpResponse,
   LogoutResponse,
+  GlobalStatsResponse,
 } from "../types/api.types";
 
 // Mock 사용자 데이터
@@ -129,6 +130,13 @@ export const mockApi = {
       data: {
         message: "로그아웃 되었습니다",
       },
+    };
+  },
+
+  globalStats: async (): Promise<ApiResponse<GlobalStatsResponse>> => {
+    return {
+      success: true,
+      data: { totalHarvested: 23, totalDbInstances: 6, activeUsers: 2 },
     };
   },
 };
