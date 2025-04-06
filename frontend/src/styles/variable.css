@@ -1,0 +1,32 @@
+:root {
+    /* 기본 컬러 팔레트 */
+    --color-primary: #4caf50;
+    --color-primary-dark: #388e3c;
+    --color-primary-light: #c8e6c9;
+    --color-accent: #ffeb3b;
+
+    /* 공통 속성 */
+    --transition-standard: 0.3s ease;
+    --border-radius-standard: 8px;
+    --shadow-standard: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+:root,
+[data-theme="light"] {
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --background: #ffffff;
+    --modal-background: #ffffff;
+    --tree-background: #dbf4d8;
+    --shadow: var(--shadow-standard);
+    --button-text: #ffffff;
+}
+
+[data-theme="dark"] {
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --background: #121212;
+    --modal-background: #1e1e1e;
+    --tree-background: #101820;
+    --shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
+}

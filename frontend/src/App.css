@@ -32,7 +32,39 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
+}
+
+
+
+body {
+  transition: background-color 0.3s ease;
+}
+
+body[data-theme="light"] {
+  --primary: #34c759;
+  --secondary: #ffd60a;
+  --dark: #1c1c1e;
+  --light: #ffffff;
+  --gray: #f2f2f7;
+  --text: #111111;
+  --text-light: #8e8e93;
+}
+
+body[data-theme="dark"] {
+  --primary: #34c759;
+  --secondary: #ffd60a;
+  --dark: #1c1c1e;
+  --light: #101820;
+  --gray: #2c2c2e;
+  --text: #eeeeee;
+  --text-light: #aaaaaa;
+}
+
+
+.lemon-tree-container[data-theme="dark"] canvas {
+  background-color: #0e0e0e;
 }
