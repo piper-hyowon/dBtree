@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import "./Home.css";
-// import LemonTree from "../../components/LemonTree/LemonTree";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
+import LemonTree from "../../components/LemonTree/LemonTree";
+import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 
 const Home: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -24,6 +25,8 @@ const Home: React.FC = () => {
           <img src={dbtreeLogo} alt="dBtree Logo" className="logo" />
         </div>
         <nav className="nav">
+          <ToggleThemeButton />
+
           <button
             className="login-button"
             onClick={() => setShowLoginModal(true)}
@@ -49,23 +52,18 @@ const Home: React.FC = () => {
           </button>
         </div>
 
-        {/* <div className="lemon-tree-container">
-          <LemonTree
-            onHarvest={(amount) => {
-              alert(
-                `${amount} 레몬 수확! 회원가입하고 더 많은 레몬을 모아보세요.`
-              );
-              setShowLoginModal(true);
-            }}
-          />
-        </div> */}
+        <div
+          className="lemon-tree-container"
+          style={{ backgroundColor: "#dbf4d8" }}
+        >
+          <LemonTree />
+        </div>
       </section>
 
       <footer className="footer">
         <p>© 2025 dBtree</p>
       </footer>
 
-      {/* 로그인 모달 */}
       {showLoginModal && (
         <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
           <div className="login-modal" onClick={(e) => e.stopPropagation()}>

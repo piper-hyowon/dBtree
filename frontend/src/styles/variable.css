@@ -17,7 +17,6 @@
     --text-secondary: #757575;
     --background: #ffffff;
     --modal-background: #ffffff;
-    --tree-background: #dbf4d8;
     --shadow: var(--shadow-standard);
     --button-text: #ffffff;
 }
@@ -27,6 +26,5 @@
     --text-secondary: #b0b0b0;
     --background: #121212;
     --modal-background: #1e1e1e;
-    --tree-background: #101820;
     --shadow: 0 2px 10px rgba(255, 255, 255, 0.1);
 }

@@ -1,213 +1,281 @@
-:root {
-  --primary: #34c759;
-  --secondary: #ffd60a;
-  --dark: #1c1c1e;
-  --light: #8c5395;
-  --gray: #f2f2f7;
-  --text: #111111;
-  --text-light: #8e8e93;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body,
-html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  color: var(--text);
-  background-color: var(--light);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 .home-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 5%;
+    position: relative;
+    z-index: 10;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
 }
 
 .logo {
-  height: 15rem;
+    height: 40px;
+    transition: transform var(--transition-standard);
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 .login-button {
-  background: transparent;
-  border: 1px solid var(--light);
-  color: var(--light);
-  padding: 0.5rem 1.5rem;
-  border-radius: 2rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+    background-color: transparent;
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--color-primary);
+    border-radius: var(--border-radius-standard);
+    transition: all var(--transition-standard);
 }
 
 .login-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+    background-color: var(--color-primary);
+    color: var(--button-text);
 }
 
 .hero-section {
-  display: flex;
-  min-height: 100vh;
-  align-items: center;
-  position: relative;
-  background: linear-gradient(135deg, #f7fdde, #dbf4d8);
-  color: var(--light);
-  padding: 0 2rem;
-  overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 5%;
+    gap: 2rem;
+    flex: 1;
 }
 
 .hero-content {
-  flex: 1;
-  max-width: 600px;
-  margin-right: 2rem;
-  z-index: 2;
+    flex: 1;
+    max-width: 600px;
 }
 
 .hero-title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-bottom: 1.5rem;
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.5px;
 }
 
 .highlight {
-  color: var(--secondary);
+    color: var(--color-primary);
+    position: relative;
+    display: inline-block;
+}
+
+.highlight::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 0.3rem;
+    background-color: var(--color-accent);
+    bottom: 0.2rem;
+    left: 0;
+    z-index: -1;
+    border-radius: 1rem;
 }
 
 .hero-subtitle {
-  font-size: 1.25rem;
-  margin-bottom: 2.5rem;
-  opacity: 0.9;
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    margin-bottom: 2.5rem;
+    line-height: 1.6;
 }
 
 .cta-button {
-  background-color: var(--secondary);
-  color: var(--dark);
-  border: none;
-  padding: 1rem 2rem;
-  border-radius: 2rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    background-color: var(--color-primary);
+    color: var(--button-text);
+    font-size: 1.125rem;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: var(--border-radius-standard);
+    box-shadow: var(--shadow);
+    transition: all var(--transition-standard);
+    text-align: center;
 }
 
 .cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+    background-color: var(--color-primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .lemon-tree-container {
-  position: relative;
-  flex: 1;
-  height: 80vh;
-  z-index: 1;
-}
-
-
-
-.footer {
-  padding: 2rem;
-  text-align: center;
-  color: var(--text-light);
-  margin-top: auto;
+    flex: 1;
+    max-width: 600px;
+    height: 500px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--tree-background);
+    transition: background-color var(--transition-standard);
 }
 
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  backdrop-filter: blur(5px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
 }
 
 .login-modal {
-  background-color: var(--light);
-  border-radius: 1rem;
-  padding: 2.5rem;
-  width: 90%;
-  max-width: 400px;
-  position: relative;
+    background-color: var(--modal-background);
+    border-radius: 1rem;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: var(--shadow);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: modalFadeIn 0.3s ease forwards;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .close-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  font-size: 1.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-light);
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
 }
 
-.modal-logo {
-  width: 100px;
-  margin: 0 auto 1.5rem;
-  display: block;
+.close-button:hover {
+    color: var(--text-primary);
 }
 
 .modal-title {
-  font-size: 1.8rem;
-  margin-bottom: 2rem;
-  text-align: center;
+    margin: 1.5rem 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.input-group {
+    width: 100%;
+    margin-bottom: 1.5rem;
 }
 
 .email-input {
-  width: 100%;
-  padding: 1rem;
-  border: 1px solid var(--gray);
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid var(--text-secondary);
+    border-radius: var(--border-radius-standard);
+    font-size: 1rem;
+    background-color: transparent;
+    color: var(--text-primary);
+    transition: border-color var(--transition-standard);
+}
+
+.email-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.email-input::placeholder {
+    color: var(--text-secondary);
 }
 
 .modal-button {
-  width: 100%;
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.footer {
+    padding: 2rem 5%;
+    display: flex;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 992px) {
+    .hero-section {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .hero-content {
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .lemon-tree-container {
+        max-width: 100%;
+        height: 400px;
+        margin-top: 2rem;
+    }
 }
 
 @media (max-width: 768px) {
-  .hero-section {
-    flex-direction: column;
-    padding-top: 6rem;
-  }
+    .header {
+        padding: 1rem 5%;
+    }
 
-  .hero-content {
-    max-width: 100%;
-    margin-right: 0;
-    margin-bottom: 2rem;
-    text-align: center;
-  }
+    .hero-title {
+        font-size: 2rem;
+    }
 
-  .hero-title {
-    font-size: 2.5rem;
-  }
+    .hero-subtitle {
+        font-size: 1rem;
+    }
 
-  .lemon-tree-container {
-    width: 100%;
-    height: 50vh;
-  }
+    .cta-button {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+    }
 
+    .lemon-tree-container {
+        height: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-modal {
+        padding: 2rem 1.5rem;
+    }
+
+    .lemon-tree-container {
+        height: 250px;
+    }
 }
