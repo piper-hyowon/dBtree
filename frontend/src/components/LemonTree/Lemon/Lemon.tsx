@@ -4,23 +4,22 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useTheme } from "../../../hooks/useTheme";
 
-
 // TODO: 최적화
 interface LemonProps {
   scene: THREE.Scene | null;
   camera: THREE.Camera | null;
   renderer: THREE.WebGLRenderer | null;
   orbitControls: OrbitControls | null;
-  id: string;
+  id: number;
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
-  onDragStart?: (id: string) => void;
-  onDragEnd?: (id: string, position: THREE.Vector3) => void;
+  onDragStart?: (id: number) => void;
+  onDragEnd?: (id: number, position: THREE.Vector3) => void;
 }
 
-const globalLemonMap = new Map<string, THREE.Group>();
+const globalLemonMap = new Map<number, THREE.Group>();
 
-const lemonPositions = new Map<string, { x: number; y: number; z: number }>();
+const lemonPositions = new Map<number, { x: number; y: number; z: number }>();
 
 const Lemon: React.FC<LemonProps> = ({
   scene,
@@ -97,9 +96,8 @@ const Lemon: React.FC<LemonProps> = ({
         }
       });
 
-      const mapKey = `lemon-${id}`;
-      if (globalLemonMap.get(mapKey) === lemonGroupRef.current) {
-        globalLemonMap.delete(mapKey);
+      if (globalLemonMap.get(id) === lemonGroupRef.current) {
+        globalLemonMap.delete(id);
       }
 
       lemonGroupRef.current = null;
@@ -222,27 +220,27 @@ const Lemon: React.FC<LemonProps> = ({
 
     loadingRef.current = true;
 
-    const mapKey = `lemon-${id}`;
-    if (globalLemonMap.has(mapKey)) {
-      const existingLemon = globalLemonMap.get(mapKey);
+    if (globalLemonMap.has(id)) {
+      const existingLemon = globalLemonMap.get(id);
       if (existingLemon && existingLemon.parent) {
         existingLemon.parent.remove(existingLemon);
       }
-      globalLemonMap.delete(mapKey);
+      globalLemonMap.delete(id);
     }
     const group = new THREE.Group();
-    group.name = mapKey;
+    group.name = id.toString();
     group.userData = { lemonId: id, instanceId: instanceIdRef.current };
 
     const posToUse = lemonPositions.get(id) || position;
     currentPositionRef.current = posToUse;
 
     group.position.set(posToUse.x, posToUse.y, posToUse.z);
+    group.rotation.order = 'XYZ';
     group.rotation.set(rotation.x, rotation.y, rotation.z);
 
     const loader = new GLTFLoader();
     loader.load(
-      "/models/lemon.gltf",
+      "/models/basic-lemon.gltf",
       (gltf) => {
         if (!mountedRef.current) {
           loadingRef.current = false;
@@ -274,7 +272,7 @@ const Lemon: React.FC<LemonProps> = ({
         }
 
         scene.add(group);
-        globalLemonMap.set(mapKey, group);
+        globalLemonMap.set(id, group);
         lemonGroupRef.current = group;
         setupDragEvents(group);
         renderer.render(scene, camera);
@@ -338,7 +336,6 @@ const Lemon: React.FC<LemonProps> = ({
           material.emissive = new THREE.Color(material.color);
           material.emissiveIntensity = 0.8;
         } else {
-          material.emissive = new THREE.Color(0x000000);
           material.emissiveIntensity = 0;
         }
       }

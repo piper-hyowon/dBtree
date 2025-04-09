@@ -6,6 +6,8 @@ import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleT
 import LoginModal from "../../components/auth/LoginModal";
 import { useAuth } from "../../hooks/useAuth";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
+// import LemonTreeApp from "./NewLemonTree";
+// import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
 
 const Home: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -70,7 +72,9 @@ const Home: React.FC = () => {
         </div>
 
         <div className="lemon-tree-container">
+          {/* <NewNewLemonTree/> */}
           <LemonTree />
+          {/* <LemonTreeApp avaiableLemonIds={[0,1,2,3,4,5,6,7,8,9]}/> */}
         </div>
       </section>
 
