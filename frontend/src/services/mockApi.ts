@@ -139,6 +139,21 @@ export const mockApi = {
       data: { totalHarvested: 23, totalDbInstances: 6, activeUsers: 2 },
     };
   },
+
+  availableLemons: async (): Promise<ApiResponse<{ lemons: number[] }>> => {
+    return {
+      success: true,
+      data: {
+        lemons: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      },
+    };
+  },
+
+  // TODO:
+  harvestLemon: async (id: number): Promise<any> => {
+    // 수확성공했는지 여부,
+    return id;
+  },
 };
 
 export const apiService = {
@@ -154,4 +169,6 @@ export const apiService = {
   getCurrentUser: () => mockApi.getCurrentUser(),
 
   logout: () => mockApi.logout(),
+
+  globalStats: () => mockApi.globalStats(),
 };
