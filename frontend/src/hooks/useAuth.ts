@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { User } from "../types/api.types";
 import { apiService } from "../services/mockApi";
 
+// TODO: 순서 Custom Hook (Context 사용 X)
+// 필요시 AuthContext 생성, AuthProvider 로 분리
+
 interface UseAuthReturn {
   isLoggedIn: boolean;
   user: User | null;

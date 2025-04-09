@@ -4,7 +4,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
 import BasicLemonTree from "./BasicLemonTree/BasicLemonTree";
 import "./LemonTree.css";
-import Basket from "./Basket/Basket";
+import Basket from "../LemonTreeScene/Basket";
 import Lemon from "./Lemon/Lemon";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { mockApi } from "../../services/mockApi";
@@ -97,13 +97,13 @@ const LemonTree: React.FC<LemonTreeProps> = ({
 
       {sceneInitialized && sceneRef.current && cameraRef.current && (
         <>
-          <Basket
+          {/* <Basket
             key={`basket-${reloadBasket}`}
             scene={sceneRef.current}
             renderer={rendererRef.current}
             camera={cameraRef.current}
             onHarvest={handleHarvest}
-          />
+          /> */}
           {/* <Lemons
             lemons={availableLemons}
             scene={sceneRef.current}

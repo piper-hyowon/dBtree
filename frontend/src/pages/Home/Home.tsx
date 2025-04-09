@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
-import LemonTree from "../../components/LemonTree";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 import LoginModal from "../../components/auth/LoginModal";
 import { useAuth } from "../../hooks/useAuth";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
+import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 // import LemonTreeApp from "./NewLemonTree";
 // import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
 
@@ -72,9 +72,7 @@ const Home: React.FC = () => {
         </div>
 
         <div className="lemon-tree-container">
-          {/* <NewNewLemonTree/> */}
-          <LemonTree />
-          {/* <LemonTreeApp avaiableLemonIds={[0,1,2,3,4,5,6,7,8,9]}/> */}
+          <LemonTreeScene />
         </div>
       </section>
 
@@ -84,17 +82,15 @@ const Home: React.FC = () => {
             <div className="feature-icon">🍋</div>
             <h3>공유 레몬 나무</h3>
             <p>
-              모든 사용자를 위한 레몬 나무에서 레몬을 수확하세요. 빠른
-              사람이 임자!
+              모든 사용자를 위한 레몬 나무에서 레몬을 수확하세요. 빠른 사람이
+              임자!
             </p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">⏰</div>
             <h3>일일 레몬</h3>
-            <p>
-              정해진 시간에 레몬이 다시 자랍니다.
-            </p>
+            <p>정해진 시간에 레몬이 다시 자랍니다.</p>
           </div>
 
           <div className="feature-card">
