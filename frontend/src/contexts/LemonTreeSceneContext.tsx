@@ -131,11 +131,11 @@ export const LemonTreeSceneProvider: React.FC<{
       controlsRef.current = controls;
 
       const ambientLight = ambientLightRef.current;
-      ambientLight.intensity = isNight ? 0.3 : 1.0;
+      ambientLight.intensity = isNight ? 0.01 : 1.5;
 
       const keyLight = keyLightRef.current;
       keyLight.position.set(3, 5, 3);
-      keyLight.intensity = isNight ? 0.5 : 1.5;
+      keyLight.intensity = isNight ? 0.2 : 1.6;
       keyLight.castShadow = true;
       keyLight.shadow.mapSize.width = 2048;
       keyLight.shadow.mapSize.height = 2048;
@@ -149,6 +149,11 @@ export const LemonTreeSceneProvider: React.FC<{
         roughness: 1,
         side: THREE.DoubleSide, // 양면 렌더링
       });
+
+      if (isNight) {
+        groundMaterial.emissive = new THREE.Color("#dbf4d8");
+        groundMaterial.emissiveIntensity = 0.4;
+      }
 
       const ground = new THREE.Mesh(
         new THREE.BoxGeometry(5.3, 3, 0.2),
@@ -267,11 +272,11 @@ export const LemonTreeSceneProvider: React.FC<{
         );
 
     if (isNight) {
-      ambientLight.intensity = 0.3;
-      keyLight.intensity = 0.5;
+      ambientLight.intensity = 0.01;
+      keyLight.intensity = 0.2;
     } else {
-      ambientLight.intensity = 1.0;
-      keyLight.intensity = 1.5;
+      ambientLight.intensity = 1.5;
+      keyLight.intensity = 1.6;
     }
 
     if (groundRef.current) {
@@ -279,6 +284,9 @@ export const LemonTreeSceneProvider: React.FC<{
       if (isNight) {
         material.emissive = new THREE.Color(material.color);
         material.emissiveIntensity = 0.4;
+      } else {
+        material.emissive = new THREE.Color(material.color);
+        material.emissiveIntensity = 0;
       }
       material.needsUpdate = true;
     }
@@ -303,21 +311,56 @@ export const LemonTreeSceneProvider: React.FC<{
 
     lemons.forEach((lemon) => {
       const lemonObj = sceneRef.current.getObjectByName(`lemon-${lemon.id}`);
-      if (lemonObj) {
-        lemonObj.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            const material = child.material as THREE.MeshStandardMaterial;
-            if (isNight) {
-              material.emissive = new THREE.Color(material.color);
-              material.emissiveIntensity = 0.8;
-            } else {
-              material.emissive = new THREE.Color(material.color);
-              material.emissiveIntensity = 0;
-            }
-            material.needsUpdate = true;
-          }
-        });
+      if (!lemonObj) {
+        console.warn(`lemon-${lemon.id} not found in scene`);
+        return;
       }
+
+      lemonObj.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          console.log(`Processing lemon mesh: ${child.name}`);
+
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat, i) => {
+              if (isNight) {
+                if (!mat.userData.originalColor) {
+                  mat.userData.originalColor = mat.color.clone();
+                }
+                mat.emissive = mat.userData.originalColor.clone();
+                mat.emissiveIntensity = 0.8;
+              } else {
+                mat.emissiveIntensity = 0;
+              }
+              mat.needsUpdate = true;
+            });
+          }
+          else if (child.material) {
+            const mat = child.material as THREE.MeshStandardMaterial;
+
+            if (!mat.userData.originalColor) {
+              mat.userData.originalColor = mat.color.clone();
+              console.log(
+                `Saved original color for ${child.name}:`,
+                mat.userData.originalColor.getHexString()
+              );
+            }
+
+            if (isNight) {
+              mat.emissive = mat.userData.originalColor.clone();
+              mat.emissiveIntensity = 0.8;
+              console.log(
+                `Night mode: Set emissive for ${child.name} to`,
+                mat.emissive.getHexString()
+              );
+            } else {
+              mat.emissive = new THREE.Color(0x000000);
+              mat.emissiveIntensity = 0;
+              console.log(`Day mode: Reset emissive for ${child.name}`);
+            }
+            mat.needsUpdate = true;
+          }
+        }
+      });
     });
   }, [isNight, isInitialized, lemons]);
 
@@ -345,7 +388,6 @@ export const LemonTreeSceneProvider: React.FC<{
           loader.load(
             "/models/basic-lemon.gltf",
             (gltf) => {
-              console.log(`레몬 ${lemon.id} 로드 성공`);
               const model = gltf.scene;
               model.name = `lemon-${lemon.id}`;
               model.userData.lemonId = lemon.id;
@@ -423,184 +465,80 @@ export const LemonTreeSceneProvider: React.FC<{
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const intersectPoint = new THREE.Vector3(); // 재사용할 벡터 객체
 
-    let selectedLemon: THREE.Object3D | null = null;
-    let originalPosition: THREE.Vector3 | null = null;
-    let isDragging = false;
-
-    const basketPosition = BASKET_POSITION;
-
-    let dragStartTime = 0;
-
-    const handleMouseDown = (event: MouseEvent) => {
-      if (isDragging) return;
-
+    const handleClick = async (event: MouseEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-
       const intersects = raycaster.intersectObjects(scene.children, true);
 
       const lemonIntersect = intersects.find((intersect) => {
-        let current: THREE.Object3D | null = intersect.object;
+        let current = intersect.object;
         while (current && !current.userData.lemonId) {
-          current = current.parent;
+          current = current.parent as THREE.Object3D;
         }
-        return current?.userData?.lemonId !== undefined;
+        return current?.userData?.lemonId;
       });
 
       if (lemonIntersect) {
-        let current: THREE.Object3D | null = lemonIntersect.object;
+        let current = lemonIntersect.object;
         while (current && !current.userData.lemonId) {
-          current = current.parent;
+          current = current.parent as THREE.Object3D;
         }
 
         if (current?.userData?.lemonId) {
-          selectedLemon = current;
-          originalPosition = selectedLemon.position.clone();
-          isDragging = true;
-          dragStartTime = performance.now();
+          const lemonId = current.userData.lemonId;
 
-          setIsDraggingLemon(true);
+          const startPosition = current.position.clone();
+          const basketPosition = BASKET_POSITION.clone();
 
-          selectedLemon.position.y += 0.5;
+          const animateSelectToBasket = () => {
+            animateMoveToBasket();
+          };
 
-          document.addEventListener("mousemove", handleMouseMove);
-          document.addEventListener("mouseup", handleMouseUp);
+          const animateMoveToBasket = async () => {
+            const duration = 1000; // 1초
+            const startTime = Date.now();
 
-          document.addEventListener("touchmove", handleTouchMove, {
-            passive: false,
-          });
-          document.addEventListener("touchend", handleTouchEnd);
-          document.addEventListener("touchcancel", handleTouchEnd);
+            const animate = () => {
+              const elapsedTime = Date.now() - startTime;
+              const progress = Math.min(elapsedTime / duration, 1);
+
+              const pos = new THREE.Vector3();
+              pos.x =
+                startPosition.x +
+                (basketPosition.x - startPosition.x) * progress;
+              pos.y = startPosition.y + 2 * Math.sin(progress * Math.PI); // 아치형 경로
+              pos.z =
+                startPosition.z +
+                (basketPosition.z - startPosition.z) * progress;
+
+              current.position.copy(pos);
+
+              if (progress < 1) {
+                requestAnimationFrame(animate);
+              } else {
+                // 애니메이션 완료 후 API 호출
+                addLemonToBasket(lemonId);
+              }
+            };
+
+            animate();
+          };
+
+          animateSelectToBasket();
         }
       }
     };
 
-    const handleTouchStart = (event: TouchEvent) => {
-      if (isDragging || event.touches.length !== 1) return;
-
-      const touch = event.touches[0];
-      const mouseEvent = new MouseEvent("mousedown", {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-      });
-
-      handleMouseDown(mouseEvent);
-
-      event.preventDefault();
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!selectedLemon || !isDragging) return;
-
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-
-      if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
-        intersectPoint.y = originalPosition!.y + 0.5; // 약간 들어올린 높이 유지
-
-        selectedLemon.position.copy(intersectPoint);
-      }
-    };
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (isDragging && event.touches.length === 1) {
-        const touch = event.touches[0];
-        const mouseEvent = new MouseEvent("mousemove", {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-        });
-
-        handleMouseMove(mouseEvent);
-        event.preventDefault(); // 페이지 스크롤 방지
-      }
-    };
-
-    const handleMouseUp = async () => {
-      if (!selectedLemon || !originalPosition || !isDragging) return;
-
-      isDragging = false;
-
-      const dragDuration = performance.now() - dragStartTime;
-      const isQuickTap = dragDuration < 200;
-
-      const distanceToBasket =
-        selectedLemon.position.distanceTo(basketPosition);
-
-      if (distanceToBasket < 1.5 && !isQuickTap) {
-        const animateToBasket = () => {
-          if (!selectedLemon) return;
-
-          const t = 0.1;
-          selectedLemon.position.lerp(basketPosition, t);
-          selectedLemon.scale.multiplyScalar(0.95);
-
-          if (selectedLemon.position.distanceTo(basketPosition) < 0.1) {
-            const lemonId = selectedLemon.userData.lemonId;
-            addLemonToBasket(lemonId);
-          } else {
-            requestAnimationFrame(animateToBasket);
-          }
-        };
-
-        animateToBasket();
-      } else {
-        const returnToOriginal = () => {
-          if (!selectedLemon || !originalPosition) return;
-
-          selectedLemon.position.lerp(originalPosition, 0.2);
-          selectedLemon.scale.lerp(new THREE.Vector3(0.15, 0.15, 0.15), 0.2);
-
-          if (selectedLemon.position.distanceTo(originalPosition) < 0.05) {
-            selectedLemon.position.copy(originalPosition);
-            selectedLemon.scale.set(0.15, 0.15, 0.15);
-          } else {
-            requestAnimationFrame(returnToOriginal);
-          }
-        };
-
-        returnToOriginal();
-      }
-
-      selectedLemon = null;
-      originalPosition = null;
-      setIsDraggingLemon(false);
-
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
-      document.removeEventListener("touchcancel", handleTouchEnd);
-    };
-
-    const handleTouchEnd = (event: TouchEvent) => {
-      handleMouseUp();
-      event.preventDefault();
-    };
-
-    renderer.domElement.addEventListener("mousedown", handleMouseDown);
-    renderer.domElement.addEventListener("touchstart", handleTouchStart, {
-      passive: false,
-    });
+    renderer.domElement.addEventListener("click", handleClick);
 
     return () => {
-      renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-      renderer.domElement.removeEventListener("touchstart", handleTouchStart);
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
-      document.removeEventListener("touchcancel", handleTouchEnd);
+      renderer.domElement.removeEventListener("click", handleClick);
     };
-  }, [isInitialized, addLemonToBasket]);
+  }, [isInitialized]);
 
   const contextValue: LemonTreeSceneContextType = {
     scene: sceneRef.current,
