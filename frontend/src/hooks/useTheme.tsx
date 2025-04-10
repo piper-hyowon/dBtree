@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-// TODO: Context + Provier + Hook 이 한 파일에 있음
+// TODO: Context + Provider + Hook 이 한 파일에 있음
 // 필요시 src/contexts/ 만들어서 ThemeContext.tsx 로 분리
 
 type Theme = "light" | "dark";
