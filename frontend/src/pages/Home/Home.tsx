@@ -69,6 +69,9 @@ const Home: React.FC = () => {
           <p className="limited-offer">
             매일 새로운 레몬이 자라납니다. 선착순 수확!
           </p>
+          <p className="golden-lemon-alert">
+            가끔 등장하는 황금 레몬을 놓치지 마세요!
+          </p>
         </div>
 
         <div className="lemon-tree-container">
