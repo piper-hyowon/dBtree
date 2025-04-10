@@ -9,7 +9,7 @@ const Basket: React.FC = () => {
   const { scene } = useLemonTreeScene();
   const basketRef = useRef<THREE.Group | null>(null);
   const collisionAreaRef = useRef<THREE.Mesh | null>(null);
-  const { theme } = useTheme();
+  const { isNight } = useTheme();
 
   const createBasket = () => {
     if (!scene) return null;
@@ -36,7 +36,7 @@ const Basket: React.FC = () => {
       metalness: 0.2,
       side: THREE.DoubleSide,
       emissive: 0xc19a6b,
-      emissiveIntensity: theme === "dark" ? 0.4 : 0,
+      emissiveIntensity: isNight ? 0.4 : 0,
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
     body.position.y = 0.3;
@@ -50,7 +50,7 @@ const Basket: React.FC = () => {
       color: 0x8b4513,
       roughness: 0.5,
       emissive: 0x8b4513,
-      emissiveIntensity: theme === "dark" ? 0.4 : 0,
+      emissiveIntensity: isNight ? 0.4 : 0,
     });
     const handle = new THREE.Mesh(handleGeometry, handleMaterial);
     handle.rotation.x = Math.PI / 2;
@@ -97,15 +97,24 @@ const Basket: React.FC = () => {
     };
   }, [scene]);
 
-  // // 테마 변경 시 재생성
-  // useEffect(() => {
-  //   if (scene && camera) {
-  //     setTimeout(() => {
-  //       createBasket();
-  //     }, 100);
-  //   }
-  // }, [theme, scene, camera]);
-
+  // 테마 적용
+  useEffect(() => {
+    if (basketRef.current) {
+      basketRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const material = child.material as THREE.MeshStandardMaterial;
+          if (isNight) {
+            material.emissive = new THREE.Color(material.color);
+            material.emissiveIntensity = 0.8;
+          } else {
+            material.emissive = new THREE.Color(material.color);
+            material.emissiveIntensity = 0;
+          }
+          material.needsUpdate = true;
+        }
+      });
+    }
+  }, [isNight]);
   return null;
 };
 
