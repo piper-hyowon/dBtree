@@ -44,7 +44,7 @@ const Tree: React.FC = () => {
     console.log("트리 모델 로드 시도...");
 
     loader.load(
-      "/models/tree-new.gltf",
+      "/models/tree.gltf",
       (gltf) => {
         console.log("트리 모델 로드 성공!");
         const model = gltf.scene;
