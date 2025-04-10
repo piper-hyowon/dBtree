@@ -21,8 +21,6 @@ interface LemonTreeSceneContextType {
   renderer: THREE.WebGLRenderer | null;
   controls: OrbitControls | null;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  isDraggingLemon: boolean;
-  setIsDraggingLemon: (isDragging: boolean) => void;
   lemons: AvailableLemon[];
 }
 
@@ -37,7 +35,6 @@ export const LemonTreeSceneProvider: React.FC<{
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isInitialized, setIsInitialized] = useState(false);
-  const [isDraggingLemon, setIsDraggingLemon] = useState(false);
   const [lemons, setLemons] = useState<AvailableLemon[]>([]);
 
   const sceneRef = useRef<THREE.Scene>(new THREE.Scene());
@@ -217,19 +214,12 @@ export const LemonTreeSceneProvider: React.FC<{
     }
   }, [isNight, isInitialized]);
 
-  useEffect(() => {
-    if (!isInitialized || !controlsRef.current) return;
-    controlsRef.current.enabled = !isDraggingLemon;
-  }, [isDraggingLemon, isInitialized]);
-
   const contextValue: LemonTreeSceneContextType = {
     scene: sceneRef.current,
     camera: cameraRef.current,
     renderer: rendererRef.current,
     controls: controlsRef.current,
     containerRef,
-    isDraggingLemon,
-    setIsDraggingLemon,
     lemons,
   };
 

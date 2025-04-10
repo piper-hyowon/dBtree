@@ -1,11 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { AvailableLemon } from "../LemonTree";
-import { LEMONS } from "../LemonTree/constants/lemon.constant";
+import { LEMONS } from "./constants/lemon.constant";
 import { mockApi } from "../../services/mockApi";
 import { useTheme } from "../../hooks/useTheme";
 import { useLemonTreeScene } from "../../contexts/LemonTreeSceneContext";
+
+export interface AvailableLemon {
+  id: number;
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+}
 
 interface LemonsProps {
   lemons: AvailableLemon[];
@@ -20,7 +25,7 @@ const Lemons: React.FC<LemonsProps> = ({
   lemonsLoaded,
   setLemonsLoaded,
 }) => {
-  const { scene} = useLemonTreeScene();
+  const { scene } = useLemonTreeScene();
 
   const lemonModelRef = useRef<THREE.Group | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,7 +82,7 @@ const Lemons: React.FC<LemonsProps> = ({
                     child.material.forEach((mat) => {
                       if (mat instanceof THREE.MeshStandardMaterial) {
                         mat.userData.originalColor = mat.color.clone();
-               
+
                         if (isNight) {
                           mat.emissive.copy(mat.userData.originalColor);
                           mat.emissiveIntensity = 0.8;
@@ -93,7 +98,6 @@ const Lemons: React.FC<LemonsProps> = ({
                   ) {
                     child.material.userData.originalColor =
                       child.material.color.clone();
-                
 
                     if (isNight) {
                       child.material.emissive.copy(
@@ -116,7 +120,7 @@ const Lemons: React.FC<LemonsProps> = ({
           );
         });
       }
-      setLemonsLoaded(true); 
+      setLemonsLoaded(true);
     } catch (err) {
       console.error("레몬 데이터 로드 오류:", err);
     }
@@ -130,18 +134,15 @@ const Lemons: React.FC<LemonsProps> = ({
         if (object.name && object.name.startsWith("lemon-")) {
           object.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-
               const processMaterial = (material: THREE.Material) => {
                 if (material instanceof THREE.MeshStandardMaterial) {
                   if (!material.userData.originalColor) {
                     material.userData.originalColor = material.color.clone();
-               
                   }
 
                   if (nightMode) {
                     material.emissive.copy(material.userData.originalColor);
                     material.emissiveIntensity = 0.8;
-             
                   } else {
                     material.emissive.set(0, 0, 0);
                     material.emissiveIntensity = 0;
