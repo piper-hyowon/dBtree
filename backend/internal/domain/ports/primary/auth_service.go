@@ -1,12 +1,13 @@
 package primary
 
 import (
+	"context"
+
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 )
 
 type AuthService interface {
-	// 인증 시작
-	StartAuth(email string) (isNewUser bool, err error)
-	VerifyOTP(email string, code string) (createdUser *model.User, err error)
-	ResendOTP(email string) error
+	StartAuth(ctx context.Context, email string) (isNewUser bool, err error)
+	VerifyOTP(ctx context.Context, email string, code string) (createdUser *model.User, err error)
+	ResendOTP(ctx context.Context, email string) error
 }

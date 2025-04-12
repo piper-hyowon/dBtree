@@ -7,9 +7,20 @@ import (
 type OTP struct {
 	Email      string
 	Code       string
-	ExpiresAt  time.Time
-	IsVerified bool
 	CreatedAt  time.Time
+	ExpiresAt  time.Time
+	SendCount  int
+	LastSentAt time.Time
+	VerifiedAt time.Time
+	IsVerified bool
+}
+
+func (o *OTP) IsExpired() bool {
+	return time.Now().After(o.ExpiresAt)
+}
+
+func (o *OTP) CanResend() bool {
+	return o.SendCount < 5 && time.Since(o.LastSentAt) >= time.Minute
 }
 
 // OTP 생성자
@@ -34,8 +45,4 @@ func (o *OTP) Verify(code string) bool {
 
 	o.IsVerified = true
 	return true
-}
-
-func (o *OTP) IsExpired() bool {
-	return time.Now().UTC().After(o.ExpiresAt)
 }
