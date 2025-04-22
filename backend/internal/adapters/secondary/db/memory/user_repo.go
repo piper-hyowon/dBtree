@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	ErrUserNotFound = errors.New("User 404")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserRepo struct {

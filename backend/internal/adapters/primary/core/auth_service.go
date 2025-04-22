@@ -12,6 +12,7 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/domain/errors"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
+	"github.com/piper-hyowon/dBtree/internal/utils/crypto"
 )
 
 var (
@@ -62,7 +63,7 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 		ExpiresAt: expiresAt,
 	}
 
-	session, err := s.sessionRepo.Get(ctx, email)
+	session, err := s.sessionRepo.GetByEmail(ctx, email)
 	if err != nil {
 		session = model.NewAuthSession(email, otp)
 	} else {
@@ -90,12 +91,7 @@ func (s *AuthService) GetSession(ctx context.Context, email string) (*model.Auth
 		return nil, errors.ErrInvalidEmail
 	}
 
-	session, err := s.sessionRepo.Get(ctx, email)
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
+	return s.sessionRepo.GetByEmail(ctx, email)
 }
 
 func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
@@ -103,7 +99,7 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 		return errors.ErrInvalidEmail
 	}
 
-	session, err := s.sessionRepo.Get(ctx, email)
+	session, err := s.sessionRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return errors.ErrSessionNotFound
 	}
@@ -160,58 +156,89 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 	return nil
 }
 
-func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) (*model.User, error) {
+func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) (*model.User, string, error) {
 	if !isValidEmail(email) {
-		return nil, errors.ErrInvalidEmail
+		return nil, "", errors.ErrInvalidEmail
 	}
 
 	if code == "" || len(code) != constants.OTPLength {
-		return nil, errors.ErrInvalidOTP
+		return nil, "", errors.ErrInvalidOTP
 	}
 
-	session, err := s.sessionRepo.Get(ctx, email)
+	session, err := s.sessionRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, errors.ErrSessionNotFound
+		return nil, "", errors.ErrSessionNotFound
 	}
 
 	if session.OTP == nil {
-		return nil, errors.ErrInvalidOTP
-	}
-
-	if time.Now().UTC().After(session.OTP.ExpiresAt) {
-		return nil, errors.ErrExpiredOTP
-	}
-
-	if session.OTP.Code != code {
-		return nil, errors.ErrInvalidOTP
+		return nil, "", errors.ErrInvalidOTP
 	}
 
 	now := time.Now().UTC()
+
+	if now.After(session.OTP.ExpiresAt) {
+		return nil, "", errors.ErrExpiredOTP
+	}
+
+	if session.OTP.Code != code {
+		return nil, "", errors.ErrInvalidOTP
+	}
+
+	token, err := crypto.GenerateRandomToken(32)
+	if err != nil {
+		s.logger.Printf("토큰 생성 실패: %v", err)
+		return nil, "", fmt.Errorf("%w", errors.ErrInternal)
+	}
+
+	session.Token = token
+	session.TokenExpiresAt = now.Add(time.Hour * constants.TokenExpirationHours)
 	session.Status = model.AuthVerified
-	session.UpdatedAt = now
+	session.UpdatedAt = time.Now().UTC()
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
 		s.logger.Printf("인증 완료 후 세션 업데이트 실패: %v", err)
-		return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
+		return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
 		if err := s.userRepo.Create(ctx, email); err != nil {
 			s.logger.Printf("유저 생성 실패: %v", err)
-			return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
+			return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		user, err = s.userRepo.FindByEmail(ctx, email)
 		if err != nil {
 			s.logger.Printf("신규 유저 조회 실패: %v", err)
-			return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
+			return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		s.emailService.SendWelcome(ctx, email)
 		s.logger.Printf("인증 완료, 유저 생성: 이메일=%s", email)
 	} else {
 		s.logger.Printf("인증 완료: 이메일=%s", email)
+	}
+
+	return user, token, nil
+}
+
+func (s *AuthService) ValidateSession(ctx context.Context, token string) (*model.User, error) {
+	if token == "" {
+		return nil, errors.ErrInvalidToken
+	}
+
+	session, err := s.sessionRepo.GetByToken(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("세션검증실패: %w", err)
+	}
+
+	if session.Status != model.AuthVerified {
+		return nil, errors.ErrUnauthorized
+	}
+
+	user, err := s.userRepo.FindByEmail(ctx, session.Email)
+	if err != nil {
+		return nil, fmt.Errorf("유저반환실패: %w", errors.ErrInternal)
 	}
 
 	return user, nil

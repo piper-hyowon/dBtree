@@ -2,32 +2,30 @@ package memory
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/piper-hyowon/dBtree/internal/domain/errors"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 )
 
-var (
-	ErrSessionNotFound = errors.New("세션 404")
-)
-
 type SessionRepo struct {
-	mu       sync.RWMutex
-	sessions map[string]*model.AuthSession // key는 이메일
+	mu              sync.RWMutex
+	sessionsByEmail map[string]*model.AuthSession
+	sessionsByToken map[string]string
 }
 
 func NewSessionRepo() *SessionRepo {
 	return &SessionRepo{
-		sessions: make(map[string]*model.AuthSession),
+		sessionsByEmail: make(map[string]*model.AuthSession),
+		sessionsByToken: make(map[string]string),
 	}
 }
 
-// upsert
 func (r *SessionRepo) Save(ctx context.Context, session *model.AuthSession) error {
 	if session == nil || session.Email == "" {
-		return errors.New("세션 or 이메일 404")
+		return fmt.Errorf("invalid session: %w", errors.ErrInternal)
 	}
 
 	r.mu.Lock()
@@ -35,21 +33,58 @@ func (r *SessionRepo) Save(ctx context.Context, session *model.AuthSession) erro
 
 	session.UpdatedAt = time.Now().UTC()
 
-	r.sessions[session.Email] = session
+	oldSession, exists := r.sessionsByEmail[session.Email]
+	if exists && oldSession.Token != "" {
+		delete(r.sessionsByToken, oldSession.Token)
+	}
+
+	if session.Token != "" {
+		r.sessionsByToken[session.Token] = session.Email
+	}
+
+	r.sessionsByEmail[session.Email] = session
 	return nil
 }
 
-func (r *SessionRepo) Get(ctx context.Context, email string) (*model.AuthSession, error) {
+func (r *SessionRepo) GetByEmail(ctx context.Context, email string) (*model.AuthSession, error) {
 	if email == "" {
-		return nil, errors.New("empty string")
+		return nil, fmt.Errorf("empty email: %w", errors.ErrInternal)
 	}
 
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	session, exists := r.sessions[email]
+	session, exists := r.sessionsByEmail[email]
 	if !exists {
-		return nil, ErrSessionNotFound
+		return nil, errors.ErrSessionNotFound
+	}
+
+	return session, nil
+}
+
+func (r *SessionRepo) GetByToken(ctx context.Context, token string) (*model.AuthSession, error) {
+	if token == "" {
+		return nil, fmt.Errorf("empty token: %w", errors.ErrInvalidToken)
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	email, exists := r.sessionsByToken[token]
+	if !exists {
+		return nil, errors.ErrSessionNotFound
+	}
+
+	session, exists := r.sessionsByEmail[email]
+	if !exists {
+		// 토큰은 있으나 세션이 없음 - 정리 필요
+		return nil, errors.ErrSessionNotFound
+	}
+
+	// 토큰 만료 확인
+	now := time.Now().UTC()
+	if session.TokenExpiresAt.Before(now) {
+		return nil, errors.ErrTokenExpired
 	}
 
 	return session, nil
@@ -57,17 +92,22 @@ func (r *SessionRepo) Get(ctx context.Context, email string) (*model.AuthSession
 
 func (r *SessionRepo) Delete(ctx context.Context, email string) error {
 	if email == "" {
-		return errors.New("empty string")
+		return fmt.Errorf("empty email: %w", errors.ErrInternal)
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if _, exists := r.sessions[email]; !exists {
-		return ErrSessionNotFound
+	session, exists := r.sessionsByEmail[email]
+	if !exists {
+		return errors.ErrSessionNotFound
 	}
 
-	delete(r.sessions, email)
+	if session.Token != "" {
+		delete(r.sessionsByToken, session.Token)
+	}
+
+	delete(r.sessionsByEmail, email)
 	return nil
 }
 
@@ -76,16 +116,24 @@ func (r *SessionRepo) Cleanup(ctx context.Context) error {
 	defer r.mu.Unlock()
 
 	now := time.Now().UTC()
-	expiredEmails := []string{}
 
-	for email, session := range r.sessions {
-		if session.OTP != nil && session.OTP.ExpiresAt.Before(now) {
-			expiredEmails = append(expiredEmails, email)
+	for email, session := range r.sessionsByEmail {
+		otpExpired := session.OTP != nil && session.OTP.ExpiresAt.Before(now)
+		tokenExpired := session.Token != "" && session.TokenExpiresAt.Before(now)
+
+		if otpExpired {
+			// OTP가 만료된 경우 세션 전체 삭제
+			if session.Token != "" {
+				delete(r.sessionsByToken, session.Token)
+			}
+			delete(r.sessionsByEmail, email)
+		} else if tokenExpired {
+			// 토큰만 만료된 경우 토큰만 삭제
+			delete(r.sessionsByToken, session.Token)
+			session.Token = ""
+			session.TokenExpiresAt = time.Time{}
+			session.UpdatedAt = now
 		}
-	}
-
-	for _, email := range expiredEmails {
-		delete(r.sessions, email)
 	}
 
 	return nil

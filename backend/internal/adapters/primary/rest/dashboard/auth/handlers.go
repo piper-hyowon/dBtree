@@ -42,9 +42,11 @@ type SendOTPResponse struct {
 }
 
 type VerifyOTPResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
-	User    *model.User `json:"user,omitempty"`
+	Success   bool        `json:"success"`
+	Message   string      `json:"message,omitempty"`
+	User      *model.User `json:"user,omitempty"`
+	Token     string      `json:"token,omitempty"`
+	ExpiresIn int64       `json:"expires_in,omitempty"`
 }
 
 type ErrorResponse struct {
@@ -105,16 +107,20 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.authService.VerifyOTP(r.Context(), req.Email, req.OTPCode)
+	user, token, err := h.authService.VerifyOTP(r.Context(), req.Email, req.OTPCode)
 	if err != nil {
 		h.handleAuthError(w, err)
 		return
 	}
 
+	expiresIn := int64(constants.TokenExpirationHours * 3600)
+
 	h.sendJSONResponse(w, http.StatusOK, VerifyOTPResponse{
-		Success: true,
-		Message: "인증이 완료되었습니다.",
-		User:    user,
+		Success:   true,
+		Message:   "인증이 완료되었습니다.",
+		User:      user,
+		Token:     token,
+		ExpiresIn: expiresIn,
 	})
 }
 
