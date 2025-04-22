@@ -10,4 +10,6 @@ type User struct {
 	LastHarvest    time.Time
 	JoinedAt       time.Time
 	Instances      []string // 인스턴스 IDs
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }

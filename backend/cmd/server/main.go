@@ -1,50 +1,120 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/joho/godotenv"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/auth"
+	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/db/memory"
+	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/email"
+	"github.com/piper-hyowon/dBtree/internal/config"
 )
 
-// 홈페이지 핸들러
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
+// TODO: log 레벨별 출력 구분
+
+func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(".env 파일 없음")
+		os.Exit(1)
 	}
-	fmt.Fprintf(w, "안녕하세요! Go 웹서버에 오신 것을 환영합니다!")
+
+	appConfig, err := config.NewConfig()
+	if err != nil {
+		log.Fatal("환경 변수 설정 오류")
+	}
+	fmt.Println(appConfig)
+
+	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
+	logger.Println("서버 시작 중...")
+
+	// 어댑터
+	sessionRepo := memory.NewSessionRepo()
+	userRepo := memory.NewUserRepo()
+	emailService := setupEmailService(appConfig.SMTP)
+
+	// 인증 서비스
+	authService := core.NewAuthService(
+		sessionRepo,
+		emailService,
+		userRepo,
+		logger,
+	)
+
+	authHandler := auth.NewHandler(authService, logger)
+	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "dBtree")
+	})
+
+	mux.HandleFunc("/auth/send-otp", authHandler.SendOTP) // 발송 or 재발송
+	mux.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP)
+
+	// TODO: 유저 조회 API 작업 후 제거
+	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		user := middleware.GetUserFromContext(r.Context())
+		if user == nil {
+			http.Error(w, "유저 인증 오류", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"id":         user.ID,
+			"email":      user.Email,
+			"created_at": user.CreatedAt,
+		})
+	}))
+
+	server := &http.Server{
+		Addr:         ":" + strconv.Itoa(appConfig.Server.Port),
+		Handler:      mux,
+		ReadTimeout:  time.Duration(appConfig.Server.ReadTimeoutSeconds) * time.Second,
+		WriteTimeout: time.Duration(appConfig.Server.WriteTimeoutSeconds) * time.Second,
+		IdleTimeout:  time.Duration(appConfig.Server.IdleTimeoutSeconds) * time.Second,
+	}
+
+	go cleanupSessions(sessionRepo, appConfig.Session.CleanupIntervalHours, logger)
+
+	startServer(server)
 }
 
-// 사용자 정보 페이지 핸들러
-func userHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "사용자 정보 페이지입니다")
-}
-
-// 커스텀 미들웨어 예제
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 요청 정보 로깅
-		log.Printf("요청: %s %s %s", r.RemoteAddr, r.Method, r.URL)
-		// 다음 핸들러로 요청 전달
-		next.ServeHTTP(w, r)
+func setupEmailService(smtpConfig config.SMTPConfig) *email.SMTPEmailService {
+	return email.NewSMTPEmailService(email.SMTPConfig{
+		Host:     smtpConfig.Host,
+		Port:     smtpConfig.Port,
+		Username: smtpConfig.Username,
+		Password: smtpConfig.Password,
+		From:     smtpConfig.From,
 	})
 }
 
-func main() {
-	// 핸들러 등록
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", homeHandler)
-	mux.HandleFunc("/user", userHandler)
+func cleanupSessions(sessionRepo *memory.SessionRepo, intervalHours int, logger *log.Logger) {
+	ticker := time.NewTicker(time.Duration(intervalHours) * time.Hour)
+	defer ticker.Stop()
 
-	// 미들웨어 적용
-	handler := loggingMiddleware(mux)
-
-	// 서버 설정
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: handler,
+	for range ticker.C {
+		logger.Println("만료된 세션 정리 중...")
+		if err := sessionRepo.Cleanup(context.Background()); err != nil {
+			logger.Printf("세션 정리 오류: %v", err)
+		}
 	}
+}
 
-	fmt.Println("서버 시작: http://localhost:8080")
-	log.Fatal(server.ListenAndServe())
+func startServer(server *http.Server) {
+	log.Printf("HTTP 서버 시작, 포트: %s\n", server.Addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("서버 시작 실패: %v", err)
+	}
 }

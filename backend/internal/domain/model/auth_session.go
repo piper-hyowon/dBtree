@@ -12,13 +12,15 @@ const (
 )
 
 type AuthSession struct {
-	Email        string
-	Status       AuthSessionStatus
-	OTP          *OTP
-	ResendCount  int
-	LastResendAt *time.Time
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Email          string
+	Status         AuthSessionStatus
+	OTP            *OTP
+	Token          string
+	TokenExpiresAt time.Time
+	ResendCount    int
+	LastResendAt   *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // AuthSession 생성자

@@ -1,6 +1,9 @@
 package secondary
 
+import "context"
+
 type EmailService interface {
-	SendOTP(to string, code string) error
-	SendWelcome(to string) error
+	SendOTP(ctx context.Context, to string, code string) error
+
+	SendWelcome(ctx context.Context, to string) error
 }
