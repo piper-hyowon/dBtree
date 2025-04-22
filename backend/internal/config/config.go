@@ -91,6 +91,15 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 
+	smtpHost := getEnvString("SMTP_HOST", "")
+	smtpUsername := getEnvString("SMTP_USERNAME", "")
+	smtpPassword := getEnvString("SMTP_PASSWORD", "")
+	smtpFrom := getEnvString("SMTP_FROM", "")
+
+	if smtpHost == "" || smtpUsername == "" || smtpPassword == "" {
+		return nil, fmt.Errorf("SMTP 환경 변수 확인")
+	}
+
 	return &Config{
 		Server: ServerConfig{
 			Port:                port,
@@ -108,11 +117,11 @@ func NewConfig() (*Config, error) {
 			CleanupIntervalHours: sessionCleanup,
 		},
 		SMTP: SMTPConfig{
-			Host:     getEnvString("SMTP_HOST", "smtp.example.com"),
+			Host:     smtpHost,
 			Port:     smtpPort,
-			Username: getEnvString("SMTP_USERNAME", ""),
-			Password: getEnvString("SMTP_PASSWORD", ""),
-			From:     getEnvString("SMTP_FROM", "noreply@dbtree.example.com"),
+			Username: smtpUsername,
+			Password: smtpPassword,
+			From:     smtpFrom,
 		},
 	}, nil
 }

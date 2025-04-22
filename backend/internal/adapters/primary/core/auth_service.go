@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/piper-hyowon/dBtree/internal/constants"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 )
@@ -26,13 +27,6 @@ var (
 	ErrExpiredOTP      = errors.New("expired OTP")
 	ErrSessionNotFound = errors.New("session 404")
 	ErrInternal        = errors.New("500")
-)
-
-const (
-	otpLength            = 6
-	maxResendAttempts    = 5
-	resendWaitSeconds    = 60
-	otpExpirationMinutes = 10
 )
 
 type AuthService struct {
@@ -64,14 +58,14 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	isNewUser := err != nil || user == nil
 
-	otpCode, err := generateOTP(otpLength)
+	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
 		s.logger.Printf("OTP 생성 실패: %v", err)
 		return isNewUser, fmt.Errorf("%w: %v", ErrInternal, err)
 	}
 
 	now := time.Now().UTC()
-	expiresAt := now.Add(time.Minute * otpExpirationMinutes)
+	expiresAt := now.Add(time.Minute * constants.OTPExpirationMinutes)
 
 	otp := &model.OTP{
 		Code:      otpCode,
@@ -102,6 +96,19 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 	return isNewUser, nil
 }
 
+func (s *AuthService) GetSession(ctx context.Context, email string) (*model.AuthSession, error) {
+	if !isValidEmail(email) {
+		return nil, ErrInvalidEmail
+	}
+
+	session, err := s.sessionRepo.Get(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return session, nil
+}
+
 func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 	if !isValidEmail(email) {
 		return ErrInvalidEmail
@@ -112,26 +119,34 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 		return ErrSessionNotFound
 	}
 
-	if session.ResendCount >= maxResendAttempts {
+	// 재전송 횟수 제한
+	if session.ResendCount >= constants.MaxResendAttempts-1 {
 		return ErrTooManyResends
 	}
 
+	now := time.Now().UTC()
+
+	// 첫 재발송이면 CreatedAt(첫 발송시간)기준으로 체크
+	var lastSentTime time.Time
 	if session.LastResendAt != nil {
-		waitTime := time.Duration(resendWaitSeconds) * time.Second
-		nextResendTime := session.LastResendAt.Add(waitTime)
-		if time.Now().UTC().Before(nextResendTime) {
-			return ErrTooEarlyResend
-		}
+		lastSentTime = *session.LastResendAt
+	} else if session.OTP != nil {
+		lastSentTime = session.OTP.CreatedAt
 	}
 
-	otpCode, err := generateOTP(otpLength)
+	waitTime := time.Duration(constants.ResendWaitSeconds) * time.Second
+	nextResendTime := lastSentTime.Add(waitTime)
+	if now.Before(nextResendTime) {
+		return ErrTooEarlyResend
+	}
+
+	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
 		s.logger.Printf("OTP 생성 실패: %v", err)
 		return fmt.Errorf("%w: %v", ErrInternal, err)
 	}
 
-	now := time.Now().UTC()
-	expiresAt := now.Add(time.Minute * otpExpirationMinutes)
+	expiresAt := now.Add(time.Minute * constants.OTPExpirationMinutes)
 
 	session.OTP = &model.OTP{
 		Code:      otpCode,
@@ -161,7 +176,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) 
 		return nil, ErrInvalidEmail
 	}
 
-	if code == "" || len(code) != otpLength {
+	if code == "" || len(code) != constants.OTPLength {
 		return nil, ErrInvalidOTP
 	}
 
@@ -204,6 +219,7 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) 
 			return nil, fmt.Errorf("%w: %v", ErrInternal, err)
 		}
 
+		s.emailService.SendWelcome(ctx, email)
 		s.logger.Printf("인증 완료, 유저 생성: 이메일=%s", email)
 	} else {
 		s.logger.Printf("인증 완료: 이메일=%s", email)
