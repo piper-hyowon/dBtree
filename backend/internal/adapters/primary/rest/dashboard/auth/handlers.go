@@ -3,10 +3,12 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
+	"github.com/piper-hyowon/dBtree/internal/constants"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 )
 
@@ -117,6 +119,7 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	var statusCode int
 	var message string
+	var retryAfter int
 
 	switch {
 	case errors.Is(err, core.ErrInvalidEmail):
@@ -125,9 +128,12 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	case errors.Is(err, core.ErrTooManyResends):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 전송 횟수 제한에 도달했습니다. 나중에 다시 시도해주세요."
+		// MaxResendAttempts에 도달한 경우 OTP 만료 시간 이후 새 세션 시작 가능
+		retryAfter = constants.OTPExpirationMinutes * 60
 	case errors.Is(err, core.ErrTooEarlyResend):
-		statusCode = http.StatusTooEarly
+		statusCode = http.StatusTooManyRequests
 		message = "OTP 재전송은 1분 후에 가능합니다."
+		retryAfter = constants.ResendWaitSeconds
 	case errors.Is(err, core.ErrInvalidOTP):
 		statusCode = http.StatusBadRequest
 		message = "유효하지 않은 인증 코드입니다."
@@ -147,6 +153,11 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 		h.logger.Printf("알 수 없는 오류: %v", err)
 	}
 
+	// Retry-After 헤더 추가
+	if retryAfter > 0 {
+		w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+	}
+
 	h.sendErrorResponse(w, statusCode, message)
 }
 
@@ -161,8 +172,13 @@ func (h *Handler) sendJSONResponse(w http.ResponseWriter, statusCode int, data i
 }
 
 func (h *Handler) sendErrorResponse(w http.ResponseWriter, statusCode int, message string) {
-	h.sendJSONResponse(w, statusCode, ErrorResponse{
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(w).Encode(ErrorResponse{
 		Success: false,
 		Error:   message,
-	})
+	}); err != nil {
+		h.logger.Printf("JSON 응답 인코딩 오류: %v", err)
+	}
 }
