@@ -60,12 +60,6 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	otpType := r.URL.Query().Get("type")
-	if otpType != "authentication" {
-		http.Error(w, "Invalid OTP type", http.StatusBadRequest)
-		return
-	}
-
 	var req SendOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.sendErrorResponse(w, http.StatusBadRequest, "잘못된 요청 형식")

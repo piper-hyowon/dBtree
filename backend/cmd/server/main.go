@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 
 	"github.com/joho/godotenv"
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
@@ -57,9 +58,17 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "dBtree")
 	})
+	mux.HandleFunc("/verify-otp", authHandler.VerifyOTP)
 
-	mux.HandleFunc("/auth/send-otp", authHandler.SendOTP) // 발송 or 재발송
-	mux.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP)
+	// 발송 or 재발송
+	mux.HandleFunc("/send-otp", func(w http.ResponseWriter, r *http.Request) {
+		otpType := r.URL.Query().Get("type")
+		if otpType == "authentication" {
+			authHandler.SendOTP(w, r)
+		} else {
+			http.Error(w, "Invalid OTP type", http.StatusBadRequest)
+		}
+	})
 
 	// TODO: 유저 조회 API 작업 후 제거
 	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
