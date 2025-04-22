@@ -70,6 +70,8 @@ func main() {
 		}
 	})
 
+	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
+
 	// TODO: 유저 조회 API 작업 후 제거
 	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		user := middleware.GetUserFromContext(r.Context())

@@ -13,6 +13,7 @@ import (
 type contextKey string
 
 const UserKey contextKey = "user"
+const TokenKey contextKey = "token"
 
 type AuthMiddleware struct {
 	authService *core.AuthService
@@ -49,6 +50,7 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		ctx := context.WithValue(r.Context(), UserKey, user)
+		ctx = context.WithValue(ctx, TokenKey, token)
 
 		next(w, r.WithContext(ctx))
 	}
@@ -60,4 +62,12 @@ func GetUserFromContext(ctx context.Context) *model.User {
 		return nil
 	}
 	return user
+}
+
+func GetTokenFromContext(ctx context.Context) string {
+	token, ok := ctx.Value(TokenKey).(string)
+	if !ok {
+		return ""
+	}
+	return token
 }

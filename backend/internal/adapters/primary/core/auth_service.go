@@ -244,6 +244,28 @@ func (s *AuthService) ValidateSession(ctx context.Context, token string) (*model
 	return user, nil
 }
 
+func (s *AuthService) Logout(ctx context.Context, token string) error {
+	if token == "" {
+		return errors.ErrInvalidToken
+	}
+
+	session, err := s.sessionRepo.GetByToken(ctx, token)
+	if err != nil {
+		return errors.ErrSessionNotFound
+	}
+
+	email := session.Email
+
+	err = s.sessionRepo.Delete(ctx, email)
+	if err != nil {
+		s.logger.Printf("세션 삭제 실패: %v", err)
+		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
+	}
+
+	s.logger.Printf("로그아웃 성공: 이메일=%s", email)
+	return nil
+}
+
 // 헬퍼
 func isValidEmail(email string) bool {
 	return email != "" && emailRegex.MatchString(email)

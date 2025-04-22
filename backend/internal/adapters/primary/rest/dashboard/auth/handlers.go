@@ -10,6 +10,7 @@ import (
 	appErrors "github.com/piper-hyowon/dBtree/internal/domain/errors"
 
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 	"github.com/piper-hyowon/dBtree/internal/constants"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 )
@@ -115,6 +116,30 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		User:      user,
 		Token:     token,
 		ExpiresIn: expiresIn,
+	})
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := middleware.GetTokenFromContext(r.Context())
+	if token == "" {
+		h.sendErrorResponse(w, http.StatusInternalServerError, "토큰 정보를 불러올 수 없습니다")
+		return
+	}
+
+	err := h.authService.Logout(r.Context(), token)
+	if err != nil {
+		h.handleAuthError(w, err)
+		return
+	}
+
+	h.sendJSONResponse(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "로그아웃 되었습니다",
 	})
 }
 
