@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -48,6 +50,7 @@ func main() {
 	)
 
 	authHandler := auth.NewHandler(authService, logger)
+	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -57,6 +60,22 @@ func main() {
 
 	mux.HandleFunc("/auth/send-otp", authHandler.SendOTP) // 발송 or 재발송
 	mux.HandleFunc("/auth/verify-otp", authHandler.VerifyOTP)
+
+	// TODO: 유저 조회 API 작업 후 제거
+	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		user := middleware.GetUserFromContext(r.Context())
+		if user == nil {
+			http.Error(w, "유저 인증 오류", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"id":         user.ID,
+			"email":      user.Email,
+			"created_at": user.CreatedAt,
+		})
+	}))
 
 	server := &http.Server{
 		Addr:         ":" + strconv.Itoa(appConfig.Server.Port),
