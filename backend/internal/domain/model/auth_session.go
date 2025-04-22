@@ -15,6 +15,8 @@ type AuthSession struct {
 	Email        string
 	Status       AuthSessionStatus
 	OTP          *OTP
+	Token        string
+	TokenExpiry  time.Time
 	ResendCount  int
 	LastResendAt *time.Time
 	CreatedAt    time.Time

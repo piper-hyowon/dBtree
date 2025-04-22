@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	appErrors "github.com/piper-hyowon/dBtree/internal/domain/errors"
+
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
 	"github.com/piper-hyowon/dBtree/internal/constants"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
@@ -122,28 +124,28 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	var retryAfter int
 
 	switch {
-	case errors.Is(err, core.ErrInvalidEmail):
+	case errors.Is(err, appErrors.ErrInvalidEmail):
 		statusCode = http.StatusBadRequest
 		message = "유효하지 않은 이메일 주소입니다."
-	case errors.Is(err, core.ErrTooManyResends):
+	case errors.Is(err, appErrors.ErrTooManyResends):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 전송 횟수 제한에 도달했습니다. 나중에 다시 시도해주세요."
 		// MaxResendAttempts에 도달한 경우 OTP 만료 시간 이후 새 세션 시작 가능
 		retryAfter = constants.OTPExpirationMinutes * 60
-	case errors.Is(err, core.ErrTooEarlyResend):
+	case errors.Is(err, appErrors.ErrTooEarlyResend):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 재전송은 1분 후에 가능합니다."
 		retryAfter = constants.ResendWaitSeconds
-	case errors.Is(err, core.ErrInvalidOTP):
+	case errors.Is(err, appErrors.ErrInvalidOTP):
 		statusCode = http.StatusBadRequest
 		message = "유효하지 않은 인증 코드입니다."
-	case errors.Is(err, core.ErrExpiredOTP):
+	case errors.Is(err, appErrors.ErrExpiredOTP):
 		statusCode = http.StatusBadRequest
 		message = "만료된 인증 코드입니다. 새 인증 코드를 요청해주세요."
-	case errors.Is(err, core.ErrSessionNotFound):
+	case errors.Is(err, appErrors.ErrSessionNotFound):
 		statusCode = http.StatusNotFound
 		message = "세션을 찾을 수 없습니다."
-	case errors.Is(err, core.ErrInternal):
+	case errors.Is(err, appErrors.ErrInternal):
 		statusCode = http.StatusInternalServerError
 		message = "내부 서버 오류"
 		h.logger.Printf("내부 오류: %v", err)

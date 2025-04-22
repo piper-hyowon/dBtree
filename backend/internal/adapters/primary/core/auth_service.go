@@ -3,30 +3,19 @@ package core
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"log"
 	"regexp"
 	"time"
 
 	"github.com/piper-hyowon/dBtree/internal/constants"
+	"github.com/piper-hyowon/dBtree/internal/domain/errors"
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 )
 
 var (
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-)
-
-// 에러 정의
-var (
-	ErrInvalidEmail    = errors.New("invalid email")
-	ErrTooManyResends  = errors.New("OTP 요청 횟수 초과, 잠시후 재시도")
-	ErrTooEarlyResend  = errors.New("OTP 재전송은 1분 후 가능")
-	ErrInvalidOTP      = errors.New("invalid OTP")
-	ErrExpiredOTP      = errors.New("expired OTP")
-	ErrSessionNotFound = errors.New("session 404")
-	ErrInternal        = errors.New("500")
 )
 
 type AuthService struct {
@@ -52,7 +41,7 @@ func NewAuthService(
 
 func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error) {
 	if !isValidEmail(email) {
-		return false, ErrInvalidEmail
+		return false, errors.ErrInvalidEmail
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, email)
@@ -61,7 +50,7 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
 		s.logger.Printf("OTP 생성 실패: %v", err)
-		return isNewUser, fmt.Errorf("%w: %v", ErrInternal, err)
+		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	now := time.Now().UTC()
@@ -84,12 +73,12 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
 		s.logger.Printf("세션 저장 실패: %v", err)
-		return isNewUser, fmt.Errorf("%w: %v", ErrInternal, err)
+		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
 		s.logger.Printf("OTP 이메일 발송 실패: %v", err)
-		return isNewUser, fmt.Errorf("%w: %v", ErrInternal, err)
+		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	s.logger.Printf("인증 시작: 이메일=%s, 신규사용자=%v", email, isNewUser)
@@ -98,7 +87,7 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 
 func (s *AuthService) GetSession(ctx context.Context, email string) (*model.AuthSession, error) {
 	if !isValidEmail(email) {
-		return nil, ErrInvalidEmail
+		return nil, errors.ErrInvalidEmail
 	}
 
 	session, err := s.sessionRepo.Get(ctx, email)
@@ -111,17 +100,17 @@ func (s *AuthService) GetSession(ctx context.Context, email string) (*model.Auth
 
 func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 	if !isValidEmail(email) {
-		return ErrInvalidEmail
+		return errors.ErrInvalidEmail
 	}
 
 	session, err := s.sessionRepo.Get(ctx, email)
 	if err != nil {
-		return ErrSessionNotFound
+		return errors.ErrSessionNotFound
 	}
 
 	// 재전송 횟수 제한
 	if session.ResendCount >= constants.MaxResendAttempts-1 {
-		return ErrTooManyResends
+		return errors.ErrTooManyResends
 	}
 
 	now := time.Now().UTC()
@@ -137,13 +126,13 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 	waitTime := time.Duration(constants.ResendWaitSeconds) * time.Second
 	nextResendTime := lastSentTime.Add(waitTime)
 	if now.Before(nextResendTime) {
-		return ErrTooEarlyResend
+		return errors.ErrTooEarlyResend
 	}
 
 	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
 		s.logger.Printf("OTP 생성 실패: %v", err)
-		return fmt.Errorf("%w: %v", ErrInternal, err)
+		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	expiresAt := now.Add(time.Minute * constants.OTPExpirationMinutes)
@@ -159,12 +148,12 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
 		s.logger.Printf("세션 업데이트 실패: %v", err)
-		return fmt.Errorf("%w: %v", ErrInternal, err)
+		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
 		s.logger.Printf("OTP 이메일 재발송 실패: %v", err)
-		return fmt.Errorf("%w: %v", ErrInternal, err)
+		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	s.logger.Printf("OTP 재전송: 이메일=%s, 횟수=%d", email, session.ResendCount)
@@ -173,28 +162,28 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 
 func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) (*model.User, error) {
 	if !isValidEmail(email) {
-		return nil, ErrInvalidEmail
+		return nil, errors.ErrInvalidEmail
 	}
 
 	if code == "" || len(code) != constants.OTPLength {
-		return nil, ErrInvalidOTP
+		return nil, errors.ErrInvalidOTP
 	}
 
 	session, err := s.sessionRepo.Get(ctx, email)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, errors.ErrSessionNotFound
 	}
 
 	if session.OTP == nil {
-		return nil, ErrInvalidOTP
+		return nil, errors.ErrInvalidOTP
 	}
 
 	if time.Now().UTC().After(session.OTP.ExpiresAt) {
-		return nil, ErrExpiredOTP
+		return nil, errors.ErrExpiredOTP
 	}
 
 	if session.OTP.Code != code {
-		return nil, ErrInvalidOTP
+		return nil, errors.ErrInvalidOTP
 	}
 
 	now := time.Now().UTC()
@@ -203,20 +192,20 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) 
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
 		s.logger.Printf("인증 완료 후 세션 업데이트 실패: %v", err)
-		return nil, fmt.Errorf("%w: %v", ErrInternal, err)
+		return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
 		if err := s.userRepo.Create(ctx, email); err != nil {
 			s.logger.Printf("유저 생성 실패: %v", err)
-			return nil, fmt.Errorf("%w: %v", ErrInternal, err)
+			return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		user, err = s.userRepo.FindByEmail(ctx, email)
 		if err != nil {
 			s.logger.Printf("신규 유저 조회 실패: %v", err)
-			return nil, fmt.Errorf("%w: %v", ErrInternal, err)
+			return nil, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		s.emailService.SendWelcome(ctx, email)
