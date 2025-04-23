@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -12,6 +13,12 @@ type Config struct {
 	OTP     OTPConfig
 	Session SessionConfig
 	SMTP    SMTPConfig
+	CORS    CORSConfig
+}
+
+type CORSConfig struct {
+	AllowedOrigins   []string
+	AllowCredentials bool
 }
 
 type ServerConfig struct {
@@ -61,6 +68,9 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 
+	corsAllowedOrigins := strings.Split(getEnvString("CORS_ALLOWED_ORIGINS", "http://localhost:3000"), ",")
+	corsAllowCredentials := getEnvString("CORS_ALLOW_CREDENTIALS", "true") == "true"
+
 	otpExpiration, err := getEnvInt("OTP_EXPIRATION_MINUTES", 10)
 	if err != nil {
 		return nil, err
@@ -106,6 +116,10 @@ func NewConfig() (*Config, error) {
 			ReadTimeoutSeconds:  readTimeout,
 			WriteTimeoutSeconds: writeTimeout,
 			IdleTimeoutSeconds:  idleTimeout,
+		},
+		CORS: CORSConfig{
+			AllowedOrigins:   corsAllowedOrigins,
+			AllowCredentials: corsAllowCredentials,
 		},
 		OTP: OTPConfig{
 			ExpirationMinutes: otpExpiration,

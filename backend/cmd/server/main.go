@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/auth"
 	"log"
 	"net/http"
 	"os"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
-	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/auth"
 	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/db/memory"
 	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/email"
 	"github.com/piper-hyowon/dBtree/internal/config"
@@ -37,6 +37,11 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
+	corsMiddleware := middleware.NewCORSMiddleware(middleware.CORSConfig{
+		AllowedOrigins:   appConfig.CORS.AllowedOrigins,
+		AllowCredentials: appConfig.CORS.AllowCredentials,
+	})
+
 	// 어댑터
 	sessionRepo := memory.NewSessionRepo()
 	userRepo := memory.NewUserRepo()
@@ -58,7 +63,14 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "dBtree")
 	})
-	mux.HandleFunc("/verify-otp", authHandler.VerifyOTP)
+	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
+		otpType := r.URL.Query().Get("type")
+		if otpType == "authentication" {
+			authHandler.VerifyOTP(w, r)
+		} else {
+			http.Error(w, "Invalid OTP type", http.StatusBadRequest)
+		}
+	})
 
 	// 발송 or 재발송
 	mux.HandleFunc("/send-otp", func(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +102,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + strconv.Itoa(appConfig.Server.Port),
-		Handler:      mux,
+		Handler:      corsMiddleware(mux),
 		ReadTimeout:  time.Duration(appConfig.Server.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout: time.Duration(appConfig.Server.WriteTimeoutSeconds) * time.Second,
 		IdleTimeout:  time.Duration(appConfig.Server.IdleTimeoutSeconds) * time.Second,

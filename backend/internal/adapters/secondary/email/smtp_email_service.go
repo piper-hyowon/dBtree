@@ -105,8 +105,8 @@ func createSMTPClient(addr, host, username, password string) (*smtp.Client, erro
 	}
 
 	if ok, _ := client.Extension("AUTH"); ok && username != "" && password != "" {
-		auth := smtp.PlainAuth("", username, password, host)
-		if err = client.Auth(auth); err != nil {
+		authApi := smtp.PlainAuth("", username, password, host)
+		if err = client.Auth(authApi); err != nil {
 			client.Close()
 			return nil, fmt.Errorf("SMTP 인증 실패: %w", err)
 		}
