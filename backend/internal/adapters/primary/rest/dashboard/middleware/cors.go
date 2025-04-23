@@ -29,6 +29,7 @@ func NewCORSMiddleware(config CORSConfig) func(http.Handler) http.Handler {
 				w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept")
+				w.Header().Set("Access-Control-Expose-Headers", "Retry-After")
 
 				if config.AllowCredentials {
 					w.Header().Set("Access-Control-Allow-Credentials", "true")
