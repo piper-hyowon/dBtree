@@ -10,3 +10,5 @@
 .env*
 backend/.env
 frontend/.env*
+frontend/.idea/
+.idea
