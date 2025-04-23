@@ -81,8 +81,7 @@ func main() {
 
 	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
 
-	// TODO: 유저 조회 API 작업 후 제거
-	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		user := middleware.GetUserFromContext(r.Context())
 		if user == nil {
 			http.Error(w, "유저 인증 오류", http.StatusInternalServerError)
@@ -91,9 +90,8 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id":         user.ID,
-			"email":      user.Email,
-			"created_at": user.CreatedAt,
+			"success": true,
+			"user":    user,
 		})
 	}))
 

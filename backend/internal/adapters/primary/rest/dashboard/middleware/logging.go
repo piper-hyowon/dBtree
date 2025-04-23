@@ -92,7 +92,7 @@ func LoggingMiddleware(logger *log.Logger, debugLogging bool) func(http.Handler)
 }
 
 func generateRequestID() string {
-	b := make([]byte, 4) // 8바이트에서 4바이트로 변경 - 더 짧고 가독성 좋은 ID
+	b := make([]byte, 4)
 	if _, err := rand.Read(b); err != nil {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
