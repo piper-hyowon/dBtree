@@ -37,6 +37,7 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
+	loggingMiddleware := middleware.LoggingMiddleware(logger, appConfig.DebugLogging)
 	corsMiddleware := middleware.NewCORSMiddleware(middleware.CORSConfig{
 		AllowedOrigins:   appConfig.CORS.AllowedOrigins,
 		AllowCredentials: appConfig.CORS.AllowCredentials,
@@ -59,10 +60,6 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "dBtree")
-	})
 	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
 		if otpType == "authentication" {
@@ -102,7 +99,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         ":" + strconv.Itoa(appConfig.Server.Port),
-		Handler:      corsMiddleware(mux),
+		Handler:      loggingMiddleware(corsMiddleware(mux)),
 		ReadTimeout:  time.Duration(appConfig.Server.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout: time.Duration(appConfig.Server.WriteTimeoutSeconds) * time.Second,
 		IdleTimeout:  time.Duration(appConfig.Server.IdleTimeoutSeconds) * time.Second,

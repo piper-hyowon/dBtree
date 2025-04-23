@@ -71,16 +71,13 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	session, err := h.authService.GetSession(r.Context(), req.Email)
 
 	var isNewUser bool
-	var responseMsg string
 
 	if err != nil || session == nil {
 		// 첫 OTP 발송
 		isNewUser, err = h.authService.StartAuth(r.Context(), req.Email)
-		responseMsg = "인증 코드가 이메일로 전송되었습니다."
 	} else {
 		// OTP 재발송
 		err = h.authService.ResendOTP(r.Context(), req.Email)
-		responseMsg = "인증 코드가 이메일로 재전송되었습니다."
 	}
 
 	if err != nil {
@@ -90,7 +87,6 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 
 	h.sendJSONResponse(w, http.StatusOK, SendOTPResponse{
 		Success:   true,
-		Message:   responseMsg,
 		IsNewUser: isNewUser,
 	})
 }
