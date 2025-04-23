@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	Server  ServerConfig
-	OTP     OTPConfig
-	Session SessionConfig
-	SMTP    SMTPConfig
-	CORS    CORSConfig
+	Server       ServerConfig
+	OTP          OTPConfig
+	Session      SessionConfig
+	SMTP         SMTPConfig
+	CORS         CORSConfig
+	DebugLogging bool
 }
 
 type CORSConfig struct {
@@ -48,6 +49,7 @@ type SMTPConfig struct {
 }
 
 func NewConfig() (*Config, error) {
+	debugLogging := getEnvString("DEBUG_LOGGING", "false") == "true"
 	port, err := getEnvInt("SERVER_PORT", 8080)
 	if err != nil {
 		return nil, err
@@ -137,6 +139,7 @@ func NewConfig() (*Config, error) {
 			Password: smtpPassword,
 			From:     smtpFrom,
 		},
+		DebugLogging: debugLogging,
 	}, nil
 }
 

@@ -50,7 +50,6 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 
 	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
-		s.logger.Printf("OTP 생성 실패: %v", err)
 		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
@@ -73,16 +72,13 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 	}
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
-		s.logger.Printf("세션 저장 실패: %v", err)
 		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
-		s.logger.Printf("OTP 이메일 발송 실패: %v", err)
 		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
-	s.logger.Printf("인증 시작: 이메일=%s, 신규사용자=%v", email, isNewUser)
 	return isNewUser, nil
 }
 
@@ -127,7 +123,6 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 
 	otpCode, err := generateOTP(constants.OTPLength)
 	if err != nil {
-		s.logger.Printf("OTP 생성 실패: %v", err)
 		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
@@ -143,16 +138,13 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 	session.UpdatedAt = now
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
-		s.logger.Printf("세션 업데이트 실패: %v", err)
 		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
-		s.logger.Printf("OTP 이메일 재발송 실패: %v", err)
 		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
-	s.logger.Printf("OTP 재전송: 이메일=%s, 횟수=%d", email, session.ResendCount)
 	return nil
 }
 
@@ -186,7 +178,6 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) 
 
 	token, err := crypto.GenerateRandomToken(32)
 	if err != nil {
-		s.logger.Printf("토큰 생성 실패: %v", err)
 		return nil, "", fmt.Errorf("%w", errors.ErrInternal)
 	}
 
@@ -196,29 +187,22 @@ func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) 
 	session.UpdatedAt = time.Now().UTC()
 
 	if err := s.sessionRepo.Save(ctx, session); err != nil {
-		s.logger.Printf("인증 완료 후 세션 업데이트 실패: %v", err)
 		return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	if err != nil || user == nil {
 		if err := s.userRepo.Create(ctx, email); err != nil {
-			s.logger.Printf("유저 생성 실패: %v", err)
 			return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		user, err = s.userRepo.FindByEmail(ctx, email)
 		if err != nil {
-			s.logger.Printf("신규 유저 조회 실패: %v", err)
 			return nil, "", fmt.Errorf("%w: %v", errors.ErrInternal, err)
 		}
 
 		s.emailService.SendWelcome(ctx, email)
-		s.logger.Printf("인증 완료, 유저 생성: 이메일=%s", email)
-	} else {
-		s.logger.Printf("인증 완료: 이메일=%s", email)
 	}
-
 	return user, token, nil
 }
 
@@ -258,11 +242,9 @@ func (s *AuthService) Logout(ctx context.Context, token string) error {
 
 	err = s.sessionRepo.Delete(ctx, email)
 	if err != nil {
-		s.logger.Printf("세션 삭제 실패: %v", err)
 		return fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
-	s.logger.Printf("로그아웃 성공: 이메일=%s", email)
 	return nil
 }
 

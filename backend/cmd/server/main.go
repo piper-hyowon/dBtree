@@ -37,6 +37,7 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
+	loggingMiddleware := middleware.LoggingMiddleware(logger, appConfig.DebugLogging)
 	corsMiddleware := middleware.NewCORSMiddleware(middleware.CORSConfig{
 		AllowedOrigins:   appConfig.CORS.AllowedOrigins,
 		AllowCredentials: appConfig.CORS.AllowCredentials,
@@ -59,10 +60,6 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "dBtree")
-	})
 	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
 		if otpType == "authentication" {
@@ -84,8 +81,7 @@ func main() {
 
 	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
 
-	// TODO: 유저 조회 API 작업 후 제거
-	mux.HandleFunc("/user/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		user := middleware.GetUserFromContext(r.Context())
 		if user == nil {
 			http.Error(w, "유저 인증 오류", http.StatusInternalServerError)
@@ -94,15 +90,14 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id":         user.ID,
-			"email":      user.Email,
-			"created_at": user.CreatedAt,
+			"success": true,
+			"user":    user,
 		})
 	}))
 
 	server := &http.Server{
 		Addr:         ":" + strconv.Itoa(appConfig.Server.Port),
-		Handler:      corsMiddleware(mux),
+		Handler:      loggingMiddleware(corsMiddleware(mux)),
 		ReadTimeout:  time.Duration(appConfig.Server.ReadTimeoutSeconds) * time.Second,
 		WriteTimeout: time.Duration(appConfig.Server.WriteTimeoutSeconds) * time.Second,
 		IdleTimeout:  time.Duration(appConfig.Server.IdleTimeoutSeconds) * time.Second,
