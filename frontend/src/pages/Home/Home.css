@@ -190,7 +190,7 @@
 
 .input-group {
     width: 100%;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .email-input {
@@ -398,4 +398,62 @@
         font-size: 1rem;
         padding: 0.7rem 1rem;
     }
+}
+
+
+.welcome-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: var(--background-alt);
+    border-radius: var(--border-radius-standard);
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.welcome-message .character {
+    width: 48px;
+    height: 48px;
+}
+
+.welcome-message p {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Home.css에 추가 */
+.resend-button {
+    background: none;
+    border: none;
+    color: #3498db;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: underline;
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+    transition: all 0.3s;
+}
+
+.resend-button:disabled {
+    text-decoration: none;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 4px;
+    padding: 8px;
 }

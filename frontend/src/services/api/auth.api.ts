@@ -36,10 +36,8 @@ export interface LogoutResponse {
 export const sendOTP = async (email: string): Promise<boolean> => {
     try {
         const response = await apiClient.post<SendOTPResponse>('/send-otp?type=authentication', {email});
-        console.log(response);
         return response.data.isNewUser;
     } catch (error) {
-        console.log("error: ", error)
         handleApiError(error);
         throw error;
     }

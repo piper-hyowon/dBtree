@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="white" opacity="0"/>
+  
+  <!-- RETURNING USER CHARACTER -->
+  <g transform="translate(100, 100)">
+    <!-- Database Body -->
+    <ellipse cx="0" cy="30" rx="45" ry="12" fill="#90CAF9" stroke="#2a7de1" stroke-width="2"/>
+    <path d="M-45 30 L-45 0 C-45 -15, -25 -25, 0 -25 C25 -25, 45 -15, 45 0 L45 30" fill="#BBDEFB" stroke="#2a7de1" stroke-width="2"/>
+    <ellipse cx="0" cy="0" rx="45" ry="12" fill="#E3F2FD" stroke="#2a7de1" stroke-width="2"/>
+    
+    <!-- Familiar/Confident Face -->
+    <circle cx="-15" cy="0" r="5" fill="#333"/>
+    <circle cx="15" cy="0" r="5" fill="#333"/>
+    <path d="M-15 15 Q0 20, 15 15" stroke="#333" stroke-width="3" fill="none"/>
+    
+    <!-- Cool sunglasses for returning user -->
+    <path d="M-22 -2 L-8 -2" stroke="#333" stroke-width="1.5" fill="none"/>
+    <path d="M8 -2 L22 -2" stroke="#333" stroke-width="1.5" fill="none"/>
+    <path d="M-15 -2 Q-15 3, -10 3 Q-5 3, -5 -2 Z" fill="#333"/>
+    <path d="M15 -2 Q15 3, 10 3 Q5 3, 5 -2 Z" fill="#333"/>
+    
+    <!-- Lemon Hat with experience badge -->
+    <ellipse cx="0" cy="-32" rx="25" ry="20" fill="#FFEB3B"/>
+    <ellipse cx="0" cy="-32" rx="20" ry="15" fill="#FFF59D"/>
+    <path d="M-5 -48 L5 -48 L5 -44 L0 -40 L-5 -44 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+    
+    <!-- Experience star -->
+    <g transform="translate(20, -30) scale(0.6)">
+      <path d="M0,-10 L2.4,-3.1 L9.5,-3.1 L3.6,1.2 L5.9,8.1 L0,3.8 L-5.9,8.1 L-3.6,1.2 L-9.5,-3.1 L-2.4,-3.1 Z" fill="#FFD700" stroke="#FF8F00" stroke-width="1"/>
+    </g>
+    
+    <!-- Thumbs up hand -->
+    <path d="M-40 5 Q-45 -5, -50 -15" stroke="#2a7de1" stroke-width="2" fill="none"/>
+    <path d="M-52 -20 Q-55 -20, -55 -17 L-55 -12 Q-55 -9, -52 -9 L-48 -9 Q-45 -9, -45 -12 L-45 -17 Q-45 -20, -48 -20 Z" fill="#BBDEFB" stroke="#2a7de1" stroke-width="1.5"/>
+    <rect x="-56" y="-17" width="5" height="8" rx="2" ry="2" fill="#BBDEFB" stroke="#2a7de1" stroke-width="1"/>
+    
+    <!-- Mail with checkmark -->
+    <path d="M40 0 Q45 -5, 50 0" stroke="#2a7de1" stroke-width="2" fill="none"/>
+    <g transform="translate(60, 0) scale(0.5)">
+      <rect x="-15" y="-10" width="30" height="20" rx="2" ry="2" fill="white" stroke="#333" stroke-width="1.5"/>
+      <path d="M-10 0 L-5 5 L10 -5" stroke="#4CAF50" stroke-width="2" fill="none"/>
+    </g>
+    
+    <!-- Text Below -->
+    <text x="0" y="60" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333">Welcome back!</text>
+    <text x="0" y="75" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#2a7de1">OTP sent to your email</text>
+  </g>
+</svg>

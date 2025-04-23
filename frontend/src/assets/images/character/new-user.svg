@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Background -->
+  <rect width="200" height="200" fill="white" opacity="0"/>
+  
+  <!-- NEW USER CHARACTER -->
+  <g transform="translate(100, 100)">
+    <!-- Database Body -->
+    <ellipse cx="0" cy="30" rx="45" ry="12" fill="#90CAF9" stroke="#2a7de1" stroke-width="2"/>
+    <path d="M-45 30 L-45 0 C-45 -15, -25 -25, 0 -25 C25 -25, 45 -15, 45 0 L45 30" fill="#BBDEFB" stroke="#2a7de1" stroke-width="2"/>
+    <ellipse cx="0" cy="0" rx="45" ry="12" fill="#E3F2FD" stroke="#2a7de1" stroke-width="2"/>
+    
+    <!-- Curious/Excited Face -->
+    <circle cx="-15" cy="0" r="5" fill="#333"/>
+    <circle cx="15" cy="0" r="5" fill="#333"/>
+    <path d="M-10 15 Q0 23, 10 15" stroke="#333" stroke-width="3" fill="none"/>
+    
+    <!-- Blush marks for new user excitement -->
+    <circle cx="-25" cy="5" r="5" fill="#FFCDD2" opacity="0.7"/>
+    <circle cx="25" cy="5" r="5" fill="#FFCDD2" opacity="0.7"/>
+    
+    <!-- Lemon Hat with "NEW" tag -->
+    <ellipse cx="0" cy="-32" rx="25" ry="20" fill="#FFEB3B"/>
+    <ellipse cx="0" cy="-32" rx="20" ry="15" fill="#FFF59D"/>
+    <path d="M-5 -48 L5 -48 L5 -44 L0 -40 L-5 -44 Z" fill="#4CAF50" stroke="#388E3C" stroke-width="1"/>
+    
+    <!-- NEW tag -->
+    <rect x="15" y="-55" width="30" height="15" rx="3" ry="3" fill="#FF5252"/>
+    <text x="30" y="-44" font-family="Arial, sans-serif" font-size="10" font-weight="bold" text-anchor="middle" fill="white">NEW</text>
+    
+    <!-- Waving arm -->
+    <path d="M-40 0 Q-50 -15, -60 -5" stroke="#2a7de1" stroke-width="2" fill="none"/>
+    
+    <!-- Mail icon in hand -->
+    <g transform="translate(-60, -5) scale(0.5)">
+      <rect x="-15" y="-10" width="30" height="20" rx="2" ry="2" fill="white" stroke="#333" stroke-width="1.5"/>
+      <path d="M-15 -10 L0 5 L15 -10" stroke="#333" stroke-width="1.5" fill="none"/>
+    </g>
+    
+    <!-- Smartphone in other hand -->
+    <path d="M40 0 Q50 -10, 60 0" stroke="#2a7de1" stroke-width="2" fill="none"/>
+    <rect x="53" y="-10" width="15" height="25" rx="2" ry="2" fill="#F5F5F5" stroke="#333" stroke-width="1"/>
+    <rect x="55" y="-5" width="11" height="15" rx="1" ry="1" fill="#E0E0E0"/>
+    
+    <!-- Text Below -->
+    <text x="0" y="60" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#333">Check your email</text>
+    <text x="0" y="75" font-family="Arial, sans-serif" font-size="10" text-anchor="middle" fill="#2a7de1">for your first OTP code!</text>
+  </g>
+</svg>

@@ -20,17 +20,45 @@ apiClient.interceptors.request.use(
     (error: AxiosError) => Promise.reject(error)
 );
 
-export const handleApiError = (error: unknown): void => {
-    if (axios.isAxiosError(error) && error.response) {
-        if (error.response.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/';
-        }
+apiClient.interceptors.response.use(
+    response => response,
+    (error: AxiosError) => {
+        if (error.response) {
+            const headers = error.response.headers;
 
-        if (error.response.status === 429 && error.response.headers['retry-after']) {
-            const retryAfter = parseInt(error.response.headers['retry-after'], 10);
-            console.log(`Retry after ${retryAfter} seconds`);
+            if (error.response.status === 429) {
+                const retryAfter = headers['retry-after'];
+
+                if (retryAfter) {
+                    const seconds = parseInt(retryAfter, 10);
+                    if (!isNaN(seconds)) {
+                        (error as any).retryAfter = seconds;
+                    }
+                }
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+export const handleApiError = (error: unknown): void => {
+    if (axios.isAxiosError(error)) {
+        if (error.response) {
+            if (error.response.status === 401) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/';
+            }
+
+            if (error.response.status === 429 && !('retryAfter' in error)) {
+                const retryAfter = error.response.headers['retry-after'];
+                if (retryAfter) {
+                    const seconds = parseInt(retryAfter, 10);
+                    if (!isNaN(seconds)) {
+                        (error as any).retryAfter = seconds;
+                    }
+                }
+            }
         }
     }
 };
