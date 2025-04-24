@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	"regexp"
 	"time"
 
 	"github.com/piper-hyowon/dBtree/internal/constants"
@@ -13,10 +12,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/domain/model"
 	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 	"github.com/piper-hyowon/dBtree/internal/utils/crypto"
-)
-
-var (
-	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 )
 
 type AuthService struct {
@@ -41,10 +36,6 @@ func NewAuthService(
 }
 
 func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error) {
-	if !isValidEmail(email) {
-		return false, errors.ErrInvalidEmail
-	}
-
 	user, err := s.userRepo.FindByEmail(ctx, email)
 	isNewUser := err != nil || user == nil
 
@@ -83,18 +74,10 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 }
 
 func (s *AuthService) GetSession(ctx context.Context, email string) (*model.AuthSession, error) {
-	if !isValidEmail(email) {
-		return nil, errors.ErrInvalidEmail
-	}
-
 	return s.sessionRepo.GetByEmail(ctx, email)
 }
 
 func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
-	if !isValidEmail(email) {
-		return errors.ErrInvalidEmail
-	}
-
 	session, err := s.sessionRepo.GetByEmail(ctx, email)
 	if err != nil {
 		return errors.ErrSessionNotFound
@@ -149,10 +132,6 @@ func (s *AuthService) ResendOTP(ctx context.Context, email string) error {
 }
 
 func (s *AuthService) VerifyOTP(ctx context.Context, email string, code string) (*model.User, string, error) {
-	if !isValidEmail(email) {
-		return nil, "", errors.ErrInvalidEmail
-	}
-
 	if code == "" || len(code) != constants.OTPLength {
 		return nil, "", errors.ErrInvalidOTP
 	}
@@ -246,11 +225,6 @@ func (s *AuthService) Logout(ctx context.Context, token string) error {
 	}
 
 	return nil
-}
-
-// 헬퍼
-func isValidEmail(email string) bool {
-	return email != "" && emailRegex.MatchString(email)
 }
 
 func generateOTP(length int) (string, error) {
