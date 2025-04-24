@@ -20,8 +20,6 @@ const OtpForm: React.FC<OtpFormProps> = ({
     const {verifyOtp, resendOtp} = useAuth();
 
     useEffect(() => {
-        console.log("Current countdown:", resendCountdown);
-
         let timer: NodeJS.Timeout | null = null;
 
         if (resendCountdown > 0) {
@@ -37,6 +35,7 @@ const OtpForm: React.FC<OtpFormProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
 
         if (!otp || otp.length !== OTP_LENGTH) {
             setError(`유효한 ${OTP_LENGTH}자리 인증 코드를 입력해주세요.`);
@@ -47,20 +46,24 @@ const OtpForm: React.FC<OtpFormProps> = ({
         setError(null);
 
         try {
-            const success = await verifyOtp(otp);
-            if (success) {
+            const response = await verifyOtp(otp);
+            if (response.success) {
                 onAuthSuccess();
             } else {
-                setError("잘못된 인증 코드입니다. 다시 확인해주세요.");
+                setError(response.message || "잘못된 인증 코드입니다. 다시 확인해주세요.");
+                setOtp("");
             }
-        } catch (err) {
-            setError("인증 과정에서 오류가 발생했습니다.");
+        } catch (err: any) {
+            setError(err?.message || "인증 과정에서 오류가 발생했습니다.");
+            setOtp("");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleResendOtp = async () => {
+    const handleResendOtp = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
         if (resendCountdown > 0) return;
 
         setIsLoading(true);
@@ -71,6 +74,7 @@ const OtpForm: React.FC<OtpFormProps> = ({
 
             if (result.success) {
                 setError("인증 코드가 재전송되었습니다.");
+                setOtp("");
             } else {
                 // 재시도 시간이 있는 경우
                 if (result.retryAfter && result.retryAfter > 0) {
@@ -80,6 +84,8 @@ const OtpForm: React.FC<OtpFormProps> = ({
                     setError(result.message || "재전송에 실패했습니다.");
                 }
             }
+        } catch (err) {
+            setError("재전송 과정에서 오류가 발생했습니다.");
         } finally {
             setIsLoading(false);
         }
@@ -113,6 +119,7 @@ const OtpForm: React.FC<OtpFormProps> = ({
                 className="cta-button modal-button"
                 type="submit"
                 disabled={isLoading || otp.length !== OTP_LENGTH}
+                onClick={(e) => e.stopPropagation()}
             >
                 {isLoading ? "인증 중..." : "인증하기"}
             </button>

@@ -158,13 +158,13 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 		message = "OTP 재전송은 1분 후에 가능합니다."
 		retryAfter = constants.ResendWaitSeconds
 	case errors.Is(err, appErrors.ErrInvalidOTP):
-		statusCode = http.StatusBadRequest
+		statusCode = http.StatusUnauthorized
 		message = "유효하지 않은 인증 코드입니다."
 	case errors.Is(err, appErrors.ErrExpiredOTP):
-		statusCode = http.StatusBadRequest
+		statusCode = http.StatusUnauthorized
 		message = "만료된 인증 코드입니다. 새 인증 코드를 요청해주세요."
 	case errors.Is(err, appErrors.ErrSessionNotFound):
-		statusCode = http.StatusNotFound
+		statusCode = http.StatusUnauthorized
 		message = "세션을 찾을 수 없습니다."
 	case errors.Is(err, appErrors.ErrInternal):
 		statusCode = http.StatusInternalServerError
