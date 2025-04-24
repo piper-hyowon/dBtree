@@ -2,6 +2,7 @@ package errors
 
 import (
 	"errors"
+	"fmt"
 )
 
 var (
@@ -16,3 +17,7 @@ var (
 	ErrInvalidToken    = errors.New("invalid token")
 	ErrUnauthorized    = errors.New("unauthorized")
 )
+
+func NewEmailValidationError(msg string) error {
+	return fmt.Errorf("%w: %s", ErrInvalidEmail, msg)
+}

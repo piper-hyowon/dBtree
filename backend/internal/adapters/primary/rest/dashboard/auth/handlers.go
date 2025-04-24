@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/email"
+	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 	"log"
 	"net/http"
 
@@ -16,14 +18,22 @@ import (
 )
 
 type Handler struct {
-	authService *core.AuthService
-	logger      *log.Logger
+	authService    *core.AuthService
+	logger         *log.Logger
+	emailValidator secondary.Validator
 }
 
 func NewHandler(authService *core.AuthService, logger *log.Logger) *Handler {
+	validator, err := email.NewValidator()
+	if err != nil {
+		logger.Printf("일회용 이메일 검사 생략: %v, 정규식, MX만 검사가능", err)
+		validator = &email.Validator{} // 빈 검증기
+	}
+
 	return &Handler{
-		authService: authService,
-		logger:      logger,
+		authService:    authService,
+		logger:         logger,
+		emailValidator: validator,
 	}
 }
 
@@ -67,6 +77,12 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	valid, err := h.emailValidator.Validate(req.Email, true)
+	if !valid {
+		h.sendErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// 세션 존재 여부 확인하여 첫 요청인지 재요청인지 판단
 	session, err := h.authService.GetSession(r.Context(), req.Email)
 
@@ -95,6 +111,12 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.sendErrorResponse(w, http.StatusBadRequest, "잘못된 요청 형식")
+		return
+	}
+
+	valid, err := h.emailValidator.Validate(req.Email, false)
+	if !valid {
+		h.sendErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
