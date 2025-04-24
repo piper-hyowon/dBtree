@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
@@ -47,6 +49,9 @@ func main() {
 	sessionRepo := memory.NewSessionRepo()
 	userRepo := memory.NewUserRepo()
 	emailService := setupEmailService(appConfig.SMTP)
+
+	// 리소스 정리
+	defer emailService.Close()
 
 	// 인증 서비스
 	authService := core.NewAuthService(
@@ -104,6 +109,22 @@ func main() {
 	}
 
 	go cleanupSessions(sessionRepo, appConfig.Session.CleanupIntervalHours, logger)
+
+	// 서버 우아한 종료
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-stopChan
+		log.Println("종료 신호 수신, 서버를 종료합니다...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			log.Fatalf("서버 종료 중 오류: %v", err)
+		}
+	}()
 
 	startServer(server)
 }
