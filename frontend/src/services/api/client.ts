@@ -44,10 +44,13 @@ apiClient.interceptors.response.use(
 export const handleApiError = (error: unknown): void => {
     if (axios.isAxiosError(error)) {
         if (error.response) {
-            if (error.response.status === 401) {
+            const isAuthFlow = error.config?.url?.includes('/verify-otp') ||
+                error.config?.url?.includes('/send-otp');
+
+            if (error.response.status === 401 && !isAuthFlow) {
+                console.log("401 Error - Session expired, logging out");
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = '/';
             }
 
             if (error.response.status === 429 && !('retryAfter' in error)) {

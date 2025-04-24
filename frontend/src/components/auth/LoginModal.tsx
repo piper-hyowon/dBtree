@@ -17,6 +17,11 @@ const LoginModal: React.FC<LoginModalProps> = ({onClose}) => {
 
     const setErrorMessage = (message: string | null) => {
         setError(message);
+        if (message) {
+            setTimeout(() => {
+                setError(null);
+            }, 5000);
+        }
     };
 
     const handleOtpRequested = async (emailValue: string, newUser: boolean) => {
@@ -29,8 +34,14 @@ const LoginModal: React.FC<LoginModalProps> = ({onClose}) => {
         onClose();
     };
 
+    const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
+
     return (
-        <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-overlay" onClick={handleOverlayClick}>
             <div className="login-modal" onClick={(e) => e.stopPropagation()}>
                 <button className="close-button" onClick={onClose}>
                     ×
