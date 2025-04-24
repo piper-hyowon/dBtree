@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/smtp"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/piper-hyowon/dBtree/internal/constants"
 )
@@ -23,7 +23,11 @@ type SMTPEmailService struct {
 	config   SMTPConfig
 	client   *smtp.Client
 	clientMu sync.Mutex
+	lastUsed time.Time
 }
+
+// 클라이언트 만료 시간 (30분)
+const clientExpirationTime = 30 * time.Minute
 
 func NewSMTPEmailService(config SMTPConfig) *SMTPEmailService {
 	return &SMTPEmailService{
@@ -35,13 +39,20 @@ func (s *SMTPEmailService) getClient() (*smtp.Client, error) {
 	s.clientMu.Lock()
 	defer s.clientMu.Unlock()
 
-	if s.client == nil {
-		if err := s.client.Noop(); err == nil {
-			return s.client, nil
+	now := time.Now()
+
+	// 기존 클라이언트 있는지. 연결 만료 확인
+	if s.client != nil {
+		if now.Sub(s.lastUsed) < clientExpirationTime {
+			if err := s.client.Noop(); err == nil {
+				s.lastUsed = now
+				return s.client, nil
+			}
 		}
 		s.client.Close()
-
+		s.client = nil
 	}
+
 	addr := fmt.Sprintf("%s:%d", s.config.Host, s.config.Port)
 	client, err := createSMTPClient(addr, s.config.Host, s.config.Username, s.config.Password)
 	if err != nil {
@@ -49,27 +60,8 @@ func (s *SMTPEmailService) getClient() (*smtp.Client, error) {
 	}
 
 	s.client = client
+	s.lastUsed = now
 	return client, nil
-}
-
-func (s *SMTPEmailService) SendOTP(ctx context.Context, to string, otpCode string) error {
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-
-	to = strings.TrimSpace(to)
-	if to == "" {
-		return fmt.Errorf("수신자 이메일 주소가 비어 있습니다")
-	}
-
-	if otpCode == "" {
-		return fmt.Errorf("OTP 코드가 비어 있습니다")
-	}
-
-	subject := "dBtree 인증 코드"
-	htmlBody := fmt.Sprintf(emailTemplateOTP, otpCode, constants.OTPExpirationMinutes)
-
-	return s.sendEmail(ctx, to, subject, htmlBody)
 }
 
 func createSMTPClient(addr, host, username, password string) (*smtp.Client, error) {
@@ -80,7 +72,7 @@ func createSMTPClient(addr, host, username, password string) (*smtp.Client, erro
 
 	client, err := smtp.Dial(addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("SMTP 서버 연결 실패: %w", err)
 	}
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
@@ -101,14 +93,24 @@ func createSMTPClient(addr, host, username, password string) (*smtp.Client, erro
 	return client, nil
 }
 
-func (s *SMTPEmailService) SendWelcome(ctx context.Context, to string) error {
+func (s *SMTPEmailService) SendOTP(ctx context.Context, to string, otpCode string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
 
-	to = strings.TrimSpace(to)
-	if to == "" {
-		return fmt.Errorf("수신자 이메일 주소가 비어 있습니다")
+	if otpCode == "" {
+		return fmt.Errorf("OTP 코드가 비어 있습니다")
+	}
+
+	subject := "dBtree 인증 코드"
+	htmlBody := fmt.Sprintf(emailTemplateOTP, otpCode, constants.OTPExpirationMinutes)
+
+	return s.sendEmail(ctx, to, subject, htmlBody)
+}
+
+func (s *SMTPEmailService) SendWelcome(ctx context.Context, to string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
 
 	subject := "dBtree에 오신 것을 환영합니다"
@@ -117,6 +119,24 @@ func (s *SMTPEmailService) SendWelcome(ctx context.Context, to string) error {
 }
 
 func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, htmlBody string) error {
+	client, err := s.getClient()
+	if err != nil {
+		return fmt.Errorf("SMTP 클라이언트 가져오기 실패: %w", err)
+	}
+
+	if err := client.Reset(); err != nil {
+		s.clientMu.Lock()
+		s.client.Close()
+		s.client = nil
+		s.clientMu.Unlock()
+
+		// 재연결
+		client, err = s.getClient()
+		if err != nil {
+			return fmt.Errorf("SMTP 클라이언트 재연결 실패: %w", err)
+		}
+	}
+
 	message := "From: " + s.config.From + "\r\n" +
 		"To: " + to + "\r\n" +
 		"Subject: " + subject + "\r\n" +
@@ -124,11 +144,6 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, htmlBody 
 		"Content-Type: text/html; charset=UTF-8\r\n" +
 		"\r\n" +
 		htmlBody
-
-	client, err := s.getClient()
-	if err != nil {
-		return fmt.Errorf("SMTP 클라이언트 생성 실패: %w", err)
-	}
 
 	if err := client.Mail(s.config.From); err != nil {
 		s.clientMu.Lock()
@@ -157,6 +172,10 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, htmlBody 
 	if err := w.Close(); err != nil {
 		return fmt.Errorf("데이터 쓰기 Close 실패: %w", err)
 	}
+
+	s.clientMu.Lock()
+	s.lastUsed = time.Now()
+	s.clientMu.Unlock()
 
 	return nil
 }

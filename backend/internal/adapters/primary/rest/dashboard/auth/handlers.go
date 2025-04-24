@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/email"
+	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 	"log"
 	"net/http"
 
@@ -19,7 +20,7 @@ import (
 type Handler struct {
 	authService    *core.AuthService
 	logger         *log.Logger
-	emailValidator *email.Validator
+	emailValidator secondary.Validator
 }
 
 func NewHandler(authService *core.AuthService, logger *log.Logger) *Handler {
@@ -76,9 +77,9 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid, errMsg := h.emailValidator.Validate(req.Email, true)
+	valid, err := h.emailValidator.Validate(req.Email, true)
 	if !valid {
-		h.sendErrorResponse(w, http.StatusBadRequest, errMsg)
+		h.sendErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -113,9 +114,9 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid, errMsg := h.emailValidator.Validate(req.Email, false)
+	valid, err := h.emailValidator.Validate(req.Email, false)
 	if !valid {
-		h.sendErrorResponse(w, http.StatusBadRequest, errMsg)
+		h.sendErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 

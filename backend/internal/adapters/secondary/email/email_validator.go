@@ -2,6 +2,7 @@ package email
 
 import (
 	"bufio"
+	"errors"
 	"net"
 	"os"
 	"regexp"
@@ -102,15 +103,15 @@ func (v *Validator) AddToBlacklist(domain string) error {
 	return err
 }
 
-func (v *Validator) Validate(email string, checkMX bool) (bool, string) {
+func (v *Validator) Validate(email string, checkMX bool) (bool, error) {
 	// 1차: 정규식 검사
 	if !v.IsValidBasicFormat(email) {
-		return false, "이메일 형식이 올바르지 않습니다"
+		return false, errors.New("이메일 형식이 올바르지 않습니다")
 	}
 
 	// 2단계: 일회용 이메일 검사
 	if v.IsDisposable(email) {
-		return false, "일회용 이메일은 사용할 수 없습니다"
+		return false, errors.New("일회용 이메일은 사용할 수 없습니다")
 	}
 
 	// 3단계: MX 레코드 검사
@@ -123,9 +124,9 @@ func (v *Validator) Validate(email string, checkMX bool) (bool, string) {
 				_ = v.AddToBlacklist(domain)
 			}
 
-			return false, "유효하지 않은 이메일 도메인입니다"
+			return false, errors.New("유효하지 않은 이메일 도메인입니다")
 		}
 	}
 
-	return true, ""
+	return true, nil
 }
