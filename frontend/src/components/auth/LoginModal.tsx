@@ -32,6 +32,7 @@ const LoginModal: React.FC<LoginModalProps> = ({onClose}) => {
 
     const handleAuthSuccess = () => {
         onClose();
+        window.location.href = "/";
     };
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
