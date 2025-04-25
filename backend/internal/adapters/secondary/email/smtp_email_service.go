@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/domain/errors"
 	"net/smtp"
+	"strings"
 	"sync"
 	"time"
 
@@ -156,6 +158,11 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, htmlBody 
 	}
 
 	if err := client.Rcpt(to); err != nil {
+		if strings.Contains(err.Error(), "Invalid recipient") ||
+			strings.Contains(err.Error(), "not verified") ||
+			strings.Contains(err.Error(), "Message rejected") {
+			return fmt.Errorf("%w: %v", errors.ErrInvalidEmail, err)
+		}
 		return fmt.Errorf("수신자 설정 실패: %w", err)
 	}
 
@@ -170,6 +177,11 @@ func (s *SMTPEmailService) sendEmail(ctx context.Context, to, subject, htmlBody 
 	}
 
 	if err := w.Close(); err != nil {
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "Email address is not verified") ||
+			strings.Contains(errorMsg, "Message rejected") {
+			return fmt.Errorf("%w: %v", errors.ErrInvalidEmail, err)
+		}
 		return fmt.Errorf("데이터 쓰기 Close 실패: %w", err)
 	}
 

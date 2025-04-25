@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ErrInvalidEmail    = errors.New("invalid email")
+	ErrInvalidEmail    = errors.New("유효하지 않은 이메일 주소")
 	ErrTooManyResends  = errors.New("OTP 요청 횟수 초과, 잠시후 재시도")
 	ErrTooEarlyResend  = errors.New("OTP 재전송은 1분 후 가능")
 	ErrInvalidOTP      = errors.New("invalid OTP")

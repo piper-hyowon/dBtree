@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/piper-hyowon/dBtree/internal/constants"
@@ -67,6 +68,9 @@ func (s *AuthService) StartAuth(ctx context.Context, email string) (bool, error)
 	}
 
 	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
+		if isEmailDeliveryError(err) {
+			return isNewUser, fmt.Errorf("%w: %v", errors.ErrInvalidEmail, err)
+		}
 		return isNewUser, fmt.Errorf("%w: %v", errors.ErrInternal, err)
 	}
 
@@ -243,4 +247,29 @@ func generateOTP(length int) (string, error) {
 	}
 
 	return string(result), nil
+}
+
+func isEmailDeliveryError(err error) bool {
+	errorMsg := err.Error()
+
+	emailErrorKeywords := []string{
+		"Email address is not verified",
+		"Message rejected",
+		"Invalid recipient",
+		"Unknown user",
+		"Mailbox unavailable",
+		"No such user",
+		"Recipient address rejected",
+		"not exist",
+		"does not exist",
+		"Invalid email",
+	}
+
+	for _, keyword := range emailErrorKeywords {
+		if strings.Contains(errorMsg, keyword) {
+			return true
+		}
+	}
+
+	return false
 }
