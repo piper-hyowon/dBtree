@@ -11,7 +11,7 @@ import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const {isLoggedIn} = useAuth();
+    const {isLoggedIn, logout} = useAuth();
 
     const handleStartNow = () => {
         setShowLoginModal(true);
@@ -25,6 +25,12 @@ const Home: React.FC = () => {
         window.location.href = "/dashboard";
     };
 
+    const handleLogout = async () => {
+        await logout();
+        window.location.href = "/";
+    };
+
+
     return (
         <div className="home-container">
             <header className="header">
@@ -35,12 +41,20 @@ const Home: React.FC = () => {
                     <ToggleThemeButton/>
 
                     {isLoggedIn ? (
-                        <button
-                            className="login-button"
-                            onClick={handleNavigateToDashboard}
-                        >
-                            대시보드
-                        </button>
+                        <>
+                            <button
+                                className="login-button"
+                                onClick={handleNavigateToDashboard}
+                            >
+                                대시보드
+                            </button>
+                            <button
+                                className="logout-button"
+                                onClick={handleLogout}
+                            >
+                                로그아웃
+                            </button>
+                        </>
                     ) : (
                         <button className="login-button" onClick={handleStartNow}>
                             로그인
