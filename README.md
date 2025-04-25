@@ -1,2 +1,13 @@
-# dBtree
-Harvest fruits, grow databases! A playful K8s-based DBaaS for MongoDB and Redis 🌳🍎🔄
+### 🌳 dBtree: 🍋 레몬나무에서 무료 데이터베이스를 수확하세요! 
+: 개발자를 위한 재미있는 데이터베이스 서비스
+
+개발 기간: 2025-02 ~ (현재)
+
+[기술 스택]
+**Go** / **Kubernetes** / **React**
+
+- 선착순 레몬 수확
+  - DB 퀴즈를 풀고 이어서 레몬을 빠르게 잡으면 수확 완료
+- 정해진 시간에 레몬이 다시 자라남
+- 수확한 레몬은 크레딧으로 사용 - DB 인스턴스 무료 생성
+  
