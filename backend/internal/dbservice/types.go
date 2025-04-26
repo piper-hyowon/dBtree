@@ -53,6 +53,7 @@ type DatabaseInstance struct {
 	ID              string
 	Name            string
 	Type            DatabaseType
+	Mode            DatabaseMode
 	Version         string
 	Status          InstanceStatus
 	StatusReason    string
@@ -88,4 +89,12 @@ const (
 	StatusBackingUp    InstanceStatus = "backing_up"
 	StatusRestoring    InstanceStatus = "restoring"
 	StatusUpgrading    InstanceStatus = "upgrading"
+)
+
+type DatabaseMode string
+
+const (
+	Basic   DatabaseMode = "basic"
+	Replica DatabaseMode = "replica"
+	Cluster DatabaseMode = "cluster"
 )
