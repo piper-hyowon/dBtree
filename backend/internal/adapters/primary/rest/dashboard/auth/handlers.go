@@ -4,17 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
+	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
 	"github.com/piper-hyowon/dBtree/internal/adapters/secondary/email"
+	"github.com/piper-hyowon/dBtree/internal/constants"
+	appErrors "github.com/piper-hyowon/dBtree/internal/domain/errors"
+	"github.com/piper-hyowon/dBtree/internal/domain/model"
 	"github.com/piper-hyowon/dBtree/internal/domain/ports/secondary"
 	"log"
 	"net/http"
-
-	appErrors "github.com/piper-hyowon/dBtree/internal/domain/errors"
-
-	"github.com/piper-hyowon/dBtree/internal/adapters/primary/core"
-	"github.com/piper-hyowon/dBtree/internal/adapters/primary/rest/dashboard/middleware"
-	"github.com/piper-hyowon/dBtree/internal/constants"
-	"github.com/piper-hyowon/dBtree/internal/domain/model"
+	"runtime/debug"
 )
 
 type Handler struct {
@@ -192,10 +191,12 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 		statusCode = http.StatusInternalServerError
 		message = "내부 서버 오류"
 		h.logger.Printf("내부 오류: %v", err)
+		h.logger.Printf("%s", debug.Stack())
 	default:
 		statusCode = http.StatusInternalServerError
 		message = "알 수 없는 오류"
 		h.logger.Printf("알 수 없는 오류: %v", err)
+		h.logger.Printf("%s", debug.Stack())
 	}
 
 	// Retry-After 헤더 추가
