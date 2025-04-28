@@ -1,12 +1,12 @@
-package http
+package rest
 
 import (
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	"github.com/piper-hyowon/dBtree/internal/common"
 	"github.com/piper-hyowon/dBtree/internal/email"
-	httputil "github.com/piper-hyowon/dBtree/internal/platform/http"
-	"github.com/piper-hyowon/dBtree/internal/platform/middleware"
+	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
+	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"github.com/piper-hyowon/dBtree/internal/user"
 	"log"
 	"net/http"
@@ -43,22 +43,13 @@ type VerifyOTPRequest struct {
 }
 
 type SendOTPResponse struct {
-	Success   bool   `json:"success"`
-	Message   string `json:"message,omitempty"`
-	IsNewUser bool   `json:"isNewUser"`
+	IsNewUser bool `json:"isNewUser"`
 }
 
 type VerifyOTPResponse struct {
-	Success   bool       `json:"success"`
-	Message   string     `json:"message,omitempty"`
 	User      *user.User `json:"user,omitempty"`
 	Token     string     `json:"token,omitempty"`
 	ExpiresIn int64      `json:"expires_in,omitempty"`
-}
-
-type ErrorResponse struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error"`
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
@@ -93,10 +84,7 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.SendJSONResponse(w, http.StatusOK, SendOTPResponse{
-		Success:   true,
-		IsNewUser: isNewUser,
-	})
+	httputil.SendSuccessResponse(w, http.StatusOK, SendOTPResponse{isNewUser})
 }
 
 func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
@@ -121,9 +109,7 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 
 	expiresIn := int64(common.TokenExpirationHours * 3600)
 
-	httputil.SendJSONResponse(w, http.StatusOK, VerifyOTPResponse{
-		Success:   true,
-		Message:   "인증이 완료되었습니다.",
+	httputil.SendSuccessResponse(w, http.StatusOK, VerifyOTPResponse{
 		User:      u,
 		Token:     token,
 		ExpiresIn: expiresIn,
@@ -149,7 +135,6 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	httputil.SendJSONResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
-		"message": "로그아웃 되었습니다",
 	})
 }
 

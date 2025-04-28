@@ -1,4 +1,4 @@
-package http
+package rest
 
 import (
 	"encoding/json"
@@ -14,7 +14,6 @@ type ErrorResponse struct {
 
 type SuccessResponse struct {
 	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
@@ -41,13 +40,12 @@ func SendErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	}
 }
 
-func SendSuccessResponse(w http.ResponseWriter, statusCode int, message string, data interface{}) {
+func SendSuccessResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(SuccessResponse{
 		Success: true,
-		Message: message,
 		Data:    data,
 	}); err != nil {
 		log.Printf("JSON 성공 응답 인코딩 오류: %v", err)
