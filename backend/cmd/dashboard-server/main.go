@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
-	"github.com/piper-hyowon/dBtree/internal/auth/store"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
@@ -37,8 +36,6 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
-	sessionStore := store.NewSessionStore()
-	userStore := user.NewStore()
 	emailService, err := email.NewSmtpService(appConfig.SMTP)
 	if err != nil {
 		logger.Fatalf("이메일 서비스 초기화 실패: %v", err)
@@ -50,6 +47,9 @@ func main() {
 		logger.Fatalf("PostgreSQL 초기화 실패: %v", err)
 	}
 	defer pgClient.Close()
+
+	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,
