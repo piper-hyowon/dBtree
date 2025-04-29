@@ -140,7 +140,7 @@ func NewConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	connMaxLifetimeMinutes, err := getEnvInt("POSTGRES_MAX_OPEN_CONNS", 0)
+	connMaxLifetimeMinutes, err := getEnvInt("POSTGRES_CONN_MAX_LIFETIME", 0)
 	if err != nil {
 		return nil, err
 	}
