@@ -9,12 +9,14 @@ import (
 )
 
 type Config struct {
-	Server       ServerConfig
-	OTP          OTPConfig
-	Session      SessionConfig
-	SMTP         SMTPConfig
-	CORS         CORSConfig
-	DebugLogging bool
+	Server              ServerConfig
+	OTP                 OTPConfig
+	Session             SessionConfig
+	SMTP                SMTPConfig
+	CORS                CORSConfig
+	DebugLogging        bool
+	Postgres            PostgresConfig
+	UseLocalMemoryStore bool
 }
 
 type CORSConfig struct {
@@ -48,8 +50,21 @@ type SMTPConfig struct {
 	From     string
 }
 
+type PostgresConfig struct {
+	Host                   string
+	Port                   int
+	Username               string
+	Password               string
+	DBName                 string
+	SSLMode                string
+	MaxOpenConns           int
+	MaxIdleConns           int
+	ConnMaxLifetimeMinutes int
+}
+
 func NewConfig() (*Config, error) {
 	debugLogging := getEnvString("DEBUG_LOGGING", "false") == "true"
+	useLocalMemoryStore := getEnvString("USE_LOCAL_MEMORY_STORE", "true") == "true"
 	port, err := getEnvInt("SERVER_PORT", 8080)
 	if err != nil {
 		return nil, err
@@ -108,6 +123,28 @@ func NewConfig() (*Config, error) {
 	smtpPassword := getEnvString("SMTP_PASSWORD", "")
 	smtpFrom := getEnvString("SMTP_FROM", "")
 
+	postgresHost := getEnvString("POSTGRES_HOST", "localhost")
+	postgresPort, err := getEnvInt("POSTGRES_PORT", 5432)
+	if err != nil {
+		return nil, err
+	}
+	postgresUser := getEnvString("POSTGRES_USER", "")
+	postgresPassword := getEnvString("POSTGRES_PASSWORD", "")
+	postgresDBName := getEnvString("POSTGRES_DB", "postgres")
+	postgresSSLMode := getEnvString("POSTGRES_SSL_MODE", "disable")
+	maxOpenConns, err := getEnvInt("POSTGRES_MAX_OPEN_CONNS", 30)
+	if err != nil {
+		return nil, err
+	}
+	maxIdleConns, err := getEnvInt("POSTGRES_MAX_IDLE_CONNS", 20)
+	if err != nil {
+		return nil, err
+	}
+	connMaxLifetimeMinutes, err := getEnvInt("POSTGRES_CONN_MAX_LIFETIME", 0)
+	if err != nil {
+		return nil, err
+	}
+
 	if smtpHost == "" || smtpUsername == "" || smtpPassword == "" {
 		return nil, fmt.Errorf("SMTP 환경 변수 확인")
 	}
@@ -139,7 +176,19 @@ func NewConfig() (*Config, error) {
 			Password: smtpPassword,
 			From:     smtpFrom,
 		},
-		DebugLogging: debugLogging,
+		DebugLogging:        debugLogging,
+		UseLocalMemoryStore: useLocalMemoryStore,
+		Postgres: PostgresConfig{
+			Host:                   postgresHost,
+			Port:                   postgresPort,
+			Username:               postgresUser,
+			Password:               postgresPassword,
+			DBName:                 postgresDBName,
+			SSLMode:                postgresSSLMode,
+			MaxOpenConns:           maxOpenConns,
+			MaxIdleConns:           maxIdleConns,
+			ConnMaxLifetimeMinutes: connMaxLifetimeMinutes,
+		},
 	}, nil
 }
 

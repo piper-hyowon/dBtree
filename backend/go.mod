@@ -8,6 +8,7 @@ require (
 )
 
 require (
+	github.com/lib/pq v1.10.9 // indirect
 	k8s.io/api v0.33.0 // indirect
 	k8s.io/apimachinery v0.33.0 // indirect
 	k8s.io/client-go v0.33.0 // indirect

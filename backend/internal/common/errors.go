@@ -16,6 +16,8 @@ var (
 	ErrTokenExpired    = errors.New("token expired")
 	ErrInvalidToken    = errors.New("invalid token")
 	ErrUnauthorized    = errors.New("unauthorized")
+
+	ErrUserNotFound = errors.New("user not found")
 )
 
 func NewEmailValidationError(msg string) error {

@@ -1,9 +1,8 @@
-package store
+package auth
 
 import (
 	"context"
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/auth"
 	"github.com/piper-hyowon/dBtree/internal/common"
 	"sync"
 	"time"
@@ -11,20 +10,20 @@ import (
 
 type memorySessionStore struct {
 	mu              sync.RWMutex
-	sessionsByEmail map[string]*auth.Session
+	sessionsByEmail map[string]*Session
 	sessionsByToken map[string]string
 }
 
-var _ auth.SessionStore = (*memorySessionStore)(nil)
+var _ SessionStore = (*memorySessionStore)(nil)
 
-func NewSessionStore() auth.SessionStore {
+func NewMemoryStore() SessionStore {
 	return &memorySessionStore{
-		sessionsByEmail: make(map[string]*auth.Session),
+		sessionsByEmail: make(map[string]*Session),
 		sessionsByToken: make(map[string]string),
 	}
 }
 
-func (r *memorySessionStore) Save(_ context.Context, session *auth.Session) error {
+func (r *memorySessionStore) Save(_ context.Context, session *Session) error {
 	if session == nil || session.Email == "" {
 		return fmt.Errorf("invalid session: %w", common.ErrInternal)
 	}
@@ -47,7 +46,7 @@ func (r *memorySessionStore) Save(_ context.Context, session *auth.Session) erro
 	return nil
 }
 
-func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*auth.Session, error) {
+func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*Session, error) {
 	if email == "" {
 		return nil, fmt.Errorf("empty email: %w", common.ErrInternal)
 	}
@@ -63,7 +62,7 @@ func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*auth.
 	return session, nil
 }
 
-func (r *memorySessionStore) GetByToken(_ context.Context, token string) (*auth.Session, error) {
+func (r *memorySessionStore) GetByToken(_ context.Context, token string) (*Session, error) {
 	if token == "" {
 		return nil, fmt.Errorf("empty token: %w", common.ErrInvalidToken)
 	}

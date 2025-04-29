@@ -5,11 +5,11 @@ import (
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
-	"github.com/piper-hyowon/dBtree/internal/auth/store"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	middleware "github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
+	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
 	"github.com/piper-hyowon/dBtree/internal/user"
 	"os/signal"
 	"syscall"
@@ -36,10 +36,20 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
-	sessionStore := store.NewSessionStore()
-	userStore := user.NewStore()
-	emailService := setupEmailService(appConfig.SMTP)
+	emailService, err := email.NewSmtpService(appConfig.SMTP)
+	if err != nil {
+		logger.Fatalf("이메일 서비스 초기화 실패: %v", err)
+	}
 	defer emailService.Close()
+
+	pgClient, err := postgres.NewClient(appConfig.Postgres, logger)
+	if err != nil {
+		logger.Fatalf("PostgreSQL 초기화 실패: %v", err)
+	}
+	defer pgClient.Close()
+
+	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,
@@ -104,16 +114,6 @@ func main() {
 	if err := server.GracefulShutdown(5 * time.Second); err != nil {
 		logger.Fatalf("서버 종료 중 오류: %v", err)
 	}
-}
-
-func setupEmailService(smtpConfig config.SMTPConfig) email.Service {
-	return email.NewSmtpService(email.SMTPConfig{
-		Host:     smtpConfig.Host,
-		Port:     smtpConfig.Port,
-		Username: smtpConfig.Username,
-		Password: smtpConfig.Password,
-		From:     smtpConfig.From,
-	})
 }
 
 func cleanupSessions(sessionStore auth.SessionStore, intervalHours int, logger *log.Logger) {

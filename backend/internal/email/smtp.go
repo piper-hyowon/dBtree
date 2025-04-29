@@ -5,22 +5,15 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/common"
+	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"net/smtp"
 	"strings"
 	"sync"
 	"time"
 )
 
-type SMTPConfig struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	From     string
-}
-
 type smtpService struct {
-	config   SMTPConfig
+	config   config.SMTPConfig
 	client   *smtp.Client
 	clientMu sync.Mutex
 	lastUsed time.Time
@@ -31,10 +24,10 @@ var _ Service = (*smtpService)(nil)
 // 클라이언트 만료 시간 (30분)
 const clientExpirationTime = 30 * time.Minute
 
-func NewSmtpService(config SMTPConfig) Service {
+func NewSmtpService(config config.SMTPConfig) (Service, error) {
 	return &smtpService{
 		config: config,
-	}
+	}, nil
 }
 
 func (s *smtpService) getClient() (*smtp.Client, error) {
