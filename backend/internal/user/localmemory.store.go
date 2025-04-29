@@ -83,3 +83,22 @@ func (r *store) Create(_ context.Context, email string) error {
 
 	return nil
 }
+
+func (r *store) Delete(_ context.Context, id string) error {
+	if id == "" {
+		return errors.New("empty ID")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	user, exists := r.usersByID[id]
+	if !exists {
+		return common.ErrUserNotFound
+	}
+
+	delete(r.usersByID, id)
+	delete(r.usersByEmail, user.Email)
+
+	return nil
+}

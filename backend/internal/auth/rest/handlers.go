@@ -162,6 +162,9 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	case errors.Is(err, common.ErrExpiredOTP):
 		statusCode = http.StatusUnauthorized
 		message = "만료된 인증 코드입니다. 새 인증 코드를 요청해주세요."
+	case errors.Is(err, common.ErrSessionAlreadyVerified):
+		statusCode = http.StatusBadRequest
+		message = "이미 인증이 완료된 세션입니다"
 	case errors.Is(err, common.ErrSessionNotFound):
 		statusCode = http.StatusUnauthorized
 		message = "세션을 찾을 수 없습니다."

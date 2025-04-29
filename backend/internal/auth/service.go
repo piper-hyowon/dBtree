@@ -144,6 +144,41 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 		return nil, "", common.ErrSessionNotFound
 	}
 
+	// 이미 인증된 세션 -> 기존 토큰 반환
+	if session.Status == Verified {
+		// 토큰이 만료시 재인증 요구
+		now := time.Now().UTC()
+		if session.TokenExpiresAt.Before(now) {
+			return nil, "", common.ErrSessionExpired
+		}
+
+		if session.OTP != nil {
+			// 이미 인증된 OTP 로 중복 인증 시도
+			if session.OTP.Code == code && !now.After(session.OTP.ExpiresAt) {
+				// OTP를 재사용 방지
+				session.OTP = nil
+				session.UpdatedAt = now
+
+				if err := s.sessionStore.Save(ctx, session); err != nil {
+					return nil, "", fmt.Errorf("%w: %v", common.ErrInternal, err)
+				}
+
+				// 기존 토큰 반환
+				u, err := s.userStore.FindByEmail(ctx, email)
+				if err != nil {
+					return nil, "", fmt.Errorf("%w: %v", common.ErrInternal, err)
+				}
+				return u, session.Token, nil
+			}
+
+			// OTP 불일치 or 만료
+			return nil, "", common.ErrInvalidOTP
+		}
+
+		return nil, "", common.ErrSessionAlreadyVerified
+
+	}
+
 	if session.OTP == nil {
 		return nil, "", common.ErrInvalidOTP
 	}
@@ -155,6 +190,7 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	}
 
 	if session.OTP.Code != code {
+		// TODO: 실패 횟수 기록 -> 유저 블락 처리?
 		return nil, "", common.ErrInvalidOTP
 	}
 
@@ -166,7 +202,8 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	session.Token = token
 	session.TokenExpiresAt = now.Add(time.Hour * common.TokenExpirationHours)
 	session.Status = Verified
-	session.UpdatedAt = time.Now().UTC()
+	session.UpdatedAt = now
+	session.OTP = nil
 
 	if err := s.sessionStore.Save(ctx, session); err != nil {
 		return nil, "", fmt.Errorf("%w: %v", common.ErrInternal, err)

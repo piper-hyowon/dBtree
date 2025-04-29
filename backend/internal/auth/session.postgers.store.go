@@ -31,14 +31,18 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *Session) error
 		return fmt.Errorf("세션 확인 실패: %w", err)
 	}
 
-	var otpCode, otpCreatedAt, otpExpiresAt sql.NullString
-	var tokenExpiresAt sql.NullTime
+	var otpCode sql.NullString
+	var tokenExpiresAt, otpCreatedAt, otpExpiresAt sql.NullTime
 	var lastResendAt sql.NullTime
 
 	if session.OTP != nil {
 		otpCode = sql.NullString{String: session.OTP.Code, Valid: true}
-		otpCreatedAt = sql.NullString{String: session.OTP.CreatedAt.Format(time.RFC3339), Valid: true}
-		otpExpiresAt = sql.NullString{String: session.OTP.ExpiresAt.Format(time.RFC3339), Valid: true}
+		otpCreatedAt = sql.NullTime{Time: session.OTP.CreatedAt, Valid: true}
+		otpExpiresAt = sql.NullTime{Time: session.OTP.ExpiresAt, Valid: true}
+	} else {
+		otpCode = sql.NullString{Valid: false}
+		otpCreatedAt = sql.NullTime{Valid: false}
+		otpExpiresAt = sql.NullTime{Valid: false}
 	}
 
 	if !session.TokenExpiresAt.IsZero() {
