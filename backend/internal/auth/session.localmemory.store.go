@@ -3,8 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"sync"
 	"time"
 )
@@ -26,7 +26,7 @@ func NewMemoryStore() auth.SessionStore {
 
 func (r *memorySessionStore) Save(_ context.Context, session *auth.Session) error {
 	if session == nil || session.Email == "" {
-		return fmt.Errorf("invalid session: %w", common.ErrInternal)
+		return fmt.Errorf("invalid session: %w", core.ErrInternal)
 	}
 
 	r.mu.Lock()
@@ -49,7 +49,7 @@ func (r *memorySessionStore) Save(_ context.Context, session *auth.Session) erro
 
 func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*auth.Session, error) {
 	if email == "" {
-		return nil, fmt.Errorf("empty email: %w", common.ErrInternal)
+		return nil, fmt.Errorf("empty email: %w", core.ErrInternal)
 	}
 
 	r.mu.RLock()
@@ -57,7 +57,7 @@ func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*auth.
 
 	session, exists := r.sessionsByEmail[email]
 	if !exists {
-		return nil, common.ErrSessionNotFound
+		return nil, core.ErrSessionNotFound
 	}
 
 	return session, nil
@@ -65,7 +65,7 @@ func (r *memorySessionStore) GetByEmail(_ context.Context, email string) (*auth.
 
 func (r *memorySessionStore) GetByToken(_ context.Context, token string) (*auth.Session, error) {
 	if token == "" {
-		return nil, fmt.Errorf("empty token: %w", common.ErrInvalidToken)
+		return nil, fmt.Errorf("empty token: %w", core.ErrInvalidToken)
 	}
 
 	r.mu.RLock()
@@ -73,19 +73,19 @@ func (r *memorySessionStore) GetByToken(_ context.Context, token string) (*auth.
 
 	email, exists := r.sessionsByToken[token]
 	if !exists {
-		return nil, common.ErrSessionNotFound
+		return nil, core.ErrSessionNotFound
 	}
 
 	session, exists := r.sessionsByEmail[email]
 	if !exists {
 		// 토큰은 있으나 세션이 없음 - 정리 필요
-		return nil, common.ErrSessionNotFound
+		return nil, core.ErrSessionNotFound
 	}
 
 	// 토큰 만료 확인
 	now := time.Now().UTC()
 	if session.TokenExpiresAt.Before(now) {
-		return nil, common.ErrTokenExpired
+		return nil, core.ErrTokenExpired
 	}
 
 	return session, nil
@@ -93,7 +93,7 @@ func (r *memorySessionStore) GetByToken(_ context.Context, token string) (*auth.
 
 func (r *memorySessionStore) Delete(_ context.Context, email string) error {
 	if email == "" {
-		return fmt.Errorf("empty email: %w", common.ErrInternal)
+		return fmt.Errorf("empty email: %w", core.ErrInternal)
 	}
 
 	r.mu.Lock()
@@ -101,7 +101,7 @@ func (r *memorySessionStore) Delete(_ context.Context, email string) error {
 
 	session, exists := r.sessionsByEmail[email]
 	if !exists {
-		return common.ErrSessionNotFound
+		return core.ErrSessionNotFound
 	}
 
 	if session.Token != "" {

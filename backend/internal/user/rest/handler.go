@@ -1,7 +1,7 @@
 package rest
 
 import (
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"log"
@@ -10,7 +10,7 @@ import (
 
 type Handler struct {
 	userService user.Service
-	logger      *log.Logger // TODO: common.Logger 인터페이스 정의해서 사용
+	logger      *log.Logger // TODO: core.Logger 인터페이스 정의해서 사용
 }
 
 func NewHandler(userService user.Service, logger *log.Logger) *Handler {

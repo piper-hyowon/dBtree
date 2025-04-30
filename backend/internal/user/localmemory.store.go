@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"sync"
 	"time"
 )
@@ -35,7 +35,7 @@ func (r *store) FindByEmail(_ context.Context, email string) (*user.User, error)
 
 	u, exists := r.usersByEmail[email]
 	if !exists {
-		return nil, common.ErrUserNotFound
+		return nil, core.ErrUserNotFound
 	}
 
 	return u, nil
@@ -51,7 +51,7 @@ func (r *store) FindById(_ context.Context, id string) (*user.User, error) {
 
 	u, exists := r.usersByID[id]
 	if !exists {
-		return nil, common.ErrUserNotFound
+		return nil, core.ErrUserNotFound
 	}
 
 	return u, nil
@@ -95,7 +95,7 @@ func (r *store) Delete(_ context.Context, id string) error {
 
 	u, exists := r.usersByID[id]
 	if !exists {
-		return common.ErrUserNotFound
+		return core.ErrUserNotFound
 	}
 
 	delete(r.usersByID, id)

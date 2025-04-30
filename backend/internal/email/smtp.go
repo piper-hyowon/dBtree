@@ -7,15 +7,15 @@ import (
 	"embed"
 	"encoding/base64"
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/common/email"
+	"github.com/piper-hyowon/dBtree/internal/core/email"
 	"math/rand"
 	"net/smtp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 )
 
@@ -429,7 +429,7 @@ func (s *service) sendEmailContent(client *smtp.Client, to string, messageData [
 		if strings.Contains(err.Error(), "Invalid recipient") ||
 			strings.Contains(err.Error(), "not verified") ||
 			strings.Contains(err.Error(), "Message rejected") {
-			return fmt.Errorf("%w: %v", common.ErrInvalidEmail, err)
+			return fmt.Errorf("%w: %v", core.ErrInvalidEmail, err)
 		}
 		return fmt.Errorf("수신자 설정 실패: %w", err)
 	}
@@ -448,7 +448,7 @@ func (s *service) sendEmailContent(client *smtp.Client, to string, messageData [
 		errorMsg := err.Error()
 		if strings.Contains(errorMsg, "Email address is not verified") ||
 			strings.Contains(errorMsg, "Message rejected") {
-			return fmt.Errorf("%w: %v", common.ErrInvalidEmail, err)
+			return fmt.Errorf("%w: %v", core.ErrInvalidEmail, err)
 		}
 		return fmt.Errorf("데이터 쓰기 Close 실패: %w", err)
 	}

@@ -2,9 +2,9 @@ package rest
 
 import (
 	"errors"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/auth"
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/auth"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
@@ -15,7 +15,7 @@ import (
 
 type Handler struct {
 	authService    auth.Service
-	logger         *log.Logger // TODO: common.Logger 인터페이스 정의해서 사용
+	logger         *log.Logger // TODO: core.Logger 인터페이스 정의해서 사용
 	emailValidator email.Validator
 }
 
@@ -144,31 +144,31 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	var retryAfter int
 
 	switch {
-	case errors.Is(err, common.ErrInvalidEmail):
+	case errors.Is(err, core.ErrInvalidEmail):
 		statusCode = http.StatusBadRequest
 		message = "유효하지 않은 이메일 주소입니다."
-	case errors.Is(err, common.ErrTooManyResends):
+	case errors.Is(err, core.ErrTooManyResends):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 전송 횟수 제한에 도달했습니다. 나중에 다시 시도해주세요."
 		// MaxResendAttempts에 도달한 경우 OTP 만료 시간 이후 새 세션 시작 가능
 		retryAfter = auth.OTPExpirationMinutes * 60
-	case errors.Is(err, common.ErrTooEarlyResend):
+	case errors.Is(err, core.ErrTooEarlyResend):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 재전송은 1분 후에 가능합니다."
 		retryAfter = auth.ResendWaitSeconds
-	case errors.Is(err, common.ErrInvalidOTP):
+	case errors.Is(err, core.ErrInvalidOTP):
 		statusCode = http.StatusUnauthorized
 		message = "유효하지 않은 인증 코드입니다."
-	case errors.Is(err, common.ErrExpiredOTP):
+	case errors.Is(err, core.ErrExpiredOTP):
 		statusCode = http.StatusUnauthorized
 		message = "만료된 인증 코드입니다. 새 인증 코드를 요청해주세요."
-	case errors.Is(err, common.ErrSessionAlreadyVerified):
+	case errors.Is(err, core.ErrSessionAlreadyVerified):
 		statusCode = http.StatusBadRequest
 		message = "이미 인증이 완료된 세션입니다"
-	case errors.Is(err, common.ErrSessionNotFound):
+	case errors.Is(err, core.ErrSessionNotFound):
 		statusCode = http.StatusUnauthorized
 		message = "세션을 찾을 수 없습니다."
-	case errors.Is(err, common.ErrInternal):
+	case errors.Is(err, core.ErrInternal):
 		statusCode = http.StatusInternalServerError
 		message = "내부 서버 오류"
 		h.logger.Printf("내부 오류: %v", err)

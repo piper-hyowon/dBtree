@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
-	commonauth "github.com/piper-hyowon/dBtree/internal/common/auth"
+	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
 
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	"github.com/piper-hyowon/dBtree/internal/email"
@@ -130,7 +130,7 @@ func main() {
 	}
 }
 
-func cleanupSessions(sessionStore commonauth.SessionStore, intervalHours int, logger *log.Logger) {
+func cleanupSessions(sessionStore coreauth.SessionStore, intervalHours int, logger *log.Logger) {
 	ticker := time.NewTicker(time.Duration(intervalHours) * time.Hour)
 	defer ticker.Stop()
 

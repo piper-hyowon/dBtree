@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 )
 
 type Service interface {

@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/email"
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/email"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"log"
 )
@@ -32,7 +32,7 @@ func NewService(
 
 func (s *service) Delete(ctx context.Context, userID string) error {
 	if userID == "" {
-		return common.ErrInvalidToken
+		return core.ErrInvalidToken
 	}
 
 	// 세션 1시간마다 정리되므로 세션 삭제 생략 (config.SessionConfig.CleanupIntervalHours)
@@ -40,7 +40,7 @@ func (s *service) Delete(ctx context.Context, userID string) error {
 	// 유저 테이블에서 소프트 딜리트
 	err := s.userStore.Delete(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("%w: %v", common.ErrInternal, err)
+		return fmt.Errorf("%w: %v", core.ErrInternal, err)
 	}
 
 	// 탈퇴 이메일 발송

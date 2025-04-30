@@ -2,7 +2,7 @@ package auth
 
 import (
 	"database/sql"
-	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/core/auth"
 )
 
 func NewSessionStore(useLocalMemoryStore bool, db *sql.DB) auth.SessionStore {

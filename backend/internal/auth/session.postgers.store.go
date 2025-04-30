@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"time"
 )
 
@@ -24,7 +24,7 @@ func NewPostgresStore(db *sql.DB) auth.SessionStore {
 
 func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) error {
 	if session == nil || session.Email == "" {
-		return fmt.Errorf("invalid session: %w", common.ErrInternal)
+		return fmt.Errorf("invalid session: %w", core.ErrInternal)
 	}
 
 	exists, err := s.sessionExists(ctx, session.Email)
@@ -115,7 +115,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 
 func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*auth.Session, error) {
 	if email == "" {
-		return nil, fmt.Errorf("empty email: %w", common.ErrInternal)
+		return nil, fmt.Errorf("empty email: %w", core.ErrInternal)
 	}
 
 	query := `
@@ -152,7 +152,7 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, common.ErrSessionNotFound
+			return nil, core.ErrSessionNotFound
 		}
 		return nil, fmt.Errorf("세션 조회 실패: %w", err)
 	}
@@ -195,7 +195,7 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 
 func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*auth.Session, error) {
 	if token == "" {
-		return nil, fmt.Errorf("empty token: %w", common.ErrInvalidToken)
+		return nil, fmt.Errorf("empty token: %w", core.ErrInvalidToken)
 	}
 
 	query := `
@@ -210,7 +210,7 @@ func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*a
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, common.ErrSessionNotFound
+			return nil, core.ErrSessionNotFound
 		}
 		return nil, fmt.Errorf("토큰으로 세션 조회 실패: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*a
 
 func (s *PostgresSessionStore) Delete(ctx context.Context, email string) error {
 	if email == "" {
-		return fmt.Errorf("empty email: %w", common.ErrInternal)
+		return fmt.Errorf("empty email: %w", core.ErrInternal)
 	}
 
 	query := `DELETE FROM sessions WHERE email = $1`
@@ -236,7 +236,7 @@ func (s *PostgresSessionStore) Delete(ctx context.Context, email string) error {
 	}
 
 	if rowsAffected == 0 {
-		return common.ErrSessionNotFound
+		return core.ErrSessionNotFound
 	}
 
 	return nil

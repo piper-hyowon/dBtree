@@ -2,7 +2,7 @@ package email
 
 import (
 	"bufio"
-	"github.com/piper-hyowon/dBtree/internal/common"
+	"github.com/piper-hyowon/dBtree/internal/core"
 	"net"
 	"os"
 	"regexp"
@@ -116,12 +116,12 @@ func (v *validator) AddToBlacklist(domain string) error {
 func (v *validator) Validate(email string, checkMX bool) (bool, error) {
 	// 1차: 정규식 검사
 	if !v.IsValidBasicFormat(email) {
-		return false, common.NewEmailValidationError(" 이메일 형식이 올바르지 않습니다")
+		return false, core.NewEmailValidationError(" 이메일 형식이 올바르지 않습니다")
 	}
 
 	// 2단계: 일회용 이메일 검사
 	if v.IsDisposable(email) {
-		return false, common.NewEmailValidationError("일회용 이메일은 사용할 수 없습니다")
+		return false, core.NewEmailValidationError("일회용 이메일은 사용할 수 없습니다")
 
 	}
 
@@ -135,7 +135,7 @@ func (v *validator) Validate(email string, checkMX bool) (bool, error) {
 				_ = v.AddToBlacklist(domain)
 			}
 
-			return false, common.NewEmailValidationError("유효하지 않은 이메일 도메인입니다")
+			return false, core.NewEmailValidationError("유효하지 않은 이메일 도메인입니다")
 		}
 	}
 

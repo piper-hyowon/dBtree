@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	commoncontext "github.com/piper-hyowon/dBtree/internal/common/context"
+	corecontext "github.com/piper-hyowon/dBtree/internal/core/context"
 )
 
 type responseRecorder struct {
@@ -37,7 +37,7 @@ func LoggingMiddleware(logger *log.Logger, debugLogging bool) func(http.Handler)
 
 			// 요청 ID 생성
 			requestID := generateRequestID()
-			ctx := context.WithValue(r.Context(), commoncontext.RequestIDKey, requestID)
+			ctx := context.WithValue(r.Context(), corecontext.RequestIDKey, requestID)
 			r = r.WithContext(ctx)
 
 			recorder := &responseRecorder{
@@ -100,7 +100,7 @@ func generateRequestID() string {
 }
 
 func GetRequestIDFromContext(ctx context.Context) string {
-	id, ok := ctx.Value(commoncontext.RequestIDKey).(string)
+	id, ok := ctx.Value(corecontext.RequestIDKey).(string)
 	if !ok {
 		return "unknown"
 	}

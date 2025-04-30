@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/common/user"
+	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"time"
 )
 
@@ -42,7 +42,7 @@ func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.Us
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, common.ErrUserNotFound
+			return nil, core.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, er
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, common.ErrUserNotFound
+			return nil, core.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (s *PostgresStore) Delete(ctx context.Context, id string) error {
 	err = tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id = $1 AND is_deleted = FALSE`, id).Scan(&email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return common.ErrUserNotFound
+			return core.ErrUserNotFound
 		}
 		return err
 	}
