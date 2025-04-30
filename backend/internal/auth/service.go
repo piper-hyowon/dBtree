@@ -5,8 +5,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/common"
-	"github.com/piper-hyowon/dBtree/internal/email"
-	"github.com/piper-hyowon/dBtree/internal/user"
+	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/common/email"
+	"github.com/piper-hyowon/dBtree/internal/common/user"
 	"log"
 	"strings"
 	"time"
@@ -14,31 +15,22 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/utils/crypto"
 )
 
-type Service interface {
-	StartAuth(ctx context.Context, email string) (isNewUser bool, err error)
-	GetSession(ctx context.Context, email string) (*Session, error)
-	ResendOTP(ctx context.Context, email string) error
-	VerifyOTP(ctx context.Context, email string, code string) (*user.User, string, error) // token 반환 추가
-	ValidateSession(ctx context.Context, token string) (*user.User, error)
-	Logout(ctx context.Context, token string) error
-}
-
 type service struct {
-	sessionStore SessionStore
+	sessionStore auth.SessionStore
 	emailService email.Service
 	userStore    user.Store
 	logger       *log.Logger
 }
 
 // 컴파일 타임에 인터페이스 구현 체크
-var _ Service = (*service)(nil)
+var _ auth.Service = (*service)(nil)
 
 func NewService(
-	sessionStore SessionStore,
+	sessionStore auth.SessionStore,
 	emailService email.Service,
 	userStore user.Store,
 	logger *log.Logger,
-) Service {
+) auth.Service {
 	return &service{
 		sessionStore: sessionStore,
 		emailService: emailService,
@@ -51,20 +43,20 @@ func (s *service) StartAuth(ctx context.Context, email string) (bool, error) {
 	u, err := s.userStore.FindByEmail(ctx, email)
 	isNewUser := err != nil || u == nil
 
-	otpCode, err := generateOTP(common.OTPLength)
+	otpCode, err := generateOTP(auth.OTPLength)
 
 	if err != nil {
 		return isNewUser, fmt.Errorf("%w: %v", common.ErrInternal, err)
 	}
 
-	otp := NewOTP(email, otpCode, common.OTPExpirationMinutes)
+	otp := auth.NewOTP(email, otpCode, auth.OTPExpirationMinutes)
 
 	session, err := s.sessionStore.GetByEmail(ctx, email)
 	if err != nil {
-		session = NewSession(email, otp)
+		session = auth.NewSession(email, otp)
 	} else {
 		session.OTP = otp
-		session.Status = Pending
+		session.Status = auth.Pending
 		session.UpdatedAt = time.Now().UTC()
 	}
 
@@ -82,7 +74,7 @@ func (s *service) StartAuth(ctx context.Context, email string) (bool, error) {
 	return isNewUser, nil
 }
 
-func (s *service) GetSession(ctx context.Context, email string) (*Session, error) {
+func (s *service) GetSession(ctx context.Context, email string) (*auth.Session, error) {
 	return s.sessionStore.GetByEmail(ctx, email)
 }
 
@@ -93,7 +85,7 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 	}
 
 	// 재전송 횟수 제한
-	if session.ResendCount >= common.MaxResendAttempts-1 {
+	if session.ResendCount >= auth.MaxResendAttempts-1 {
 		return common.ErrTooManyResends
 	}
 
@@ -107,18 +99,18 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 		lastSentTime = session.OTP.CreatedAt
 	}
 
-	waitTime := time.Duration(common.ResendWaitSeconds) * time.Second
+	waitTime := time.Duration(auth.ResendWaitSeconds) * time.Second
 	nextResendTime := lastSentTime.Add(waitTime)
 	if now.Before(nextResendTime) {
 		return common.ErrTooEarlyResend
 	}
 
-	otpCode, err := generateOTP(common.OTPLength)
+	otpCode, err := generateOTP(auth.OTPLength)
 	if err != nil {
 		return fmt.Errorf("%w: %v", common.ErrInternal, err)
 	}
 
-	session.OTP = NewOTP(email, otpCode, common.OTPExpirationMinutes)
+	session.OTP = auth.NewOTP(email, otpCode, auth.OTPExpirationMinutes)
 	session.ResendCount++
 	session.LastResendAt = &now
 	session.UpdatedAt = now
@@ -135,7 +127,7 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 }
 
 func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*user.User, string, error) {
-	if code == "" || len(code) != common.OTPLength {
+	if code == "" || len(code) != auth.OTPLength {
 		return nil, "", common.ErrInvalidOTP
 	}
 
@@ -145,7 +137,7 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	}
 
 	// 이미 인증된 세션 -> 기존 토큰 반환
-	if session.Status == Verified {
+	if session.Status == auth.Verified {
 		// 토큰이 만료시 재인증 요구
 		now := time.Now().UTC()
 		if session.TokenExpiresAt.Before(now) {
@@ -200,8 +192,8 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	}
 
 	session.Token = token
-	session.TokenExpiresAt = now.Add(time.Hour * common.TokenExpirationHours)
-	session.Status = Verified
+	session.TokenExpiresAt = now.Add(time.Hour * auth.TokenExpirationHours)
+	session.Status = auth.Verified
 	session.UpdatedAt = now
 	session.OTP = nil
 
@@ -235,7 +227,7 @@ func (s *service) ValidateSession(ctx context.Context, token string) (*user.User
 		return nil, fmt.Errorf("세션검증실패: %w", err)
 	}
 
-	if session.Status != Verified {
+	if session.Status != auth.Verified {
 		return nil, common.ErrUnauthorized
 	}
 

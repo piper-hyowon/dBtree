@@ -5,26 +5,27 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/common"
+	"github.com/piper-hyowon/dBtree/internal/common/user"
 	"sync"
 	"time"
 )
 
 type store struct {
 	mu           sync.RWMutex
-	usersByID    map[string]*User
-	usersByEmail map[string]*User
+	usersByID    map[string]*user.User
+	usersByEmail map[string]*user.User
 }
 
-var _ Store = (*store)(nil)
+var _ user.Store = (*store)(nil)
 
-func NewMemoryStore() Store {
+func NewMemoryStore() user.Store {
 	return &store{
-		usersByID:    make(map[string]*User),
-		usersByEmail: make(map[string]*User),
+		usersByID:    make(map[string]*user.User),
+		usersByEmail: make(map[string]*user.User),
 	}
 }
 
-func (r *store) FindByEmail(_ context.Context, email string) (*User, error) {
+func (r *store) FindByEmail(_ context.Context, email string) (*user.User, error) {
 	if email == "" {
 		return nil, errors.New("empty Email")
 	}
@@ -32,15 +33,15 @@ func (r *store) FindByEmail(_ context.Context, email string) (*User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	user, exists := r.usersByEmail[email]
+	u, exists := r.usersByEmail[email]
 	if !exists {
 		return nil, common.ErrUserNotFound
 	}
 
-	return user, nil
+	return u, nil
 }
 
-func (r *store) FindById(_ context.Context, id string) (*User, error) {
+func (r *store) FindById(_ context.Context, id string) (*user.User, error) {
 	if id == "" {
 		return nil, errors.New("empty ID")
 	}
@@ -48,12 +49,12 @@ func (r *store) FindById(_ context.Context, id string) (*User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	user, exists := r.usersByID[id]
+	u, exists := r.usersByID[id]
 	if !exists {
 		return nil, common.ErrUserNotFound
 	}
 
-	return user, nil
+	return u, nil
 }
 
 func (r *store) Create(_ context.Context, email string) error {
@@ -71,15 +72,15 @@ func (r *store) Create(_ context.Context, email string) error {
 	id := uuid.New().String()
 	now := time.Now().UTC()
 
-	user := &User{
+	u := &user.User{
 		ID:        id,
 		Email:     email,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 
-	r.usersByID[id] = user
-	r.usersByEmail[email] = user
+	r.usersByID[id] = u
+	r.usersByEmail[email] = u
 
 	return nil
 }
@@ -92,13 +93,13 @@ func (r *store) Delete(_ context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	user, exists := r.usersByID[id]
+	u, exists := r.usersByID[id]
 	if !exists {
 		return common.ErrUserNotFound
 	}
 
 	delete(r.usersByID, id)
-	delete(r.usersByEmail, user.Email)
+	delete(r.usersByEmail, u.Email)
 
 	return nil
 }

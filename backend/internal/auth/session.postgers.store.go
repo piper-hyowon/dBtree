@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/common"
+	"github.com/piper-hyowon/dBtree/internal/common/auth"
 	"time"
 )
 
@@ -13,15 +14,15 @@ type PostgresSessionStore struct {
 	db *sql.DB
 }
 
-var _ SessionStore = (*PostgresSessionStore)(nil)
+var _ auth.SessionStore = (*PostgresSessionStore)(nil)
 
-func NewPostgrestore(db *sql.DB) SessionStore {
+func NewPostgresStore(db *sql.DB) auth.SessionStore {
 	return &PostgresSessionStore{
 		db: db,
 	}
 }
 
-func (s *PostgresSessionStore) Save(ctx context.Context, session *Session) error {
+func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) error {
 	if session == nil || session.Email == "" {
 		return fmt.Errorf("invalid session: %w", common.ErrInternal)
 	}
@@ -112,7 +113,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *Session) error
 	return nil
 }
 
-func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*Session, error) {
+func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*auth.Session, error) {
 	if email == "" {
 		return nil, fmt.Errorf("empty email: %w", common.ErrInternal)
 	}
@@ -156,9 +157,9 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*S
 		return nil, fmt.Errorf("세션 조회 실패: %w", err)
 	}
 
-	session := &Session{
+	session := &auth.Session{
 		Email:       email,
-		Status:      SessionStatus(status),
+		Status:      auth.SessionStatus(status),
 		ResendCount: resendCount,
 		CreatedAt:   createdAt,
 		UpdatedAt:   updatedAt,
@@ -168,7 +169,7 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*S
 		otpCreatedAt, _ := time.Parse(time.RFC3339, otpCreatedAtStr.String)
 		otpExpiresAt, _ := time.Parse(time.RFC3339, otpExpiresAtStr.String)
 
-		session.OTP = &OTP{
+		session.OTP = &auth.OTP{
 			Email:     email,
 			Code:      otpCode.String,
 			CreatedAt: otpCreatedAt,
@@ -192,7 +193,7 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*S
 	return session, nil
 }
 
-func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*Session, error) {
+func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*auth.Session, error) {
 	if token == "" {
 		return nil, fmt.Errorf("empty token: %w", common.ErrInvalidToken)
 	}

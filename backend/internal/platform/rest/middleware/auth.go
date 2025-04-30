@@ -2,17 +2,13 @@ package middleware
 
 import (
 	"context"
-	"github.com/piper-hyowon/dBtree/internal/auth"
-	"github.com/piper-hyowon/dBtree/internal/user"
+	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	commoncontext "github.com/piper-hyowon/dBtree/internal/common/context"
+	"github.com/piper-hyowon/dBtree/internal/common/user"
 	"log"
 	"net/http"
 	"strings"
 )
-
-type contextKey string
-
-const UserKey contextKey = "user"
-const TokenKey contextKey = "token"
 
 type AuthMiddleware struct {
 	authService auth.Service
@@ -47,15 +43,15 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserKey, u)
-		ctx = context.WithValue(ctx, TokenKey, token)
+		ctx := context.WithValue(r.Context(), commoncontext.UserKey, u)
+		ctx = context.WithValue(ctx, commoncontext.TokenKey, token)
 
 		next(w, r.WithContext(ctx))
 	}
 }
 
 func GetUserFromContext(ctx context.Context) *user.User {
-	u, ok := ctx.Value(UserKey).(*user.User)
+	u, ok := ctx.Value(commoncontext.UserKey).(*user.User)
 	if !ok {
 		return nil
 	}
@@ -63,7 +59,7 @@ func GetUserFromContext(ctx context.Context) *user.User {
 }
 
 func GetTokenFromContext(ctx context.Context) string {
-	token, ok := ctx.Value(TokenKey).(string)
+	token, ok := ctx.Value(commoncontext.TokenKey).(string)
 	if !ok {
 		return ""
 	}

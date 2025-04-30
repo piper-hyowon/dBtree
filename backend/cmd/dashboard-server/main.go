@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
+	commonauth "github.com/piper-hyowon/dBtree/internal/common/auth"
+
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
-	middleware "github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
+	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
 	"github.com/piper-hyowon/dBtree/internal/user"
+	userRest "github.com/piper-hyowon/dBtree/internal/user/rest"
 	"os/signal"
 	"syscall"
 
@@ -36,7 +39,7 @@ func main() {
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
 	logger.Println("서버 시작 중...")
 
-	emailService, err := email.NewSmtpService(appConfig.SMTP)
+	emailService, err := email.NewService(appConfig.SMTP)
 	if err != nil {
 		logger.Fatalf("이메일 서비스 초기화 실패: %v", err)
 	}
@@ -61,6 +64,14 @@ func main() {
 	authHandler := authRest.NewHandler(authService, logger)
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
 
+	userService := user.NewService(
+		emailService,
+		userStore,
+		logger,
+	)
+
+	userHandler := userRest.NewHandler(userService, logger)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
@@ -82,7 +93,9 @@ func main() {
 	})
 
 	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
+	mux.HandleFunc("/user", authMiddleware.RequireAuth(userHandler.Delete))
 
+	// TODO: 임시 API
 	mux.HandleFunc("/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
 		u := middleware.GetUserFromContext(r.Context())
 		if u == nil {
@@ -94,6 +107,7 @@ func main() {
 			"user": u,
 		})
 	}))
+
 	server := rest.NewServer(appConfig, mux, logger)
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
@@ -116,7 +130,7 @@ func main() {
 	}
 }
 
-func cleanupSessions(sessionStore auth.SessionStore, intervalHours int, logger *log.Logger) {
+func cleanupSessions(sessionStore commonauth.SessionStore, intervalHours int, logger *log.Logger) {
 	ticker := time.NewTicker(time.Duration(intervalHours) * time.Hour)
 	defer ticker.Stop()
 

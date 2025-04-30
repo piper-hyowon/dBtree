@@ -44,12 +44,14 @@ func SendSuccessResponse(w http.ResponseWriter, statusCode int, data interface{}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	if err := json.NewEncoder(w).Encode(SuccessResponse{
-		Success: true,
-		Data:    data,
-	}); err != nil {
-		log.Printf("JSON 성공 응답 인코딩 오류: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	if data != nil {
+		if err := json.NewEncoder(w).Encode(SuccessResponse{
+			Success: true,
+			Data:    data,
+		}); err != nil {
+			log.Printf("JSON 성공 응답 인코딩 오류: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
 	}
 }
 

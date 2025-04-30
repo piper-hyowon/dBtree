@@ -2,12 +2,12 @@ package rest
 
 import (
 	"errors"
-	"github.com/piper-hyowon/dBtree/internal/auth"
 	"github.com/piper-hyowon/dBtree/internal/common"
+	"github.com/piper-hyowon/dBtree/internal/common/auth"
+	"github.com/piper-hyowon/dBtree/internal/common/user"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
-	"github.com/piper-hyowon/dBtree/internal/user"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -107,7 +107,7 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresIn := int64(common.TokenExpirationHours * 3600)
+	expiresIn := int64(auth.TokenExpirationHours * 3600)
 
 	httputil.SendSuccessResponse(w, http.StatusOK, VerifyOTPResponse{
 		User:      u,
@@ -151,11 +151,11 @@ func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 전송 횟수 제한에 도달했습니다. 나중에 다시 시도해주세요."
 		// MaxResendAttempts에 도달한 경우 OTP 만료 시간 이후 새 세션 시작 가능
-		retryAfter = common.OTPExpirationMinutes * 60
+		retryAfter = auth.OTPExpirationMinutes * 60
 	case errors.Is(err, common.ErrTooEarlyResend):
 		statusCode = http.StatusTooManyRequests
 		message = "OTP 재전송은 1분 후에 가능합니다."
-		retryAfter = common.ResendWaitSeconds
+		retryAfter = auth.ResendWaitSeconds
 	case errors.Is(err, common.ErrInvalidOTP):
 		statusCode = http.StatusUnauthorized
 		message = "유효하지 않은 인증 코드입니다."
