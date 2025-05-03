@@ -15,7 +15,6 @@ const (
 type Status string
 
 const (
-	StatusInProgress Status = "in_progress"
 	StatusSuccessful Status = "successful"
 	StatusFailed     Status = "failed"
 )

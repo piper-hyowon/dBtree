@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
-	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
-
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
+	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
@@ -53,6 +52,7 @@ func main() {
 
 	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	//lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,

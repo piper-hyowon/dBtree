@@ -119,7 +119,7 @@ func (s *PostgresStore) Delete(ctx context.Context, id string) error {
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("트랜잭션 시작 실패: %w", err)
 	}
 	defer tx.Rollback()
 

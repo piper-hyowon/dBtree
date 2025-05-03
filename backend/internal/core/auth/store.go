@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"database/sql"
 )
 
 type SessionStore interface {
@@ -12,5 +11,3 @@ type SessionStore interface {
 	Delete(ctx context.Context, email string) error
 	Cleanup(ctx context.Context) error // 만료 세션 정리
 }
-
-type StoreFactory func(useLocalMemoryStore bool, db *sql.DB) SessionStore
