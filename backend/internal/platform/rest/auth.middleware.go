@@ -1,9 +1,10 @@
-package middleware
+package rest
 
 import (
 	"context"
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	corecontext "github.com/piper-hyowon/dBtree/internal/core/context"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"log"
 	"net/http"
@@ -26,20 +27,19 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			http.Error(w, "인증 헤더 없음", http.StatusUnauthorized)
+			HandleError(w, errors.NewUnauthorizedError(), m.logger)
 			return
 		}
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "인증 포맷 오류", http.StatusUnauthorized)
+			HandleError(w, errors.NewUnauthorizedError(), m.logger)
 			return
 		}
 		token := parts[1]
 		u, err := m.authService.ValidateSession(r.Context(), token)
 		if err != nil {
-			m.logger.Printf("인증 실패: %v", err)
-			http.Error(w, "인증 실패", http.StatusUnauthorized)
+			HandleError(w, errors.NewUnauthorizedError(), m.logger)
 			return
 		}
 

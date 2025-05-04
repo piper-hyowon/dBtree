@@ -2,12 +2,21 @@ package rest
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 )
 
 func DecodeJSONRequest(w http.ResponseWriter, r *http.Request, v interface{}) bool {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		SendErrorResponse(w, http.StatusBadRequest, "잘못된 요청 형식")
+		domainErr := errors.NewError(
+			errors.ErrInvalidParameter,
+			"잘못된 요청 형식",
+			nil,
+			err,
+		)
+		HandleError(w, domainErr, log.Default())
 		return false
 	}
 	return true
@@ -16,7 +25,7 @@ func DecodeJSONRequest(w http.ResponseWriter, r *http.Request, v interface{}) bo
 func ValidateMethod(w http.ResponseWriter, r *http.Request, allowedMethod string) bool {
 	if r.Method != allowedMethod {
 		w.Header().Set("Allow", allowedMethod)
-		SendErrorResponse(w, http.StatusMethodNotAllowed, "허용되지 않는 메서드")
+		HandleError(w, errors.NewMethodNotAllowedError(allowedMethod), log.Default())
 		return false
 	}
 	return true
@@ -29,8 +38,10 @@ func ValidateMethods(w http.ResponseWriter, r *http.Request, allowedMethods ...s
 		}
 	}
 
-	w.Header().Set("Allow", joinMethods(allowedMethods))
-	SendErrorResponse(w, http.StatusMethodNotAllowed, "허용되지 않는 메서드")
+	allowed := joinMethods(allowedMethods)
+	w.Header().Set("Allow", allowed)
+
+	HandleError(w, errors.NewMethodNotAllowedError(allowed), log.Default())
 	return false
 }
 

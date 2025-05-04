@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
+	"runtime/debug"
+
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"time"
 )
@@ -23,25 +25,22 @@ func NewPostgresStore(db *sql.DB) auth.SessionStore {
 }
 
 func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) error {
-	if session == nil || session.Email == "" {
-		return fmt.Errorf("invalid session: %w", core.ErrInternal)
-	}
-
 	exists, err := s.sessionExists(ctx, session.Email)
 	if err != nil {
-		return fmt.Errorf("세션 확인 실패: %w", err)
+		return errors.NewInternalError(fmt.Errorf("세션 확인 실패: %w", err))
+
 	}
 
-	var otpCode sql.NullString
+	var otp sql.NullString
 	var tokenExpiresAt, otpCreatedAt, otpExpiresAt sql.NullTime
 	var lastResendAt sql.NullTime
 
 	if session.OTP != nil {
-		otpCode = sql.NullString{String: session.OTP.Code, Valid: true}
+		otp = sql.NullString{String: session.OTP.Code, Valid: true}
 		otpCreatedAt = sql.NullTime{Time: session.OTP.CreatedAt, Valid: true}
 		otpExpiresAt = sql.NullTime{Time: session.OTP.ExpiresAt, Valid: true}
 	} else {
-		otpCode = sql.NullString{Valid: false}
+		otp = sql.NullString{Valid: false}
 		otpCreatedAt = sql.NullTime{Valid: false}
 		otpExpiresAt = sql.NullTime{Valid: false}
 	}
@@ -60,7 +59,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 		query := `
 			UPDATE "sessions" 
 			SET status = $1, 
-				otp_code = $2, 
+				otp = $2, 
 				otp_created_at = $3, 
 				otp_expires_at = $4, 
 				token = $5, 
@@ -73,7 +72,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 
 		_, err = s.db.ExecContext(ctx, query,
 			string(session.Status),
-			otpCode,
+			otp,
 			otpCreatedAt,
 			otpExpiresAt,
 			session.Token,
@@ -86,7 +85,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 	} else {
 		query := `
 			INSERT INTO sessions 
-			(id, email, status, otp_code, otp_created_at, otp_expires_at, token, token_expires_at, resend_count, last_resend_at, created_at, updated_at) 
+			(id, email, status, otp, otp_created_at, otp_expires_at, token, token_expires_at, resend_count, last_resend_at, created_at, updated_at) 
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		`
 
@@ -94,7 +93,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 			uuid.New().String(),
 			session.Email,
 			string(session.Status),
-			otpCode,
+			otp,
 			otpCreatedAt,
 			otpExpiresAt,
 			session.Token,
@@ -107,20 +106,16 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 	}
 
 	if err != nil {
-		return fmt.Errorf("세션 저장 실패: %w", err)
+		return errors.NewInternalError(fmt.Errorf("세션 저장 실패: %w", err))
 	}
 
 	return nil
 }
 
-func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*auth.Session, error) {
-	if email == "" {
-		return nil, fmt.Errorf("empty email: %w", core.ErrInternal)
-	}
-
+func (s *PostgresSessionStore) FindByEmail(ctx context.Context, email string) (*auth.Session, error) {
 	query := `
 		SELECT 
-			email, status, otp_code, otp_created_at, otp_expires_at, 
+			email, status, otp, otp_created_at, otp_expires_at, 
 			token, token_expires_at, resend_count, last_resend_at, 
 			created_at, updated_at 
 		FROM sessions 
@@ -128,18 +123,18 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 	`
 
 	var (
-		status                                    string
-		otpCode, otpCreatedAtStr, otpExpiresAtStr sql.NullString
-		token                                     sql.NullString
-		tokenExpiresAt, lastResendAt              sql.NullTime
-		resendCount                               int
-		createdAt, updatedAt                      time.Time
+		status                                string
+		otp, otpCreatedAtStr, otpExpiresAtStr sql.NullString
+		token                                 sql.NullString
+		tokenExpiresAt, lastResendAt          sql.NullTime
+		resendCount                           int
+		createdAt, updatedAt                  time.Time
 	)
 
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&email,
 		&status,
-		&otpCode,
+		&otp,
 		&otpCreatedAtStr,
 		&otpExpiresAtStr,
 		&token,
@@ -151,10 +146,10 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, core.ErrSessionNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
 		}
-		return nil, fmt.Errorf("세션 조회 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("세션 조회 실패: %w", err), string(debug.Stack()))
 	}
 
 	session := &auth.Session{
@@ -165,13 +160,13 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 		UpdatedAt:   updatedAt,
 	}
 
-	if otpCode.Valid && otpCreatedAtStr.Valid && otpExpiresAtStr.Valid {
+	if otp.Valid && otpCreatedAtStr.Valid && otpExpiresAtStr.Valid {
 		otpCreatedAt, _ := time.Parse(time.RFC3339, otpCreatedAtStr.String)
 		otpExpiresAt, _ := time.Parse(time.RFC3339, otpExpiresAtStr.String)
 
 		session.OTP = &auth.OTP{
 			Email:     email,
-			Code:      otpCode.String,
+			Code:      otp.String,
 			CreatedAt: otpCreatedAt,
 			ExpiresAt: otpExpiresAt,
 		}
@@ -193,50 +188,93 @@ func (s *PostgresSessionStore) GetByEmail(ctx context.Context, email string) (*a
 	return session, nil
 }
 
-func (s *PostgresSessionStore) GetByToken(ctx context.Context, token string) (*auth.Session, error) {
-	if token == "" {
-		return nil, fmt.Errorf("empty token: %w", core.ErrInvalidToken)
-	}
-
+func (s *PostgresSessionStore) FindByToken(ctx context.Context, token string) (*auth.Session, error) {
 	query := `
-		SELECT 
-			email 
-		FROM sessions 
-		WHERE token = $1 AND token_expires_at > $2
-	`
+        SELECT 
+            email, status, otp, otp_created_at, otp_expires_at, 
+            token, token_expires_at, resend_count, last_resend_at, 
+            created_at, updated_at 
+        FROM sessions 
+        WHERE token = $1 AND token_expires_at > $2
+    `
 
-	var email string
-	err := s.db.QueryRowContext(ctx, query, token, time.Now().UTC()).Scan(&email)
+	var (
+		email                        string
+		status                       string
+		otp                          sql.NullString
+		otpCreatedAt, otpExpiresAt   sql.NullTime
+		tokenValue                   sql.NullString
+		tokenExpiresAt, lastResendAt sql.NullTime
+		resendCount                  int
+		createdAt, updatedAt         time.Time
+	)
+
+	err := s.db.QueryRowContext(ctx, query, token, time.Now().UTC()).Scan(
+		&email,
+		&status,
+		&otp,
+		&otpCreatedAt,
+		&otpExpiresAt,
+		&tokenValue,
+		&tokenExpiresAt,
+		&resendCount,
+		&lastResendAt,
+		&createdAt,
+		&updatedAt,
+	)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, core.ErrSessionNotFound
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
 		}
-		return nil, fmt.Errorf("토큰으로 세션 조회 실패: %w", err)
+		return nil, errors.NewInternalError(fmt.Errorf("토큰으로 세션 조회 실패: %w", err))
 	}
 
-	return s.GetByEmail(ctx, email)
+	session := &auth.Session{
+		Email:       email,
+		Status:      auth.SessionStatus(status),
+		Token:       token,
+		ResendCount: resendCount,
+		CreatedAt:   createdAt,
+		UpdatedAt:   updatedAt,
+	}
+
+	if otp.Valid && otpCreatedAt.Valid && otpExpiresAt.Valid {
+		session.OTP = &auth.OTP{
+			Email:     email,
+			Code:      otp.String,
+			CreatedAt: otpCreatedAt.Time,
+			ExpiresAt: otpExpiresAt.Time,
+		}
+	}
+
+	if tokenExpiresAt.Valid {
+		session.TokenExpiresAt = tokenExpiresAt.Time
+	}
+
+	if lastResendAt.Valid {
+		last := lastResendAt.Time
+		session.LastResendAt = &last
+	}
+
+	return session, nil
 }
-
 func (s *PostgresSessionStore) Delete(ctx context.Context, email string) error {
-	if email == "" {
-		return fmt.Errorf("empty email: %w", core.ErrInternal)
-	}
-
 	query := `DELETE FROM sessions WHERE email = $1`
 
 	result, err := s.db.ExecContext(ctx, query, email)
 	if err != nil {
-		return fmt.Errorf("세션 삭제 실패: %w", err)
+		return errors.NewInternalError(fmt.Errorf("세션 삭제 실패: %w", err))
+
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("세션 삭제 결과 확인 실패: %w", err)
+		return errors.NewInternalError(fmt.Errorf("세션 삭제 결과 확인 실패: %w", err))
 	}
 
 	if rowsAffected == 0 {
-		return core.ErrSessionNotFound
+		//return errors.NewSessionNotFoundError()
 	}
 
 	return nil
@@ -253,7 +291,7 @@ func (s *PostgresSessionStore) Cleanup(ctx context.Context) error {
 
 	_, err := s.db.ExecContext(ctx, query, now)
 	if err != nil {
-		return fmt.Errorf("만료된 세션 정리 실패: %w", err)
+		return errors.NewInternalError(fmt.Errorf("만료된 세션 정리 실패: %w", err))
 	}
 
 	return nil

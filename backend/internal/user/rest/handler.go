@@ -1,9 +1,9 @@
 package rest
 
 import (
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
-	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"log"
 	"net/http"
 )
@@ -25,15 +25,17 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := middleware.GetUserFromContext(r.Context())
+	u := httputil.GetUserFromContext(r.Context())
 	if u == nil {
-		httputil.SendErrorResponse(w, http.StatusInternalServerError, "서버 에러")
+		httputil.HandleError(w, errors.NewError(
+			errors.ErrInternalServer,
+			"인증 정보 없음", nil, nil), h.logger)
 		return
 	}
 
-	err := h.userService.Delete(r.Context(), u.ID)
+	err := h.userService.Delete(r.Context(), u.ID, u.Email)
 	if err != nil {
-		httputil.SendErrorResponse(w, http.StatusInternalServerError, "유저 탈퇴 실패")
+		httputil.HandleError(w, err, h.logger)
 		return
 	}
 

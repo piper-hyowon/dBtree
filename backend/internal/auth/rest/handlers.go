@@ -1,16 +1,14 @@
 package rest
 
 import (
-	"errors"
-	"github.com/piper-hyowon/dBtree/internal/core"
+	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"github.com/piper-hyowon/dBtree/internal/email"
-	httputil "github.com/piper-hyowon/dBtree/internal/platform/rest"
-	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
+	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"log"
 	"net/http"
-	"runtime/debug"
 )
 
 type Handler struct {
@@ -38,8 +36,8 @@ type SendOTPRequest struct {
 }
 
 type VerifyOTPRequest struct {
-	Email   string `json:"email"`
-	OTPCode string `json:"otpCode"`
+	Email string `json:"email"`
+	OTP   string `json:"otp"`
 }
 
 type SendOTPResponse struct {
@@ -53,12 +51,12 @@ type VerifyOTPResponse struct {
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
-	if !httputil.ValidateMethod(w, r, http.MethodPost) {
+	if !rest.ValidateMethod(w, r, http.MethodPost) {
 		return
 	}
 
 	var req SendOTPRequest
-	if !httputil.DecodeJSONRequest(w, r, &req) {
+	if !rest.DecodeJSONRequest(w, r, &req) {
 		return
 	}
 
@@ -68,10 +66,14 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 
 	// 세션 존재 여부 확인하여 첫 요청인지 재요청인지 판단
 	session, err := h.authService.GetSession(r.Context(), req.Email)
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
 
 	var isNewUser bool
 
-	if err != nil || session == nil {
+	if session == nil {
 		// 첫 OTP 발송
 		isNewUser, err = h.authService.StartAuth(r.Context(), req.Email)
 	} else {
@@ -80,20 +82,25 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		h.handleAuthError(w, err)
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
-	httputil.SendSuccessResponse(w, http.StatusOK, SendOTPResponse{isNewUser})
+	rest.SendSuccessResponse(w, http.StatusOK, SendOTPResponse{isNewUser})
 }
 
 func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
-	if !httputil.ValidateMethod(w, r, http.MethodPost) {
+	if !rest.ValidateMethod(w, r, http.MethodPost) {
 		return
 	}
 
-	if !httputil.DecodeJSONRequest(w, r, &req) {
+	if !rest.DecodeJSONRequest(w, r, &req) {
+		return
+	}
+
+	if req.OTP == "" {
+		rest.HandleError(w, errors.NewMissingParameterError("otp"), h.logger)
 		return
 	}
 
@@ -101,15 +108,15 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, token, err := h.authService.VerifyOTP(r.Context(), req.Email, req.OTPCode)
+	u, token, err := h.authService.VerifyOTP(r.Context(), req.Email, req.OTP)
 	if err != nil {
-		h.handleAuthError(w, err)
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
 	expiresIn := int64(auth.TokenExpirationHours * 3600)
 
-	httputil.SendSuccessResponse(w, http.StatusOK, VerifyOTPResponse{
+	rest.SendSuccessResponse(w, http.StatusOK, VerifyOTPResponse{
 		User:      u,
 		Token:     token,
 		ExpiresIn: expiresIn,
@@ -117,86 +124,29 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	if !httputil.ValidateMethod(w, r, http.MethodPost) {
+	if !rest.ValidateMethod(w, r, http.MethodPost) {
 		return
 	}
 
-	token := middleware.GetTokenFromContext(r.Context())
+	token := rest.GetTokenFromContext(r.Context())
 	if token == "" {
-		httputil.SendErrorResponse(w, http.StatusInternalServerError, "토큰 정보를 불러올 수 없습니다")
+		rest.HandleError(w, errors.NewInternalError(fmt.Errorf("토큰 정보를 불러올 수 없습니다")), h.logger)
 		return
 	}
 
 	err := h.authService.Logout(r.Context(), token)
 	if err != nil {
-		h.handleAuthError(w, err)
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
-	httputil.SendJSONResponse(w, http.StatusOK, map[string]interface{}{
-		"success": true,
-	})
-}
-
-func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
-	var statusCode int
-	var message string
-	var retryAfter int
-
-	switch {
-	case errors.Is(err, core.ErrInvalidEmail):
-		statusCode = http.StatusBadRequest
-		message = "유효하지 않은 이메일 주소입니다."
-	case errors.Is(err, core.ErrTooManyResends):
-		statusCode = http.StatusTooManyRequests
-		message = "OTP 전송 횟수 제한에 도달했습니다. 나중에 다시 시도해주세요."
-		// MaxResendAttempts에 도달한 경우 OTP 만료 시간 이후 새 세션 시작 가능
-		retryAfter = auth.OTPExpirationMinutes * 60
-	case errors.Is(err, core.ErrTooEarlyResend):
-		statusCode = http.StatusTooManyRequests
-		message = "OTP 재전송은 1분 후에 가능합니다."
-		retryAfter = auth.ResendWaitSeconds
-	case errors.Is(err, core.ErrInvalidOTP):
-		statusCode = http.StatusUnauthorized
-		message = "유효하지 않은 인증 코드입니다."
-	case errors.Is(err, core.ErrExpiredOTP):
-		statusCode = http.StatusUnauthorized
-		message = "만료된 인증 코드입니다. 새 인증 코드를 요청해주세요."
-	case errors.Is(err, core.ErrSessionAlreadyVerified):
-		statusCode = http.StatusBadRequest
-		message = "이미 인증이 완료된 세션입니다"
-	case errors.Is(err, core.ErrSessionNotFound):
-		statusCode = http.StatusUnauthorized
-		message = "세션을 찾을 수 없습니다."
-	case errors.Is(err, core.ErrInternal):
-		statusCode = http.StatusInternalServerError
-		message = "내부 서버 오류"
-		h.logger.Printf("내부 오류: %v", err)
-		h.logger.Printf("%s", debug.Stack())
-	default:
-		statusCode = http.StatusInternalServerError
-		message = "알 수 없는 오류"
-		h.logger.Printf("알 수 없는 오류: %v", err)
-		h.logger.Printf("%s", debug.Stack())
-	}
-
-	// Retry-After 헤더 추가
-	if retryAfter > 0 {
-		httputil.WithRetryAfter(w, statusCode, message, retryAfter)
-		return
-	}
-
-	httputil.SendErrorResponse(w, statusCode, message)
+	rest.SendSuccessResponse(w, http.StatusOK, nil)
 }
 
 func (h *Handler) validateEmail(w http.ResponseWriter, email string, checkMX bool) bool {
-	valid, err := h.emailValidator.Validate(email, checkMX)
+	valid, validErr := h.emailValidator.Validate(email, checkMX)
 	if !valid {
-		if err != nil {
-			httputil.SendErrorResponse(w, http.StatusBadRequest, err.Error())
-		} else {
-			httputil.SendErrorResponse(w, http.StatusBadRequest, "유효하지 않은 이메일")
-		}
+		rest.HandleError(w, validErr, h.logger)
 		return false
 	}
 	return true

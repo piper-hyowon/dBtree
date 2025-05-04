@@ -5,10 +5,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 )
 
-func NewStore(useLocalMemoryStore bool, db *sql.DB) user.Store {
-	if useLocalMemoryStore {
-		return NewMemoryStore()
-	} else {
-		return NewPostgresStore(db)
-	}
+func NewStore(_ bool, db *sql.DB) user.Store {
+	return NewPostgresStore(db)
 }

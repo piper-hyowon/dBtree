@@ -3,12 +3,12 @@ package auth
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/core"
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/core/email"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"log"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -22,7 +22,6 @@ type service struct {
 	logger       *log.Logger
 }
 
-// 컴파일 타임에 인터페이스 구현 체크
 var _ auth.Service = (*service)(nil)
 
 func NewService(
@@ -41,18 +40,24 @@ func NewService(
 
 func (s *service) StartAuth(ctx context.Context, email string) (bool, error) {
 	u, err := s.userStore.FindByEmail(ctx, email)
-	isNewUser := err != nil || u == nil
-
-	otpCode, err := generateOTP(auth.OTPLength)
-
+	isNewUser := u == nil
 	if err != nil {
-		return isNewUser, fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return isNewUser, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	otp := auth.NewOTP(email, otpCode, auth.OTPExpirationMinutes)
+	code, err := generateOTP(auth.OTPLength)
 
-	session, err := s.sessionStore.GetByEmail(ctx, email)
 	if err != nil {
+		return isNewUser, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	otp := auth.NewOTP(email, code, auth.OTPExpirationMinutes)
+
+	session, err := s.sessionStore.FindByEmail(ctx, email)
+	if err != nil {
+		return isNewUser, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+	if session == nil {
 		session = auth.NewSession(email, otp)
 	} else {
 		session.OTP = otp
@@ -61,32 +66,34 @@ func (s *service) StartAuth(ctx context.Context, email string) (bool, error) {
 	}
 
 	if err := s.sessionStore.Save(ctx, session); err != nil {
-		return isNewUser, fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return isNewUser, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
+	if err := s.emailService.SendOTP(ctx, email, code); err != nil {
 		if isEmailDeliveryError(err) {
-			return isNewUser, fmt.Errorf("%w: %v", core.ErrInvalidEmail, err)
+			return isNewUser, errors.NewInvalidEmailError(err.Error())
 		}
-		return isNewUser, fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return isNewUser, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return isNewUser, nil
 }
 
 func (s *service) GetSession(ctx context.Context, email string) (*auth.Session, error) {
-	return s.sessionStore.GetByEmail(ctx, email)
+	return s.sessionStore.FindByEmail(ctx, email)
 }
 
 func (s *service) ResendOTP(ctx context.Context, email string) error {
-	session, err := s.sessionStore.GetByEmail(ctx, email)
+	session, err := s.sessionStore.FindByEmail(ctx, email)
 	if err != nil {
-		return core.ErrSessionNotFound
+		return err
 	}
-
+	if session == nil {
+		return errors.NewSessionNotFoundError()
+	}
 	// 재전송 횟수 제한
 	if session.ResendCount >= auth.MaxResendAttempts-1 {
-		return core.ErrTooManyResends
+		return errors.NewTooManyResendsError(auth.MaxResendAttempts)
 	}
 
 	now := time.Now().UTC()
@@ -102,46 +109,46 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 	waitTime := time.Duration(auth.ResendWaitSeconds) * time.Second
 	nextResendTime := lastSentTime.Add(waitTime)
 	if now.Before(nextResendTime) {
-		return core.ErrTooEarlyResend
+		return errors.NewTooEarlyResendError(auth.ResendWaitSeconds)
 	}
 
-	otpCode, err := generateOTP(auth.OTPLength)
+	otp, err := generateOTP(auth.OTPLength)
 	if err != nil {
-		return fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	session.OTP = auth.NewOTP(email, otpCode, auth.OTPExpirationMinutes)
+	session.OTP = auth.NewOTP(email, otp, auth.OTPExpirationMinutes)
 	session.ResendCount++
 	session.LastResendAt = &now
 	session.UpdatedAt = now
 
 	if err := s.sessionStore.Save(ctx, session); err != nil {
-		return fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	if err := s.emailService.SendOTP(ctx, email, otpCode); err != nil {
-		return fmt.Errorf("%w: %v", core.ErrInternal, err)
+	if err := s.emailService.SendOTP(ctx, email, otp); err != nil {
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return nil
 }
 
 func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*user.User, string, error) {
-	if code == "" || len(code) != auth.OTPLength {
-		return nil, "", core.ErrInvalidOTP
+	if len(code) != auth.OTPLength {
+		return nil, "", errors.NewInvalidOTPError()
 	}
 
-	session, err := s.sessionStore.GetByEmail(ctx, email)
+	session, err := s.sessionStore.FindByEmail(ctx, email)
 	if err != nil {
-		return nil, "", core.ErrSessionNotFound
+		return nil, "", errors.NewSessionNotFoundError()
 	}
 
-	// 이미 인증된 세션 -> 기존 토큰 반환
+	// 이미 인증된 세션이 있으면 기존 토큰 반환
 	if session.Status == auth.Verified {
 		// 토큰이 만료시 재인증 요구
 		now := time.Now().UTC()
 		if session.TokenExpiresAt.Before(now) {
-			return nil, "", core.ErrSessionExpired
+			return nil, "", errors.NewSessionExpiredError()
 		}
 
 		if session.OTP != nil {
@@ -152,43 +159,43 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 				session.UpdatedAt = now
 
 				if err := s.sessionStore.Save(ctx, session); err != nil {
-					return nil, "", fmt.Errorf("%w: %v", core.ErrInternal, err)
+					return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 				}
 
 				// 기존 토큰 반환
 				u, err := s.userStore.FindByEmail(ctx, email)
 				if err != nil {
-					return nil, "", fmt.Errorf("%w: %v", core.ErrInternal, err)
+					return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 				}
 				return u, session.Token, nil
 			}
 
 			// OTP 불일치 or 만료
-			return nil, "", core.ErrInvalidOTP
+			return nil, "", errors.NewInvalidOTPError()
 		}
 
-		return nil, "", core.ErrSessionAlreadyVerified
+		return nil, "", errors.NewSessionNotFoundError()
 
 	}
 
 	if session.OTP == nil {
-		return nil, "", core.ErrInvalidOTP
+		return nil, "", errors.NewInvalidOTPError()
 	}
 
 	now := time.Now().UTC()
 
 	if now.After(session.OTP.ExpiresAt) {
-		return nil, "", core.ErrExpiredOTP
+		return nil, "", errors.NewExpiredOTPError()
 	}
 
 	if session.OTP.Code != code {
 		// TODO: 실패 횟수 기록 -> 유저 블락 처리?
-		return nil, "", core.ErrInvalidOTP
+		return nil, "", errors.NewInvalidOTPError()
 	}
 
 	token, err := crypto.GenerateRandomToken(32)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w", core.ErrInternal)
+		return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	session.Token = token
@@ -198,62 +205,66 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	session.OTP = nil
 
 	if err := s.sessionStore.Save(ctx, session); err != nil {
-		return nil, "", fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	u, err := s.userStore.FindByEmail(ctx, email)
 	if err != nil || u == nil {
-		if err := s.userStore.Create(ctx, email); err != nil {
-			return nil, "", fmt.Errorf("%w: %v", core.ErrInternal, err)
+		if err := s.userStore.CreateIfNotExists(ctx, email); err != nil {
+			return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 
 		u, err = s.userStore.FindByEmail(ctx, email)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: %v", core.ErrInternal, err)
+			return nil, "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 
-		s.emailService.SendWelcome(ctx, email)
+		_ = s.emailService.SendWelcome(ctx, email)
 	}
 	return u, token, nil
 }
 
 func (s *service) ValidateSession(ctx context.Context, token string) (*user.User, error) {
 	if token == "" {
-		return nil, core.ErrInvalidToken
+		return nil, errors.NewInvalidTokenError()
 	}
 
-	session, err := s.sessionStore.GetByToken(ctx, token)
+	session, err := s.sessionStore.FindByToken(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("세션검증실패: %w", err)
+		return nil, errors.NewInternalError(err)
+	}
+
+	if session == nil {
+		return nil, errors.NewSessionNotFoundError()
 	}
 
 	if session.Status != auth.Verified {
-		return nil, core.ErrUnauthorized
+		return nil, errors.NewUnauthorizedError()
 	}
 
 	u, err := s.userStore.FindByEmail(ctx, session.Email)
-	if err != nil {
-		return nil, fmt.Errorf("유저반환실패: %w", core.ErrInternal)
+	if err != nil || u == nil {
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return u, nil
 }
 
 func (s *service) Logout(ctx context.Context, token string) error {
-	if token == "" {
-		return core.ErrInvalidToken
+	session, err := s.sessionStore.FindByToken(ctx, token)
+	if err != nil {
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	session, err := s.sessionStore.GetByToken(ctx, token)
-	if err != nil {
-		return core.ErrSessionNotFound
+	if session == nil {
+		return nil
 	}
 
 	e := session.Email
 
 	err = s.sessionStore.Delete(ctx, e)
 	if err != nil {
-		return fmt.Errorf("%w: %v", core.ErrInternal, err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return nil
@@ -267,7 +278,7 @@ func generateOTP(length int) (string, error) {
 
 	_, err := rand.Read(randomBytes)
 	if err != nil {
-		return "", err
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	for i, b := range randomBytes {

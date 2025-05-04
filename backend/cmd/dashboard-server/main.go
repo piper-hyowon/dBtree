@@ -9,7 +9,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
-	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
 	"github.com/piper-hyowon/dBtree/internal/user"
 	userRest "github.com/piper-hyowon/dBtree/internal/user/rest"
@@ -62,11 +61,12 @@ func main() {
 	)
 
 	authHandler := authRest.NewHandler(authService, logger)
-	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
+	authMiddleware := rest.NewAuthMiddleware(authService, logger)
 
 	userService := user.NewService(
 		emailService,
 		userStore,
+		sessionStore,
 		logger,
 	)
 
@@ -97,9 +97,8 @@ func main() {
 
 	// TODO: 임시 API
 	mux.HandleFunc("/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-		u := middleware.GetUserFromContext(r.Context())
+		u := rest.GetUserFromContext(r.Context())
 		if u == nil {
-			rest.SendErrorResponse(w, http.StatusInternalServerError, "유저 인증 오류")
 			return
 		}
 
