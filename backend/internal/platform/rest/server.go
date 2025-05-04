@@ -3,7 +3,6 @@ package rest
 import (
 	"context"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
-	"github.com/piper-hyowon/dBtree/internal/platform/rest/middleware"
 	"log"
 	"net/http"
 	"strconv"
@@ -16,8 +15,8 @@ type Server struct {
 }
 
 func NewServer(appConfig *config.Config, router http.Handler, logger *log.Logger) *Server {
-	loggingMiddleware := middleware.LoggingMiddleware(logger, appConfig.DebugLogging)
-	corsMiddleware := middleware.NewCORSMiddleware(middleware.CORSConfig{
+	loggingMiddleware := LoggingMiddleware(logger, appConfig.DebugLogging)
+	corsMiddleware := NewCORSMiddleware(CORSConfig{
 		AllowedOrigins:   appConfig.CORS.AllowedOrigins,
 		AllowCredentials: appConfig.CORS.AllowCredentials,
 	})

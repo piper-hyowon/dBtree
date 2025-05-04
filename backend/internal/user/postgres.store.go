@@ -3,10 +3,11 @@ package user
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/piper-hyowon/dBtree/internal/core"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
+	"runtime/debug"
+
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"time"
 )
@@ -24,10 +25,6 @@ func NewPostgresStore(db *sql.DB) user.Store {
 }
 
 func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	if email == "" {
-		return nil, errors.New("empty Email")
-	}
-
 	query := `SELECT id, email, created_at, updated_at 
               FROM users 
               WHERE email = $1 AND is_deleted = FALSE`
@@ -42,19 +39,15 @@ func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.Us
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, core.ErrUserNotFound
+			return nil, nil // 유저가 없는 경우 에러 반환 X
 		}
-		return nil, err
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return &u, nil
 }
 
 func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, error) {
-	if id == "" {
-		return nil, errors.New("empty ID")
-	}
-
 	query := `SELECT id, email, created_at, updated_at FROM users WHERE id = $1`
 
 	var u user.User
@@ -67,25 +60,21 @@ func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, er
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, core.ErrUserNotFound
+			return nil, nil
 		}
-		return nil, err
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return &u, nil
 }
 
-func (s *PostgresStore) Create(ctx context.Context, email string) error {
-	if email == "" {
-		return errors.New("empty Email")
-	}
-
+func (s *PostgresStore) CreateIfNotExists(ctx context.Context, email string) error {
 	exists, err := s.emailExists(ctx, email)
 	if err != nil {
 		return err
 	}
 	if exists {
-		return errors.New("duplicated email")
+		return nil
 	}
 
 	id := uuid.New().String()
@@ -106,17 +95,14 @@ func (s *PostgresStore) emailExists(ctx context.Context, email string) (bool, er
 	var exists bool
 	err := s.db.QueryRowContext(ctx, query, email).Scan(&exists)
 	if err != nil {
-		return false, err
+		return false, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+
 	}
 
 	return exists, nil
 }
 
 func (s *PostgresStore) Delete(ctx context.Context, id string) error {
-	if id == "" {
-		return errors.New("empty ID")
-	}
-
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("트랜잭션 시작 실패: %w", err)
@@ -126,10 +112,8 @@ func (s *PostgresStore) Delete(ctx context.Context, id string) error {
 	var email string
 	err = tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id = $1 AND is_deleted = FALSE`, id).Scan(&email)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return core.ErrUserNotFound
-		}
-		return err
+		// row 가 반드시 있어야함
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	now := time.Now().UTC()

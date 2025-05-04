@@ -5,10 +5,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 )
 
-func NewSessionStore(useLocalMemoryStore bool, db *sql.DB) auth.SessionStore {
-	if useLocalMemoryStore {
-		return NewMemoryStore()
-	} else {
-		return NewPostgresStore(db)
-	}
+func NewSessionStore(_ bool, db *sql.DB) auth.SessionStore {
+	return NewPostgresStore(db)
 }

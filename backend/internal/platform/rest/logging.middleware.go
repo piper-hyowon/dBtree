@@ -1,4 +1,4 @@
-package middleware
+package rest
 
 import (
 	"bytes"

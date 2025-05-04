@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS sessions
     id               UUID PRIMARY KEY,
     email            VARCHAR(255) UNIQUE NOT NULL,
     status           VARCHAR(20)         NOT NULL,
-    otp_code         VARCHAR(10),
+    otp              VARCHAR(10),
     otp_created_at   TIMESTAMP,
     otp_expires_at   TIMESTAMP,
     token            VARCHAR(64),

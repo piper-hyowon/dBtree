@@ -3,9 +3,9 @@ package lemon
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
+	"runtime/debug"
 	"time"
 )
 
@@ -24,7 +24,7 @@ func NewPostgresStore(db *sql.DB) lemon.Store {
 func (s *PostgresStore) CreateTransaction(ctx context.Context, tx *lemon.Transaction) error {
 	dbTx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("트랜잭션 시작 실패: %w", err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 	defer dbTx.Rollback()
 
@@ -52,7 +52,7 @@ func (s *PostgresStore) CreateTransaction(ctx context.Context, tx *lemon.Transac
 	)
 
 	if err != nil {
-		return fmt.Errorf("트랜잭션 삽입 실패: %w", err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	if tx.Status == lemon.StatusSuccessful {
@@ -71,12 +71,12 @@ func (s *PostgresStore) CreateTransaction(ctx context.Context, tx *lemon.Transac
 		)
 
 		if err != nil {
-			return fmt.Errorf("사용자 잔액 업데이트 실패: %w", err)
+			return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 	}
 
 	if err = dbTx.Commit(); err != nil {
-		return fmt.Errorf("트랜잭션 커밋 실패: %w", err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (s *PostgresStore) FindTransactionByID(ctx context.Context, id string) (*le
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("트랜잭션 조회 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return &tx, nil
@@ -127,7 +127,7 @@ func (s *PostgresStore) FindTransactionsByUserID(ctx context.Context, userID str
 
 	rows, err := s.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("트랜잭션 목록 조회 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 	defer rows.Close()
 
@@ -146,13 +146,13 @@ func (s *PostgresStore) FindTransactionsByUserID(ctx context.Context, userID str
 			&tx.Note,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("트랜잭션 스캔 실패: %w", err)
+			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 		transactions = append(transactions, &tx)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("트랜잭션 행 처리 중 오류: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return transactions, nil
@@ -171,7 +171,7 @@ func (s *PostgresStore) FindTransactionsByInstanceID(ctx context.Context, instan
 
 	rows, err := s.db.QueryContext(ctx, query, instanceID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("인스턴스별 트랜잭션 조회 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 	defer rows.Close()
 
@@ -190,13 +190,13 @@ func (s *PostgresStore) FindTransactionsByInstanceID(ctx context.Context, instan
 			&tx.Note,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("트랜잭션 스캔 실패: %w", err)
+			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 		transactions = append(transactions, &tx)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("트랜잭션 행 처리 중 오류: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return transactions, nil
@@ -209,9 +209,10 @@ func (s *PostgresStore) GetUserBalance(ctx context.Context, userID string) (int,
 	err := s.db.QueryRowContext(ctx, query, userID).Scan(&balance)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return 0, fmt.Errorf("사용자를 찾을 수 없음")
+			return 0, errors.NewResourceNotFoundError("user", userID)
 		}
-		return 0, fmt.Errorf("사용자 잔액 조회 실패: %w", err)
+
+		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return balance, nil
@@ -224,9 +225,9 @@ func (s *PostgresStore) GetUserLastHarvestTime(ctx context.Context, userID strin
 	err := s.db.QueryRowContext(ctx, query, userID).Scan(&lastHarvestAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("사용자를 찾을 수 없음")
+			return nil, errors.NewResourceNotFoundError("user", userID)
 		}
-		return nil, fmt.Errorf("마지막 수확 시간 조회 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	if !lastHarvestAt.Valid {
@@ -245,7 +246,7 @@ func (s *PostgresStore) UpdateUserLastHarvestTime(ctx context.Context, userID st
 
 	_, err := s.db.ExecContext(ctx, query, harvestTime, time.Now(), userID)
 	if err != nil {
-		return fmt.Errorf("마지막 수확 시간 업데이트 실패: %w", err)
+		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	return nil

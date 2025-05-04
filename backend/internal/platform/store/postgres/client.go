@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"log"
 	"runtime/debug"
 	"time"
@@ -34,16 +35,14 @@ func NewClient(config config.PostgresConfig, logger *log.Logger) (Client, error)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		fmt.Printf("%s", debug.Stack())
-		return nil, fmt.Errorf("PostgreSQL 연결 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("PostgreSQL 연결 실패: %w", err), string(debug.Stack()))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		fmt.Printf("%s", debug.Stack())
-		return nil, fmt.Errorf("PostgreSQL 핑 실패: %w", err)
+		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("PostgreSQL 핑 실패: %w", err), string(debug.Stack()))
 	}
 
 	db.SetMaxOpenConns(config.MaxOpenConns)
