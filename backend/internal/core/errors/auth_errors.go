@@ -87,3 +87,9 @@ func NewSessionExpiredError() DomainError {
 		nil,
 	)
 }
+
+func NewSessionAlreadyVerifiedError() DomainError {
+	return NewError(
+		ErrAlreadyVerified,
+		"이미 인증 완료", nil, nil)
+}

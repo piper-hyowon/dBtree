@@ -174,7 +174,7 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 			return nil, "", errors.NewInvalidOTPError()
 		}
 
-		return nil, "", errors.NewSessionNotFoundError()
+		return nil, "", errors.NewSessionAlreadyVerifiedError()
 
 	}
 
