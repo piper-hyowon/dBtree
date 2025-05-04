@@ -1,80 +1,40 @@
 package dbservice
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
-type DatabaseType string
+type DBType string
 
 const (
-	MongoDB DatabaseType = "mongodb"
-	Redis   DatabaseType = "redis"
+	MongoDB DBType = "mongodb"
+	Redis   DBType = "redis"
 )
 
-var DefaultResourceSpecs = map[DatabaseType]map[string]ResourceSpec{
-	MongoDB: {
-		"small":  {CPU: 1, Memory: 1024, Disk: 10},
-		"medium": {CPU: 2, Memory: 2048, Disk: 20},
-		"large":  {CPU: 4, Memory: 4096, Disk: 40},
-	},
-	Redis: {
-		"small":  {CPU: 1, Memory: 512, Disk: 5},
-		"medium": {CPU: 2, Memory: 1024, Disk: 10},
-		"large":  {CPU: 2, Memory: 2048, Disk: 20},
-	},
-}
+type DBSize string
 
-type ResourceSpec struct {
-	CPU    int
-	Memory int // MB
-	Disk   int // GB
-}
+const (
+	SizeSmall  DBSize = "small"
+	SizeMedium DBSize = "medium"
+	SizeLarge  DBSize = "large"
+)
 
-type LemonCost struct {
-	CreationCost  float64
-	HourlyLemons  float64
-	MinimumLemons float64
-}
+type DBMode string
 
-var DefaultLemonCosts = map[DatabaseType]map[string]LemonCost{
-	MongoDB: {
-		"small":  {CreationCost: 10, HourlyLemons: 0.5, MinimumLemons: 5},
-		"medium": {CreationCost: 20, HourlyLemons: 1.0, MinimumLemons: 10},
-		"large":  {CreationCost: 30, HourlyLemons: 2.0, MinimumLemons: 20},
-	},
-	Redis: {
-		"small":  {CreationCost: 5, HourlyLemons: 0.3, MinimumLemons: 3},
-		"medium": {CreationCost: 15, HourlyLemons: 0.8, MinimumLemons: 8},
-		"large":  {CreationCost: 25, HourlyLemons: 1.5, MinimumLemons: 15},
-	},
-}
+const (
+	// MongoDB
 
-type DatabaseInstance struct {
-	ID              string
-	Name            string
-	Type            DatabaseType
-	Mode            DatabaseMode
-	Version         string
-	Status          InstanceStatus
-	StatusReason    string
-	Config          map[string]interface{}
-	OwnedBy         string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	Resources       ResourceSpec
-	LemonCost       LemonCost
-	LemonsBalance   float64
-	LastLemonUpdate time.Time
-	LastHarvest     time.Time
+	ModeStandalone DBMode = "standalone"
+	ModeReplicaSet DBMode = "replica_set"
+	ModeSharded    DBMode = "sharded"
 
-	// Connection
-	Endpoint  string
-	Port      int
-	SecretRef string
+	// Redis
 
-	PauseAfter  time.Time
-	DeleteAfter time.Time
-}
+	ModeBasic    DBMode = "basic"
+	ModeSentinel DBMode = "sentinel"
+	ModeCluster  DBMode = "cluster"
+)
 
 type InstanceStatus string
 
@@ -91,10 +51,99 @@ const (
 	StatusUpgrading    InstanceStatus = "upgrading"
 )
 
-type DatabaseMode string
+type ResourceSpec struct {
+	CPU    int `json:"cpu"`
+	Memory int `json:"memory"` // MB
+	Disk   int `json:"disk"`   // GB
+}
 
-const (
-	Basic   DatabaseMode = "basic"
-	Replica DatabaseMode = "replica"
-	Cluster DatabaseMode = "cluster"
-)
+var DefaultResourceSpecs = map[DBType]map[DBSize]ResourceSpec{
+	MongoDB: {
+		SizeSmall:  {CPU: 1, Memory: 1024, Disk: 10},
+		SizeMedium: {CPU: 2, Memory: 2048, Disk: 20},
+		SizeLarge:  {CPU: 4, Memory: 4096, Disk: 40},
+	},
+	Redis: {
+		SizeSmall:  {CPU: 1, Memory: 512, Disk: 5},
+		SizeMedium: {CPU: 2, Memory: 1024, Disk: 10},
+		SizeLarge:  {CPU: 2, Memory: 2048, Disk: 20},
+	},
+}
+
+type LemonCost struct {
+	CreationCost  int // 초기 생성 비용
+	HourlyLemons  int // 시간당 비용
+	MinimumLemons int // 최소 필요 레몬 수
+}
+
+var DefaultLemonCosts = map[DBType]map[DBSize]LemonCost{
+	MongoDB: {
+		SizeSmall:  {CreationCost: 100, HourlyLemons: 5, MinimumLemons: 50},
+		SizeMedium: {CreationCost: 200, HourlyLemons: 10, MinimumLemons: 100},
+		SizeLarge:  {CreationCost: 300, HourlyLemons: 20, MinimumLemons: 200},
+	},
+	Redis: {
+		SizeSmall:  {CreationCost: 50, HourlyLemons: 5, MinimumLemons: 30},
+		SizeMedium: {CreationCost: 150, HourlyLemons: 8, MinimumLemons: 80},
+		SizeLarge:  {CreationCost: 250, HourlyLemons: 15, MinimumLemons: 150},
+	},
+}
+
+type MongoDBConfig struct {
+	Version         string `json:"version"`         // MongoDB 버전
+	ReplicaCount    int    `json:"replicaCount"`    // 레플리카셋 구성 시 레플리카 수
+	ShardCount      int    `json:"shardCount"`      // 샤딩 시 샤드 수
+	AuthEnabled     bool   `json:"authEnabled"`     // 인증 활성화 여부
+	WiredTigerCache int    `json:"wiredTigerCache"` // 캐시 크기 (MB)
+}
+
+type RedisConfig struct {
+	Version         string `json:"version"`         // Redis 버전
+	ReplicaCount    int    `json:"replicaCount"`    // 복제본 수
+	Password        bool   `json:"password"`        // 패스워드 활성화 여부
+	Persistence     bool   `json:"persistence"`     // 영속성 활성화 여부
+	PersistenceType string `json:"persistenceType"` // AOF 또는 RDB
+	MaxMemoryPolicy string `json:"maxMemoryPolicy"` // 메모리 정책
+}
+
+type NetworkConfig struct {
+	Private bool `json:"private"` // 프라이빗 네트워크 사용 여부
+	Port    int  `json:"port"`    // 포트 번호 (default 0)
+}
+
+type BackupConfig struct {
+	Enabled       bool   `json:"enabled"`       // 백업 활성화
+	Schedule      string `json:"schedule"`      // cron format
+	RetentionDays int    `json:"retentionDays"` // 보관 기간
+}
+
+type DBInstanceSpec struct {
+	Name        string            `json:"name"`
+	Type        DBType            `json:"type"`
+	Size        DBSize            `json:"size"`
+	Mode        DBMode            `json:"mode"`
+	Resources   ResourceSpec      `json:"resources"`
+	Network     NetworkConfig     `json:"network"`
+	Backup      BackupConfig      `json:"backup"`
+	MongoDBConf *MongoDBConfig    `json:"mongodbConf,omitempty"`
+	RedisConf   *RedisConfig      `json:"redisConf,omitempty"`
+	Tags        map[string]string `json:"tags,omitempty"`
+}
+
+type DBInstance struct {
+	ID           uuid.UUID      `json:"id"`
+	UserID       uuid.UUID      `json:"userId"`
+	Spec         DBInstanceSpec `json:"spec"`
+	Status       InstanceStatus `json:"status"`
+	StatusReason string         `json:"statusReason"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    time.Time      `json:"updatedAt"`
+	LemonCost    LemonCost      `json:"lemonCost"`
+
+	Endpoint  string `json:"endpoint"`
+	Port      int    `json:"port"`
+	SecretRef string `json:"secretRef"`
+
+	PauseAfter  time.Time `json:"pauseAfter,omitempty"`
+	DeleteAfter time.Time `json:"deleteAfter,omitempty"`
+}
