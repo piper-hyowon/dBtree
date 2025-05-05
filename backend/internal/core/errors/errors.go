@@ -36,6 +36,10 @@ const (
 
 	ErrResourceNotFound ErrorCode = 1400
 	ErrResourceConflict ErrorCode = 1401
+
+	ErrHarvestCooldown    ErrorCode = 1500
+	ErrLemonStorageFull   ErrorCode = 1501
+	ErrInsufficientLemons ErrorCode = 1502
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -56,6 +60,8 @@ var errorStrings = map[ErrorCode]string{
 	ErrInvalidEmail:     "invalid_email",
 	ErrResourceNotFound: "resource_not_found",
 	ErrResourceConflict: "resource_conflict",
+	ErrHarvestCooldown:  "harvest_cooldown",
+	ErrLemonStorageFull: "lemon_storage_full",
 }
 
 func (c ErrorCode) String() string {
