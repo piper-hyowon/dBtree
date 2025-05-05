@@ -81,7 +81,7 @@ func NewResourceNotFoundError(resourceName string, data string) DomainError {
 	return NewError(
 		ErrResourceNotFound,
 		"존재하지 않는 데이터",
-		map[string]string{"resourceName": data},
+		map[string]string{"resourceName": resourceName, "data": data},
 		nil,
 	)
 }

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS user_lemon_transactions
 (
-    id             SERIAL PRIMARY KEY,
+    id             UUID,
     user_id        UUID                     NOT NULL,
     action_type    VARCHAR(20)              NOT NULL,
     amount         INTEGER                  NOT NULL,

@@ -55,6 +55,13 @@ func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatusResponse, err
 }
 
 func (s *service) HarvestLemon(ctx context.Context, userID string, positionID int) (lemon.HarvestResponse, error) {
+	// TODO: 퀴즈 풀었는지 확인해야함.퀴즈시스템 개발 후 수정필요
+	// 레몬이랑 퀴즈 맵핑!! 레몬 재생성될때 퀴즈도 같이 매핑해둬.
+	// 프론트: 일단 유저가 수확 쿨타임 지났는지확인(/lemon/harvestable)  (!! /lemon/harvest POST가 아님!)
+	//   -> 확인되면 퀴즈 진행
+	//   -> 퀴즈 답 제출.
+	//   -> 퀴즈 답 제출한 유저인지 확인하는과정필요!
+
 	availability, err := s.CanHarvest(ctx, userID)
 	if err != nil {
 		return lemon.HarvestResponse{}, err

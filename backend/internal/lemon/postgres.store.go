@@ -364,7 +364,6 @@ func (s *PostgresStore) HarvestWithTransaction(ctx context.Context, positionID i
 		harvestAmount,
 		newBalance,
 		now,
-		now,
 		note,
 	); err != nil {
 		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
@@ -391,7 +390,6 @@ func (s *PostgresStore) RegrowLemons(ctx context.Context, now time.Time) (int, e
 		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 	defer rows.Close()
-
 	var regrown int
 	for rows.Next() {
 		var posID int

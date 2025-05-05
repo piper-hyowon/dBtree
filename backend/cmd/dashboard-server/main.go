@@ -107,6 +107,9 @@ func main() {
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
 
+	lemonScheduler := lemon.NewScheduler(lemonStore, logger, 1*time.Minute)
+	lemonScheduler.Start()
+
 	// 종료 시그널
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
@@ -120,6 +123,8 @@ func main() {
 	// 종료 시그널 대기
 	<-stopChan
 	logger.Println("종료 신호 수신")
+	lemonScheduler.Stop()
+
 	if err := server.GracefulShutdown(5 * time.Second); err != nil {
 		logger.Fatalf("서버 종료 중 오류: %v", err)
 	}
