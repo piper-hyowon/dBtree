@@ -7,8 +7,8 @@ import (
 
 type Service interface {
 	// 레몬 나무
-	TreeStatus(ctx context.Context) (TreeStatus, error)
-	HarvestLemon(ctx context.Context, userID string, positionID int) (HarvestResult, error)
+	TreeStatus(ctx context.Context) (TreeStatusResponse, error)
+	HarvestLemon(ctx context.Context, userID string, positionID int) (HarvestResponse, error)
 	CanHarvest(ctx context.Context, userID string) (HarvestAvailability, error) // 마지막 수확 가능시간 체크
 
 	// 레몬 잔액 직접 변경

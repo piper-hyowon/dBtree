@@ -7,6 +7,8 @@ import (
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/email"
+	"github.com/piper-hyowon/dBtree/internal/lemon"
+	lemonRest "github.com/piper-hyowon/dBtree/internal/lemon/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
@@ -51,7 +53,7 @@ func main() {
 
 	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
-	//lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,
@@ -70,9 +72,10 @@ func main() {
 		logger,
 	)
 
-	userHandler := userRest.NewHandler(userService, logger)
+	userHandler := userRest.NewHandler(userService, lemonStore, logger)
 
-	//lemonService := lemon.NewService(lemonStore)
+	lemonService := lemon.NewService(lemonStore)
+	lemonHandler := lemonRest.NewHandler(lemonService, logger)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
@@ -95,19 +98,10 @@ func main() {
 	})
 
 	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
-	mux.HandleFunc("/user", authMiddleware.RequireAuth(userHandler.Delete))
-
-	// TODO: 임시 API
-	mux.HandleFunc("/profile", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-		u := rest.GetUserFromContext(r.Context())
-		if u == nil {
-			return
-		}
-
-		rest.SendSuccessResponse(w, http.StatusOK, map[string]interface{}{
-			"user": u,
-		})
-	}))
+	mux.HandleFunc("/user", authMiddleware.RequireAuth(userHandler.Default))
+	mux.HandleFunc("/lemon/global-status", lemonHandler.TreeStatus)
+	mux.HandleFunc("/lemon/harvestable", authMiddleware.RequireAuth(lemonHandler.CanHarvest))
+	mux.HandleFunc("/lemon/harvest", authMiddleware.RequireAuth(lemonHandler.HarvestLemon))
 
 	server := rest.NewServer(appConfig, mux, logger)
 

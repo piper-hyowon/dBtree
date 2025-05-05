@@ -3,9 +3,12 @@ package lemon
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -114,7 +117,7 @@ func (s *PostgresStore) FindTransactionByID(ctx context.Context, id string) (*le
 	return &tx, nil
 }
 
-func (s *PostgresStore) FindTransactionsByUserID(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
+func (s *PostgresStore) TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
 	query := `
 		SELECT 
 			id, user_id, db_instance_id, action_type, status, 
@@ -158,7 +161,7 @@ func (s *PostgresStore) FindTransactionsByUserID(ctx context.Context, userID str
 	return transactions, nil
 }
 
-func (s *PostgresStore) FindTransactionsByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*lemon.Transaction, error) {
+func (s *PostgresStore) TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*lemon.Transaction, error) {
 	query := `
         SELECT 
             id, user_id, db_instance_id, action_type, status, 
@@ -202,7 +205,7 @@ func (s *PostgresStore) FindTransactionsByInstanceID(ctx context.Context, instan
 	return transactions, nil
 }
 
-func (s *PostgresStore) GetUserBalance(ctx context.Context, userID string) (int, error) {
+func (s *PostgresStore) UserBalance(ctx context.Context, userID string) (int, error) {
 	query := `SELECT lemon_balance FROM users WHERE id = $1`
 
 	var balance int
@@ -218,7 +221,7 @@ func (s *PostgresStore) GetUserBalance(ctx context.Context, userID string) (int,
 	return balance, nil
 }
 
-func (s *PostgresStore) GetUserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error) {
+func (s *PostgresStore) UserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error) {
 	query := `SELECT last_harvest_at FROM users WHERE id = $1`
 
 	var lastHarvestAt sql.NullTime
@@ -237,17 +240,185 @@ func (s *PostgresStore) GetUserLastHarvestTime(ctx context.Context, userID strin
 	return &lastHarvestAt.Time, nil
 }
 
-func (s *PostgresStore) UpdateUserLastHarvestTime(ctx context.Context, userID string, harvestTime time.Time) error {
-	query := `
-		UPDATE users 
-		SET last_harvest_at = $1, updated_at = $2
-		WHERE id = $3
-	`
+func (s *PostgresStore) AvailablePositions(ctx context.Context) ([]int, error) {
+	query := `SELECT position_id FROM lemons WHERE is_available = true ORDER BY position_id`
 
-	_, err := s.db.ExecContext(ctx, query, harvestTime, time.Now(), userID)
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+	defer rows.Close()
+
+	var positions []int
+	for rows.Next() {
+		var posID int
+		if err := rows.Scan(&posID); err != nil {
+			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		}
+		positions = append(positions, posID)
 	}
 
-	return nil
+	if err = rows.Err(); err != nil {
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	return positions, nil
+}
+
+func (s *PostgresStore) TotalHarvestedCount(ctx context.Context) (int, error) {
+	query := `
+        SELECT COUNT(*) 
+        FROM user_lemon_transactions 
+        WHERE action_type = 'harvest' AND status = 'successful'
+    `
+
+	var count int
+	if err := s.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	return count, nil
+}
+
+func (s *PostgresStore) UserTotalHarvestedCount(ctx context.Context, userID string) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM user_lemon_transactions
+		WHERE action_type = 'harvest' AND status = 'successful' AND user_id = $1
+	`
+
+	var count int
+	if err := s.db.QueryRowContext(ctx, query, userID).Scan(&count); err != nil {
+		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	return count, nil
+}
+
+func (s *PostgresStore) HarvestWithTransaction(ctx context.Context, positionID int, userID string, harvestAmount int, now time.Time) (string, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+	defer tx.Rollback()
+
+	var isAvailable bool
+	query := `SELECT is_available FROM lemons WHERE position_id = $1 FOR UPDATE`
+	if err := tx.QueryRowContext(ctx, query, positionID).Scan(&isAvailable); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if !isAvailable {
+		return "", errors.NewResourceNotFoundError("available_lemon", strconv.Itoa(positionID))
+	}
+
+	// 레몬 수확 처리
+	nextTime := now.Add(lemon.DefaultHarvestRules.CooldownPeriod)
+	updateQuery := `
+        UPDATE lemons 
+        SET is_available = false, 
+            last_harvested_at = $1,
+            next_available_at = $2
+        WHERE position_id = $3
+    `
+	if _, err := tx.ExecContext(ctx, updateQuery, now, nextTime, positionID); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	// 사용자 잔액 조회
+	var balance int
+	balanceQuery := `SELECT lemon_balance FROM users WHERE id = $1 FOR UPDATE`
+	if err := tx.QueryRowContext(ctx, balanceQuery, userID).Scan(&balance); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	newBalance := balance + harvestAmount
+
+	// 유저 마지막 수확 시간, 잔액 업데이트
+	userUpdateQuery := `
+        UPDATE users 
+        SET last_harvest_at = $1, updated_at = $2, lemon_balance = $3
+        WHERE id = $4
+    `
+	if _, err := tx.ExecContext(ctx, userUpdateQuery, now, now, newBalance, userID); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	txID := uuid.New().String()
+	txQuery := `
+        INSERT INTO "user_lemon_transactions" (
+            id, user_id, action_type, status, 
+            amount, balance, created_at, note
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8
+        )
+    `
+	note := fmt.Sprintf("레몬 위치 %d에서 수확", positionID)
+	if _, err := tx.ExecContext(
+		ctx,
+		txQuery,
+		txID,
+		userID,
+		lemon.ActionHarvest,
+		lemon.StatusSuccessful,
+		harvestAmount,
+		newBalance,
+		now,
+		now,
+		note,
+	); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	return txID, nil
+}
+
+func (s *PostgresStore) RegrowLemons(ctx context.Context, now time.Time) (int, error) {
+	query := `
+        UPDATE lemons 
+        SET is_available = true 
+        WHERE is_available = false 
+          AND next_available_at <= $1
+        RETURNING position_id
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, now)
+	if err != nil {
+		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+	defer rows.Close()
+
+	var regrown int
+	for rows.Next() {
+		var posID int
+		if err := rows.Scan(&posID); err != nil {
+			return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		}
+		regrown++
+	}
+
+	return regrown, nil
+}
+
+func (s *PostgresStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {
+	query := `
+        SELECT MIN(next_available_at)
+        FROM lemons
+        WHERE is_available = false AND next_available_at IS NOT NULL
+    `
+	var nextTime sql.NullTime
+	if err := s.db.QueryRowContext(ctx, query).Scan(&nextTime); err != nil {
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if !nextTime.Valid {
+		// 재생성 예정인 레몬이 없음 - 현재 시간 반환
+		return nil, nil
+	}
+
+	return &nextTime.Time, nil
 }

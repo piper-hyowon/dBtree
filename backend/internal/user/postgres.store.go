@@ -25,14 +25,17 @@ func NewPostgresStore(db *sql.DB) user.Store {
 }
 
 func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	query := `SELECT id, email, created_at, updated_at 
+	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at 
               FROM users 
               WHERE email = $1 AND is_deleted = FALSE`
 
 	var u user.User
+	var lastHarvest sql.NullTime
 	err := s.db.QueryRowContext(ctx, query, email).Scan(
 		&u.ID,
 		&u.Email,
+		&u.LemonBalance,
+		&lastHarvest,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -44,16 +47,25 @@ func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.Us
 		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
+	if lastHarvest.Valid {
+		u.LastHarvest = &lastHarvest.Time
+	} else {
+		u.LastHarvest = nil
+	}
+
 	return &u, nil
 }
 
 func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, error) {
-	query := `SELECT id, email, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at FROM users WHERE id = $1`
 
 	var u user.User
+	var lastHarvest sql.NullTime
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&u.ID,
 		&u.Email,
+		&u.LemonBalance,
+		&lastHarvest,
 		&u.CreatedAt,
 		&u.UpdatedAt,
 	)
@@ -63,6 +75,12 @@ func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, er
 			return nil, nil
 		}
 		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if lastHarvest.Valid {
+		u.LastHarvest = &lastHarvest.Time
+	} else {
+		u.LastHarvest = nil
 	}
 
 	return &u, nil

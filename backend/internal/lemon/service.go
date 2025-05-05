@@ -23,15 +23,15 @@ func NewService(store lemon.Store) lemon.Service {
 	}
 }
 
-func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatus, error) {
+func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatusResponse, error) {
 	positions, err := s.store.AvailablePositions(ctx)
 	if err != nil {
-		return lemon.TreeStatus{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	totalHarvested, err := s.store.TotalHarvestedCount(ctx)
 	if err != nil {
-		return lemon.TreeStatus{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	var nextRegrowthTime *time.Time
@@ -40,28 +40,28 @@ func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatus, error) {
 		// 다음 재생성 시간 계산(가장 빠른 시간)
 		t, err := s.store.NextRegrowthTime(ctx)
 		if err != nil {
-			return lemon.TreeStatus{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
 		nextRegrowthTime = t
 	} else {
 		nextRegrowthTime = nil
 	}
 
-	return lemon.TreeStatus{
+	return lemon.TreeStatusResponse{
 		AvailablePositions: positions,
 		TotalHarvested:     totalHarvested,
 		NextRegrowthTime:   nextRegrowthTime,
 	}, nil
 }
 
-func (s *service) HarvestLemon(ctx context.Context, userID string, positionID int) (lemon.HarvestResult, error) {
+func (s *service) HarvestLemon(ctx context.Context, userID string, positionID int) (lemon.HarvestResponse, error) {
 	availability, err := s.CanHarvest(ctx, userID)
 	if err != nil {
-		return lemon.HarvestResult{}, err
+		return lemon.HarvestResponse{}, err
 	}
 
 	if !availability.CanHarvest {
-		return lemon.HarvestResult{}, errors.NewHarvestCooldownError(availability.WaitTime)
+		return lemon.HarvestResponse{}, errors.NewHarvestCooldownError(availability.WaitTime)
 	}
 
 	now := time.Now()
@@ -69,7 +69,7 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	// 사용자 잔액 조회
 	balanceBefore, err := s.store.UserBalance(ctx, userID)
 	if err != nil {
-		return lemon.HarvestResult{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
 	harvestAmount := lemon.DefaultHarvestRules.BaseAmount
@@ -79,17 +79,17 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	if newBalance > lemon.DefaultHarvestRules.MaxStoredLemons {
 		harvestAmount = lemon.DefaultHarvestRules.MaxStoredLemons - balanceBefore
 		if harvestAmount <= 0 {
-			return lemon.HarvestResult{}, errors.NewLemonStorageFullError()
+			return lemon.HarvestResponse{}, errors.NewLemonStorageFullError()
 		}
 		newBalance = lemon.DefaultHarvestRules.MaxStoredLemons
 	}
 
 	txID, err := s.store.HarvestWithTransaction(ctx, positionID, userID, harvestAmount, now)
 	if err != nil {
-		return lemon.HarvestResult{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	return lemon.HarvestResult{
+	return lemon.HarvestResponse{
 		HarvestAmount:   harvestAmount,
 		NewBalance:      newBalance,
 		TransactionID:   txID,
