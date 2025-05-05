@@ -9,9 +9,15 @@ import (
 type Store interface {
 	CreateTransaction(ctx context.Context, tx *Transaction) error
 	FindTransactionByID(ctx context.Context, id string) (*Transaction, error)
-	FindTransactionsByUserID(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
-	FindTransactionsByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*Transaction, error)
-	GetUserBalance(ctx context.Context, userID string) (int, error)
-	GetUserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error)
-	UpdateUserLastHarvestTime(ctx context.Context, userID string, lastHarvestTime time.Time) error
+	TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
+	TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*Transaction, error)
+
+	UserBalance(ctx context.Context, userID string) (int, error)
+	UserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error)
+
+	AvailablePositions(ctx context.Context) ([]int, error)
+	TotalHarvestedCount(ctx context.Context) (int, error) // 선택적: 총 수확량 반환
+	Harvest(ctx context.Context, positionID int, userID string, now time.Time) error
+	RegrowLemons(ctx context.Context, now time.Time) (int, error) // 수확후 일정시간이 지난 재생성된 레몬 수 반환
+
 }
