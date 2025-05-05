@@ -249,7 +249,7 @@ func (s *PostgresStore) AvailablePositions(ctx context.Context) ([]int, error) {
 	}
 	defer rows.Close()
 
-	var positions []int
+	var positions = []int{}
 	for rows.Next() {
 		var posID int
 		if err := rows.Scan(&posID); err != nil {

@@ -2,13 +2,6 @@ package lemon
 
 import "time"
 
-type Position struct {
-	PositionID      int       `json:"position_id"` // 고정된 위치 ID(0~9)
-	IsAvailable     bool      `json:"is_available"`
-	LastHarvestedAt time.Time `json:"last_harvested_at"` // 마지막 수확 시간
-	NextAvailableAt time.Time `json:"next_available_at"` // 다음 수확 가능 시간
-}
-
 const (
 	WelcomeBonusAmount = 50
 )
@@ -64,13 +57,13 @@ var DefaultHarvestRules = HarvestRules{
 }
 
 type HarvestAvailability struct {
-	CanHarvest bool          `json:"can_harvest"` // 수확 가능 여부
-	WaitTime   time.Duration `json:"wait_time"`   // 기다려야 하는 시간
+	CanHarvest bool          `json:"canHarvest"` // 수확 가능 여부
+	WaitTime   time.Duration `json:"waitTime"`   // 기다려야 하는 시간
 }
 
 type RegrowthRules struct {
-	RegrowthPeriod time.Duration `json:"regrowth_period"`
-	MaxPositions   int           `json:"max_positions"`
+	RegrowthPeriod time.Duration `json:"regrowthPeriod"`
+	MaxPositions   int           `json:"maxPositions"`
 }
 
 var DefaultRegrowthRules = RegrowthRules{
