@@ -72,6 +72,8 @@ func main() {
 
 	userHandler := userRest.NewHandler(userService, logger)
 
+	//lemonService := lemon.NewService(lemonStore)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")

@@ -64,6 +64,7 @@ var DefaultHarvestRules = HarvestRules{
 }
 
 type HarvestResult struct {
+	HarvestAmount   int           `json:"harvest_amount"`    // 수확한 레몬 수
 	NewBalance      int           `json:"new_balance"`       // 수확 후 잔액
 	NextHarvestTime time.Duration `json:"next_harvest_time"` // 다음 수확까지 남은 시간
 	TransactionID   string        `json:"transaction_id"`    // 생성된 트랜잭션 ID

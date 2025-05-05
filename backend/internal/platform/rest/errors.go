@@ -24,7 +24,7 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 		return http.StatusTooManyRequests
 	case errors.ErrResourceNotFound:
 		return http.StatusNotFound
-	case errors.ErrResourceConflict:
+	case errors.ErrResourceConflict, errors.ErrInsufficientLemons, errors.ErrHarvestCooldown, errors.ErrLemonStorageFull:
 		return http.StatusConflict
 	case errors.ErrInternalServer:
 		return http.StatusInternalServerError
