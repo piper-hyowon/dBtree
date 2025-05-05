@@ -4,56 +4,152 @@ metadata:
   name: dbinstances.dbtree.cloud
 spec:
   group: dbtree.cloud
+  names:
+    kind: DBInstance
+    plural: dbinstances
+    singular: dbinstance
+    shortNames:
+      - dbi
+  scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1
       served: true
       storage: true
       schema:
         openAPIV3Schema:
           type: object
+          required:
+            - spec
           properties:
             spec:
               type: object
+              required:
+                - name
+                - type
+                - size
+                - mode
+                - resources
+                - network
+                - backup
+                - userId
               properties:
                 name:
                   type: string
+                  description: "인스턴스 이름"
                 type:
                   type: string
-                  enum: [redis, mongodb]
+                  description: "데이터베이스 타입 (mongodb/redis)"
+                  enum:
+                    - mongodb
+                    - redis
+                size:
+                  type: string
+                  description: "인스턴스 크기 (small/medium/large)"
+                  enum:
+                    - small
+                    - medium
+                    - large
                 mode:
                   type: string
-                  enum: [basic, replica, cluster]
-                version:
-                  type: string
-                config:
-                  type: object
-                  x-kubernetes-preserve-unknown-fields: true
-                ownedBy:
-                  type: string
+                  description: "배포 모드 (standalone, replica_set 등)"
+                  enum:
+                    - standalone
+                    - replica_set
+                    - sharded
+                    - basic
+                    - sentinel
+                    - cluster
                 resources:
                   type: object
                   properties:
                     cpu:
                       type: integer
+                      minimum: 1
                     memory:
                       type: integer
+                      description: "메모리 (MB)"
+                      minimum: 128
                     disk:
                       type: integer
-                lemonCost:
+                      description: "디스크 (GB)"
+                      minimum: 1
+                network:
                   type: object
                   properties:
-                    creationCost:
-                      type: number
-                    hourlyLemons:
-                      type: number
-                    minimumLemons:
-                      type: number
+                    private:
+                      type: boolean
+                    port:
+                      type: integer
+                      minimum: 0
+                      maximum: 65535
+                backup:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                    schedule:
+                      type: string
+                      pattern: "^(\\*|([0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])) (\\*|([0-9]|1[0-9]|2[0-3])) (\\*|([1-9]|1[0-9]|2[0-9]|3[0-1])) (\\*|([1-9]|1[0-2])) (\\*|([0-6]))$"
+                    retentionDays:
+                      type: integer
+                      minimum: 1
+                mongoDBConf:
+                  type: object
+                  properties:
+                    version:
+                      type: string
+                    replicaCount:
+                      type: integer
+                      minimum: 0
+                    shardCount:
+                      type: integer
+                      minimum: 0
+                    authEnabled:
+                      type: boolean
+                    wiredTigerCache:
+                      type: integer
+                redisConf:
+                  type: object
+                  properties:
+                    version:
+                      type: string
+                    replicaCount:
+                      type: integer
+                      minimum: 0
+                    password:
+                      type: boolean
+                    persistence:
+                      type: boolean
+                    persistenceType:
+                      type: string
+                      enum:
+                        - AOF
+                        - RDB
+                    maxMemoryPolicy:
+                      type: string
+                tags:
+                  type: object
+                  additionalProperties:
+                    type: string
+                userId:
+                  type: string
+                  description: "인스턴스 소유자 ID"
             status:
               type: object
               properties:
-                status:
+                state:
                   type: string
-                  enum: [provisioning, running, stopped, paused, error, deleting, maintenance, backing_up, restoring, upgrading]
+                  enum:
+                    - provisioning
+                    - running
+                    - stopped
+                    - paused
+                    - error
+                    - deleting
+                    - maintenance
+                    - backing_up
+                    - restoring
+                    - upgrading
                 statusReason:
                   type: string
                 endpoint:
@@ -62,20 +158,43 @@ spec:
                   type: integer
                 secretRef:
                   type: string
-                lemonsBalance:
-                  type: number
-                lastLemonUpdate:
+                metrics:
+                  type: object
+                  properties:
+                    cpuUsage:
+                      type: string
+                      description: "CPU 사용량 (퍼센트)"
+                    memoryUsage:
+                      type: string
+                      description: "메모리 사용량 (퍼센트)"
+                    diskUsage:
+                      type: string
+                      description: "디스크 사용량 (퍼센트)"
+                    connections:
+                      type: integer
+                      description: "활성 연결 수"
+                    operationsPerSecond:
+                      type: integer
+                      description: "초당 작업 수"
+                lastMetricsUpdate:
                   type: string
                   format: date-time
-                pauseAfter:
-                  type: string
-                  format: date-time
-                deleteAfter:
-                  type: string
-                  format: date-time
-  scope: Namespaced
-  names:
-    plural: dbinstances
-    singular: dbinstance
-    kind: DBInstance
-    shortNames: [dbi]
+                  description: "마지막 메트릭 업데이트 시간"
+      additionalPrinterColumns:
+        - name: DB Type
+          type: string
+          jsonPath: .spec.type
+        - name: Size
+          type: string
+          jsonPath: .spec.size
+        - name: Status
+          type: string
+          jsonPath: .status.state
+        - name: Endpoint
+          type: string
+          jsonPath: .status.endpoint
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
