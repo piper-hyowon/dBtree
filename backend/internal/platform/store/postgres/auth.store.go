@@ -1,4 +1,4 @@
-package auth
+package postgres
 
 import (
 	"context"
@@ -12,19 +12,19 @@ import (
 	"time"
 )
 
-type PostgresSessionStore struct {
+type SessionStore struct {
 	db *sql.DB
 }
 
-var _ auth.SessionStore = (*PostgresSessionStore)(nil)
+var _ auth.SessionStore = (*SessionStore)(nil)
 
-func NewPostgresStore(db *sql.DB) auth.SessionStore {
-	return &PostgresSessionStore{
+func NewSessionStore(db *sql.DB) auth.SessionStore {
+	return &SessionStore{
 		db: db,
 	}
 }
 
-func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) error {
+func (s *SessionStore) Save(ctx context.Context, session *auth.Session) error {
 	exists, err := s.sessionExists(ctx, session.Email)
 	if err != nil {
 		return errors.NewInternalError(fmt.Errorf("세션 확인 실패: %w", err))
@@ -112,7 +112,7 @@ func (s *PostgresSessionStore) Save(ctx context.Context, session *auth.Session) 
 	return nil
 }
 
-func (s *PostgresSessionStore) FindByEmail(ctx context.Context, email string) (*auth.Session, error) {
+func (s *SessionStore) FindByEmail(ctx context.Context, email string) (*auth.Session, error) {
 	query := `
 		SELECT 
 			email, status, otp, otp_created_at, otp_expires_at, 
@@ -188,7 +188,7 @@ func (s *PostgresSessionStore) FindByEmail(ctx context.Context, email string) (*
 	return session, nil
 }
 
-func (s *PostgresSessionStore) FindByToken(ctx context.Context, token string) (*auth.Session, error) {
+func (s *SessionStore) FindByToken(ctx context.Context, token string) (*auth.Session, error) {
 	query := `
         SELECT 
             email, status, otp, otp_created_at, otp_expires_at, 
@@ -259,7 +259,7 @@ func (s *PostgresSessionStore) FindByToken(ctx context.Context, token string) (*
 
 	return session, nil
 }
-func (s *PostgresSessionStore) Delete(ctx context.Context, email string) error {
+func (s *SessionStore) Delete(ctx context.Context, email string) error {
 	query := `DELETE FROM sessions WHERE email = $1`
 
 	result, err := s.db.ExecContext(ctx, query, email)
@@ -280,7 +280,7 @@ func (s *PostgresSessionStore) Delete(ctx context.Context, email string) error {
 	return nil
 }
 
-func (s *PostgresSessionStore) Cleanup(ctx context.Context) error {
+func (s *SessionStore) Cleanup(ctx context.Context) error {
 	now := time.Now().UTC()
 
 	query := `
@@ -297,7 +297,7 @@ func (s *PostgresSessionStore) Cleanup(ctx context.Context) error {
 	return nil
 }
 
-func (s *PostgresSessionStore) sessionExists(ctx context.Context, email string) (bool, error) {
+func (s *SessionStore) sessionExists(ctx context.Context, email string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM sessions WHERE email = $1)`
 
 	var exists bool

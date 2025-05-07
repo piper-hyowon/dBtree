@@ -1,4 +1,4 @@
-package user
+package postgres
 
 import (
 	"context"
@@ -12,19 +12,19 @@ import (
 	"time"
 )
 
-type PostgresStore struct {
+type UserStore struct {
 	db *sql.DB
 }
 
-var _ user.Store = (*PostgresStore)(nil)
+var _ user.Store = (*UserStore)(nil)
 
-func NewPostgresStore(db *sql.DB) user.Store {
-	return &PostgresStore{
+func NewUserStore(db *sql.DB) user.Store {
+	return &UserStore{
 		db: db,
 	}
 }
 
-func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
+func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
 	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at 
               FROM users 
               WHERE email = $1 AND is_deleted = FALSE`
@@ -56,7 +56,7 @@ func (s *PostgresStore) FindByEmail(ctx context.Context, email string) (*user.Us
 	return &u, nil
 }
 
-func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, error) {
+func (s *UserStore) FindById(ctx context.Context, id string) (*user.User, error) {
 	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at FROM users WHERE id = $1`
 
 	var u user.User
@@ -86,7 +86,7 @@ func (s *PostgresStore) FindById(ctx context.Context, id string) (*user.User, er
 	return &u, nil
 }
 
-func (s *PostgresStore) CreateIfNotExists(ctx context.Context, email string) error {
+func (s *UserStore) CreateIfNotExists(ctx context.Context, email string) error {
 	exists, err := s.emailExists(ctx, email)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func (s *PostgresStore) CreateIfNotExists(ctx context.Context, email string) err
 	return err
 }
 
-func (s *PostgresStore) emailExists(ctx context.Context, email string) (bool, error) {
+func (s *UserStore) emailExists(ctx context.Context, email string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)`
 
 	var exists bool
@@ -120,7 +120,7 @@ func (s *PostgresStore) emailExists(ctx context.Context, email string) (bool, er
 	return exists, nil
 }
 
-func (s *PostgresStore) Delete(ctx context.Context, id string) error {
+func (s *UserStore) Delete(ctx context.Context, id string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("트랜잭션 시작 실패: %w", err)
