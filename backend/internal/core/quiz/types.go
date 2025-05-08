@@ -3,5 +3,5 @@ package quiz
 type StatusInfo struct {
 	QuizID         int
 	PositionID     int
-	StartTimeStamp int64
+	StartTimestamp int64
 }

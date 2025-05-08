@@ -40,28 +40,38 @@ const (
 	ErrHarvestCooldown    ErrorCode = 1500
 	ErrLemonStorageFull   ErrorCode = 1501
 	ErrInsufficientLemons ErrorCode = 1502
+
+	ErrQuizInProgress         ErrorCode = 1600
+	ErrNoQuizPassed           ErrorCode = 1601
+	ErrQuizTimeExpired        ErrorCode = 1602
+	ErrClickCircleTimeExpired ErrorCode = 1603
 )
 
 var errorStrings = map[ErrorCode]string{
-	ErrUnknown:          "unknown_error",
-	ErrInternalServer:   "internal_server_error",
-	ErrInvalidParameter: "invalid_parameter",
-	ErrMissingParameter: "missing_parameter",
-	ErrMethodNotAllowed: "method_not_allowed",
-	ErrInvalidOTP:       "invalid_otp",
-	ErrExpiredOTP:       "expired_otp",
-	ErrSessionNotFound:  "session_not_found",
-	ErrTooManyResends:   "too_many_resends",
-	ErrTooEarlyResend:   "too_early_resend",
-	ErrInvalidToken:     "invalid_token",
-	ErrUnauthorized:     "unauthorized",
-	ErrSessionExpired:   "session_expired",
-	ErrAlreadyVerified:  "already_verified",
-	ErrInvalidEmail:     "invalid_email",
-	ErrResourceNotFound: "resource_not_found",
-	ErrResourceConflict: "resource_conflict",
-	ErrHarvestCooldown:  "harvest_cooldown",
-	ErrLemonStorageFull: "lemon_storage_full",
+	ErrUnknown:                "unknown_error",
+	ErrInternalServer:         "internal_server_error",
+	ErrInvalidParameter:       "invalid_parameter",
+	ErrMissingParameter:       "missing_parameter",
+	ErrMethodNotAllowed:       "method_not_allowed",
+	ErrInvalidOTP:             "invalid_otp",
+	ErrExpiredOTP:             "expired_otp",
+	ErrSessionNotFound:        "session_not_found",
+	ErrTooManyResends:         "too_many_resends",
+	ErrTooEarlyResend:         "too_early_resend",
+	ErrInvalidToken:           "invalid_token",
+	ErrUnauthorized:           "unauthorized",
+	ErrSessionExpired:         "session_expired",
+	ErrAlreadyVerified:        "already_verified",
+	ErrInvalidEmail:           "invalid_email",
+	ErrResourceNotFound:       "resource_not_found",
+	ErrResourceConflict:       "resource_conflict",
+	ErrHarvestCooldown:        "harvest_cooldown",
+	ErrLemonStorageFull:       "lemon_storage_full",
+	ErrInsufficientLemons:     "insufficient_lemons",
+	ErrQuizInProgress:         "quiz_in_progress",
+	ErrNoQuizPassed:           "no_quiz_passed",
+	ErrQuizTimeExpired:        "time_expired",
+	ErrClickCircleTimeExpired: "click_circle_time_expired",
 }
 
 func (c ErrorCode) String() string {
