@@ -12,6 +12,7 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
+	"github.com/piper-hyowon/dBtree/internal/platform/store/redis"
 	"github.com/piper-hyowon/dBtree/internal/user"
 	userRest "github.com/piper-hyowon/dBtree/internal/user/rest"
 	"os/signal"
@@ -33,7 +34,7 @@ func main() {
 	}
 	appConfig, err := config.NewConfig()
 	if err != nil {
-		log.Fatal("환경 변수 설정 오류")
+		log.Fatalf("환경 변수 설정 오류: %v", err)
 	}
 
 	logger := log.New(os.Stdout, "[dBtree] ", log.LstdFlags|log.Lshortfile)
@@ -50,6 +51,12 @@ func main() {
 		logger.Fatalf("PostgreSQL 초기화 실패: %v", err)
 	}
 	defer pgClient.Close()
+
+	redisClient, err := redis.NewClient(appConfig.Redis, logger)
+	if err != nil {
+		logger.Fatalf("Redis 연결 실패: %v", err)
+	}
+	defer redisClient.Close()
 
 	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())

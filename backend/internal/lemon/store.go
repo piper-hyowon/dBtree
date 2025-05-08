@@ -7,5 +7,5 @@ import (
 )
 
 func NewLemonStore(_ bool, db *sql.DB) lemon.Store {
-	return postgres.NewLemonPostgresStore(db)
+	return postgres.NewLemonStore(db)
 }

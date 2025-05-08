@@ -17,6 +17,7 @@ type Config struct {
 	DebugLogging        bool
 	Postgres            PostgresConfig
 	UseLocalMemoryStore bool
+	Redis               RedisConfig
 }
 
 type CORSConfig struct {
@@ -60,6 +61,10 @@ type PostgresConfig struct {
 	MaxOpenConns           int
 	MaxIdleConns           int
 	ConnMaxLifetimeMinutes int
+}
+
+type RedisConfig struct {
+	ConnectString string
 }
 
 func NewConfig() (*Config, error) {
@@ -149,6 +154,11 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("SMTP 환경 변수 확인")
 	}
 
+	redisConnectString := getEnvString("REDIS_CONNECTION_STRING", "")
+	if redisConnectString == "" {
+		return nil, fmt.Errorf("REDIS 환경 변수 확인")
+	}
+
 	return &Config{
 		Server: ServerConfig{
 			Port:                port,
@@ -188,6 +198,9 @@ func NewConfig() (*Config, error) {
 			MaxOpenConns:           maxOpenConns,
 			MaxIdleConns:           maxIdleConns,
 			ConnMaxLifetimeMinutes: connMaxLifetimeMinutes,
+		},
+		Redis: RedisConfig{
+			ConnectString: redisConnectString,
 		},
 	}, nil
 }

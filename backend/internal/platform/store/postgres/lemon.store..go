@@ -12,19 +12,19 @@ import (
 	"time"
 )
 
-type PostgresLemonStore struct {
+type LemonStore struct {
 	db *sql.DB
 }
 
-var _ lemon.Store = (*PostgresLemonStore)(nil)
+var _ lemon.Store = (*LemonStore)(nil)
 
-func NewLemonPostgresStore(db *sql.DB) lemon.Store {
-	return &PostgresLemonStore{
+func NewLemonStore(db *sql.DB) lemon.Store {
+	return &LemonStore{
 		db: db,
 	}
 }
 
-func (s *PostgresLemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transaction) error {
+func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transaction) error {
 	dbTx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
@@ -85,7 +85,7 @@ func (s *PostgresLemonStore) CreateTransaction(ctx context.Context, tx *lemon.Tr
 	return nil
 }
 
-func (s *PostgresLemonStore) FindTransactionByID(ctx context.Context, id string) (*lemon.Transaction, error) {
+func (s *LemonStore) FindTransactionByID(ctx context.Context, id string) (*lemon.Transaction, error) {
 	query := `
 		SELECT 
 			id, user_id, db_instance_id, action_type, status, 
@@ -117,7 +117,7 @@ func (s *PostgresLemonStore) FindTransactionByID(ctx context.Context, id string)
 	return &tx, nil
 }
 
-func (s *PostgresLemonStore) TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
+func (s *LemonStore) TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
 	query := `
 		SELECT 
 			id, user_id, db_instance_id, action_type, status, 
@@ -161,7 +161,7 @@ func (s *PostgresLemonStore) TransactionListByUserID(ctx context.Context, userID
 	return transactions, nil
 }
 
-func (s *PostgresLemonStore) TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*lemon.Transaction, error) {
+func (s *LemonStore) TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*lemon.Transaction, error) {
 	query := `
         SELECT 
             id, user_id, db_instance_id, action_type, status, 
@@ -205,7 +205,7 @@ func (s *PostgresLemonStore) TransactionListByInstanceID(ctx context.Context, in
 	return transactions, nil
 }
 
-func (s *PostgresLemonStore) UserBalance(ctx context.Context, userID string) (int, error) {
+func (s *LemonStore) UserBalance(ctx context.Context, userID string) (int, error) {
 	query := `SELECT lemon_balance FROM users WHERE id = $1`
 
 	var balance int
@@ -221,7 +221,7 @@ func (s *PostgresLemonStore) UserBalance(ctx context.Context, userID string) (in
 	return balance, nil
 }
 
-func (s *PostgresLemonStore) UserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error) {
+func (s *LemonStore) UserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error) {
 	query := `SELECT last_harvest_at FROM users WHERE id = $1`
 
 	var lastHarvestAt sql.NullTime
@@ -240,7 +240,7 @@ func (s *PostgresLemonStore) UserLastHarvestTime(ctx context.Context, userID str
 	return &lastHarvestAt.Time, nil
 }
 
-func (s *PostgresLemonStore) AvailablePositions(ctx context.Context) ([]int, error) {
+func (s *LemonStore) AvailablePositions(ctx context.Context) ([]int, error) {
 	query := `SELECT position_id FROM lemons WHERE is_available = true ORDER BY position_id`
 
 	rows, err := s.db.QueryContext(ctx, query)
@@ -265,7 +265,7 @@ func (s *PostgresLemonStore) AvailablePositions(ctx context.Context) ([]int, err
 	return positions, nil
 }
 
-func (s *PostgresLemonStore) TotalHarvestedCount(ctx context.Context) (int, error) {
+func (s *LemonStore) TotalHarvestedCount(ctx context.Context) (int, error) {
 	query := `
         SELECT COUNT(*) 
         FROM user_lemon_transactions 
@@ -280,7 +280,7 @@ func (s *PostgresLemonStore) TotalHarvestedCount(ctx context.Context) (int, erro
 	return count, nil
 }
 
-func (s *PostgresLemonStore) UserTotalHarvestedCount(ctx context.Context, userID string) (int, error) {
+func (s *LemonStore) UserTotalHarvestedCount(ctx context.Context, userID string) (int, error) {
 	query := `
 		SELECT COUNT(*)
 		FROM user_lemon_transactions
@@ -295,7 +295,7 @@ func (s *PostgresLemonStore) UserTotalHarvestedCount(ctx context.Context, userID
 	return count, nil
 }
 
-func (s *PostgresLemonStore) HarvestWithTransaction(ctx context.Context, positionID int, userID string, harvestAmount int, now time.Time) (string, error) {
+func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int, userID string, harvestAmount int, now time.Time) (string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
@@ -376,7 +376,7 @@ func (s *PostgresLemonStore) HarvestWithTransaction(ctx context.Context, positio
 	return txID, nil
 }
 
-func (s *PostgresLemonStore) RegrowLemons(ctx context.Context, now time.Time) (int, error) {
+func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) (int, error) {
 	query := `
         UPDATE lemons 
         SET is_available = true 
@@ -402,7 +402,7 @@ func (s *PostgresLemonStore) RegrowLemons(ctx context.Context, now time.Time) (i
 	return regrown, nil
 }
 
-func (s *PostgresLemonStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {
+func (s *LemonStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {
 	query := `
         SELECT MIN(next_available_at)
         FROM lemons
