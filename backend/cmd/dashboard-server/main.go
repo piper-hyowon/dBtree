@@ -2,13 +2,18 @@ package main
 
 import (
 	"context"
-	"errors"
+	stdErrors "errors"
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/lemon"
 	lemonRest "github.com/piper-hyowon/dBtree/internal/lemon/rest"
+	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
+	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
+	"strconv"
+
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
@@ -84,8 +89,11 @@ func main() {
 	lemonService := lemon.NewService(lemonStore)
 	lemonHandler := lemonRest.NewHandler(lemonService, logger)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
+	quizHandler := quizRest.NewHandler(logger)
+
+	r := router.New(logger)
+
+	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
 		if otpType == "authentication" {
 			authHandler.VerifyOTP(w, r)
@@ -95,7 +103,7 @@ func main() {
 	})
 
 	// 발송 or 재발송
-	mux.HandleFunc("/send-otp", func(w http.ResponseWriter, r *http.Request) {
+	r.POST("/send-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
 		if otpType == "authentication" {
 			authHandler.SendOTP(w, r)
@@ -104,13 +112,38 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("/logout", authMiddleware.RequireAuth(authHandler.Logout))
-	mux.HandleFunc("/user", authMiddleware.RequireAuth(userHandler.Default))
-	mux.HandleFunc("/lemon/global-status", lemonHandler.TreeStatus)
-	mux.HandleFunc("/lemon/harvestable", authMiddleware.RequireAuth(lemonHandler.CanHarvest))
-	mux.HandleFunc("/lemon/harvest", authMiddleware.RequireAuth(lemonHandler.HarvestLemon))
+	r.POST("/logout", authMiddleware.RequireAuth(authHandler.Logout))
 
-	server := rest.NewServer(appConfig, mux, logger)
+	r.GET("/user", authMiddleware.RequireAuth(userHandler.Profile))
+	r.DELETE("/user", authMiddleware.RequireAuth(userHandler.Delete))
+
+	r.GET("/lemon/global-status", lemonHandler.TreeStatus)
+	r.GET("/lemon/harvestable", authMiddleware.RequireAuth(lemonHandler.CanHarvest))
+	r.POST("/lemon/harvest", authMiddleware.RequireAuth(lemonHandler.HarvestLemon))
+
+	r.GET("/quiz/:positionID", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		positionID := router.Param(r, "positionID")
+		if positionID == "" {
+			rest.HandleError(w, errors.NewMissingParameterError("positionID"), logger)
+			return
+		}
+
+		if len(positionID) != 1 || positionID[0] < '0' || positionID[0] > '9' {
+			rest.HandleError(w, errors.NewInvalidParameterError("positionID", "0-9"), logger)
+			return
+		}
+
+		positionIDInt, err := strconv.Atoi(positionID)
+		if err != nil {
+			rest.HandleError(w, errors.NewInvalidParameterError("positionID", "int"), logger)
+			return
+		}
+
+		quizHandler.StartQuizWithPosition(w, r, positionIDInt)
+	}))
+	r.POST("/quiz/answer", authMiddleware.RequireAuth(quizHandler.SubmitAnswer))
+
+	server := rest.NewServer(appConfig, r, logger)
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
 
@@ -122,7 +155,7 @@ func main() {
 	signal.Notify(stopChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		if err := server.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Start(); err != nil && !stdErrors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("서버 시작 실패: %v", err)
 		}
 	}()

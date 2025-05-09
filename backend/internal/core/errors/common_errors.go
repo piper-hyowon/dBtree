@@ -77,6 +77,15 @@ func NewMethodNotAllowedError(allowedMethods string) DomainError {
 	)
 }
 
+func NewEndpointNotFoundError(path string) DomainError {
+	return NewError(
+		ErrEndpointNotFound,
+		"존재하지 않는 API 엔드포인트 입니다",
+		map[string]string{"path": path},
+		nil,
+	)
+}
+
 func NewResourceNotFoundError(resourceName string, data string) DomainError {
 	return NewError(
 		ErrResourceNotFound,

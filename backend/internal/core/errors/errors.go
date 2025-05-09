@@ -21,6 +21,7 @@ const (
 	ErrInvalidParameter ErrorCode = 1100
 	ErrMissingParameter ErrorCode = 1101
 	ErrMethodNotAllowed ErrorCode = 1102
+	ErrEndpointNotFound ErrorCode = 1103
 
 	ErrInvalidOTP      ErrorCode = 1200
 	ErrExpiredOTP      ErrorCode = 1201
@@ -53,6 +54,7 @@ var errorStrings = map[ErrorCode]string{
 	ErrInvalidParameter:       "invalid_parameter",
 	ErrMissingParameter:       "missing_parameter",
 	ErrMethodNotAllowed:       "method_not_allowed",
+	ErrEndpointNotFound:       "endpoint_not_found",
 	ErrInvalidOTP:             "invalid_otp",
 	ErrExpiredOTP:             "expired_otp",
 	ErrSessionNotFound:        "session_not_found",

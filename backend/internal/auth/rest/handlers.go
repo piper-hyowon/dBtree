@@ -51,12 +51,8 @@ type VerifyOTPResponse struct {
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
-	if !rest.ValidateMethod(w, r, http.MethodPost) {
-		return
-	}
-
 	var req SendOTPRequest
-	if !rest.DecodeJSONRequest(w, r, &req) {
+	if !rest.DecodeJSONRequest(w, r, &req, h.logger) {
 		return
 	}
 
@@ -91,11 +87,7 @@ func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOTPRequest
-	if !rest.ValidateMethod(w, r, http.MethodPost) {
-		return
-	}
-
-	if !rest.DecodeJSONRequest(w, r, &req) {
+	if !rest.DecodeJSONRequest(w, r, &req, h.logger) {
 		return
 	}
 
@@ -124,10 +116,6 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
-	if !rest.ValidateMethod(w, r, http.MethodPost) {
-		return
-	}
-
 	token := rest.GetTokenFromContext(r.Context())
 	if token == "" {
 		rest.HandleError(w, errors.NewInternalError(fmt.Errorf("토큰 정보를 불러올 수 없습니다")), h.logger)

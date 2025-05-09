@@ -24,22 +24,6 @@ func NewHandler(userService user.Service, lemonStore lemon.Store, logger *log.Lo
 	}
 }
 
-func (h *Handler) Default(w http.ResponseWriter, r *http.Request) {
-	if !rest.ValidateMethods(w, r, http.MethodDelete, http.MethodGet) {
-		return
-	}
-
-	if r.Method == http.MethodDelete {
-		h.Delete(w, r)
-		return
-	}
-
-	if r.Method == http.MethodGet {
-		h.Profile(w, r)
-		return
-	}
-}
-
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	u := rest.GetUserFromContext(r.Context())
 	if u == nil {

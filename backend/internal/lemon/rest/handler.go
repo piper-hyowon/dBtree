@@ -22,10 +22,6 @@ func NewHandler(lemonService lemon.Service, logger *log.Logger) *Handler {
 }
 
 func (h *Handler) TreeStatus(w http.ResponseWriter, r *http.Request) {
-	if !rest.ValidateMethod(w, r, http.MethodGet) {
-		return
-	}
-
 	t, err := h.lemonService.TreeStatus(r.Context())
 	if err != nil {
 		rest.HandleError(w, err, h.logger)
@@ -36,10 +32,6 @@ func (h *Handler) TreeStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CanHarvest(w http.ResponseWriter, r *http.Request) {
-	if !rest.ValidateMethod(w, r, http.MethodGet) {
-		return
-	}
-
 	u := rest.GetUserFromContext(r.Context())
 	if u == nil {
 		//rest.HandleError(w, errors.NewError(
@@ -61,10 +53,7 @@ func (h *Handler) CanHarvest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HarvestLemon(w http.ResponseWriter, r *http.Request) {
 	var req lemon.HarvestRequest
 
-	if !rest.ValidateMethod(w, r, http.MethodPost) {
-		return
-	}
-	if !rest.DecodeJSONRequest(w, r, &req) {
+	if !rest.DecodeJSONRequest(w, r, &req, h.logger) {
 		return
 	}
 
