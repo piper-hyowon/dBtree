@@ -21,7 +21,7 @@ CREATE TRIGGER update_users_timestamp
     FOR EACH ROW
 EXECUTE FUNCTION update_timestamp_column();
 
-CREATE TRIGGER update_users_timestamp
+CREATE TRIGGER update_sessions_timestamp
     BEFORE UPDATE
     ON sessions
     FOR EACH ROW
