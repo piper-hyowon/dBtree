@@ -62,21 +62,28 @@ func (h *Handler) HarvestLemon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.AttemptID == nil {
+		rest.HandleError(w, errors.NewMissingParameterError("attemptID"), h.logger)
+		return
+	}
+
 	if *req.PositionID < 0 || *req.PositionID > lemon.DefaultRegrowthRules.MaxPositions {
 		rest.HandleError(w, errors.NewInvalidParameterError("positionID", fmt.Sprintf("positionID 는 %d 부터 %d 사이", 0, lemon.DefaultRegrowthRules.MaxPositions)), h.logger)
 		return
 	}
 
+	if *req.AttemptID <= 0 {
+		rest.HandleError(w, errors.NewInvalidParameterError("attemptID", "attemptID - 양의 정수"), h.logger)
+		return
+	}
+
 	u := rest.GetUserFromContext(r.Context())
 	if u == nil {
-		//rest.HandleError(w, errors.NewError(
-		//	errors.ErrInternalServer,
-		//	"인증 정보 없음", nil, nil), h.logger)
 		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
 		return
 	}
 
-	result, err := h.lemonService.HarvestLemon(r.Context(), u.ID, *req.PositionID)
+	result, err := h.lemonService.HarvestLemon(r.Context(), u.ID, *req.PositionID, *req.AttemptID)
 	if err != nil {
 		rest.HandleError(w, err, h.logger)
 		return

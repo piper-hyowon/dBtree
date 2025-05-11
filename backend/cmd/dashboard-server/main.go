@@ -11,6 +11,7 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/lemon"
 	lemonRest "github.com/piper-hyowon/dBtree/internal/lemon/rest"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
+	"github.com/piper-hyowon/dBtree/internal/quiz"
 	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
 	"strconv"
 
@@ -66,6 +67,7 @@ func main() {
 	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	quizStore := quiz.NewStore(redisClient.Redis(), pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,
@@ -86,10 +88,11 @@ func main() {
 
 	userHandler := userRest.NewHandler(userService, lemonStore, logger)
 
-	lemonService := lemon.NewService(lemonStore)
+	lemonService := lemon.NewService(lemonStore, quizStore)
 	lemonHandler := lemonRest.NewHandler(lemonService, logger)
 
-	quizHandler := quizRest.NewHandler(logger)
+	quizService := quiz.NewService(quizStore, lemonStore, logger)
+	quizHandler := quizRest.NewHandler(quizService, lemonService, logger)
 
 	r := router.New(logger)
 
@@ -139,7 +142,7 @@ func main() {
 			return
 		}
 
-		quizHandler.StartQuizWithPosition(w, r, positionIDInt)
+		quizHandler.StartQuiz(w, r, positionIDInt)
 	}))
 	r.POST("/quiz/answer", authMiddleware.RequireAuth(quizHandler.SubmitAnswer))
 

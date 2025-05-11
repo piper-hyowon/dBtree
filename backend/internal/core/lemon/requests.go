@@ -4,6 +4,7 @@ import "time"
 
 type HarvestRequest struct {
 	PositionID *int `json:"positionId"`
+	AttemptID  *int `json:"attemptId"`
 }
 
 type HarvestResponse struct {

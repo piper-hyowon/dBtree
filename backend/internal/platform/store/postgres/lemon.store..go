@@ -24,6 +24,37 @@ func NewLemonStore(db *sql.DB) lemon.Store {
 	}
 }
 
+func (s *LemonStore) ByPositionID(ctx context.Context, positionID int) (*lemon.Lemon, error) {
+	query := `SELECT position_id, is_available, last_harvested_at, next_available_at  FROM lemons WHERE position_id = $1`
+
+	var lemonData lemon.Lemon
+	var lastHarvestedAtNull sql.NullTime
+	var nextAvailableAtNull sql.NullTime
+	err := s.db.QueryRowContext(ctx, query, positionID).Scan(
+		&lemonData.PositionID,
+		&lemonData.IsAvailable,
+		&lastHarvestedAtNull,
+		&nextAvailableAtNull,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if lastHarvestedAtNull.Valid {
+		lemonData.LastHarvestedAt = lastHarvestedAtNull.Time
+	}
+
+	if nextAvailableAtNull.Valid {
+		lemonData.NextAvailableAt = nextAvailableAtNull.Time
+	}
+
+	return &lemonData, nil
+}
+
 func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transaction) error {
 	dbTx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -85,7 +116,7 @@ func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transactio
 	return nil
 }
 
-func (s *LemonStore) FindTransactionByID(ctx context.Context, id string) (*lemon.Transaction, error) {
+func (s *LemonStore) TransactionByID(ctx context.Context, id string) (*lemon.Transaction, error) {
 	query := `
 		SELECT 
 			id, user_id, db_instance_id, action_type, status, 

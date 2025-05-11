@@ -7,19 +7,24 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/dbservice"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
+	"github.com/piper-hyowon/dBtree/internal/core/quiz"
+	"log"
 	"runtime/debug"
 	"time"
 )
 
 type service struct {
-	store lemon.Store
+	store     lemon.Store
+	quizStore quiz.Store
+	logger    *log.Logger // TODO: core.Logger 인터페이스 정의해서 사용
 }
 
 var _ lemon.Service = (*service)(nil)
 
-func NewService(store lemon.Store) lemon.Service {
+func NewService(store lemon.Store, quizStore quiz.Store) lemon.Service {
 	return &service{
-		store: store,
+		store:     store,
+		quizStore: quizStore,
 	}
 }
 
@@ -54,24 +59,41 @@ func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatusResponse, err
 	}, nil
 }
 
-func (s *service) HarvestLemon(ctx context.Context, userID string, positionID int) (lemon.HarvestResponse, error) {
-	// TODO: 퀴즈 풀었는지 확인해야함.퀴즈시스템 개발 후 수정필요
-	// 레몬이랑 퀴즈 맵핑!! 레몬 재생성될때 퀴즈도 같이 매핑해둬.
-	// 프론트: 일단 유저가 수확 쿨타임 지났는지확인(/lemon/harvestable)  (!! /lemon/harvest POST가 아님!)
-	//   -> 확인되면 퀴즈 진행(lemon id 로 퀴즈 조회)
-	//   -> 퀴즈 답 제출.
-	//   -> 퀴즈 답 제출한 유저인지 확인하는과정필요!
-
-	availability, err := s.CanHarvest(ctx, userID)
+func (s *service) HarvestLemon(ctx context.Context, userID string, positionID int, attemptID int) (lemon.HarvestResponse, error) {
+	// 퀴즈 시도 기록 조회
+	attempt, err := s.quizStore.AttemptByID(ctx, attemptID)
 	if err != nil {
-		return lemon.HarvestResponse{}, err
+		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 
-	if !availability.CanHarvest {
-		return lemon.HarvestResponse{}, errors.NewHarvestCooldownError(availability.WaitTime)
+	if attempt == nil {
+		return lemon.HarvestResponse{}, errors.NewNoQuizPassedError()
 	}
 
+	if attempt.UserID != userID || !attempt.IsCorrect || attempt.Status != quiz.StatusDone || attempt.LemonPositionID != positionID {
+		return lemon.HarvestResponse{}, errors.NewNoQuizPassedError()
+	}
+
+	// 이미 성공/실패 처리되었는지(중복 보상 방지)
+	if attempt.HarvestStatus != quiz.HarvestStatusInProgress {
+		return lemon.HarvestResponse{}, errors.NewHarvestAlreadyProcessedError()
+	}
+
+	// 원 클릭 시간 제한 확인
 	now := time.Now()
+	timeSinceSubmit := time.Since(attempt.SubmitTime).Seconds()
+	if timeSinceSubmit > float64(quiz.HarvestTimeSeconds) {
+		// 시간 초과 - 상태 업데이트
+		err = s.quizStore.UpdateAttemptHarvestStatus(ctx, attemptID, quiz.HarvestStatusTimeout, now)
+		if err != nil {
+			s.logger.Printf("수확 상태 업데이트 실패: %v", err)
+		}
+
+		return lemon.HarvestResponse{}, errors.NewClickCircleTimeExpiredError(
+			now,
+			attempt.SubmitTime.Add(time.Duration(quiz.HarvestTimeSeconds)*time.Second),
+		)
+	}
 
 	// 사용자 잔액 조회
 	balanceBefore, err := s.store.UserBalance(ctx, userID)
@@ -94,6 +116,13 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	txID, err := s.store.HarvestWithTransaction(ctx, positionID, userID, harvestAmount, now)
 	if err != nil {
 		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	// 수확 상태 업데이트
+	err = s.quizStore.UpdateAttemptHarvestStatus(ctx, attemptID, quiz.HarvestStatusSuccess, now)
+	if err != nil {
+		s.logger.Printf("수확 상태 업데이트 실패: %v", err)
+		// 로그만 남기고 계속 진행 (잔액은 이미 반영 완료) // TODO: 에러리포팅?
 	}
 
 	return lemon.HarvestResponse{
