@@ -32,3 +32,12 @@ func NewInsufficientLemonsError(required int, missing int) DomainError {
 		nil,
 	)
 }
+
+func NewLemonAlreadyHarvestedError() DomainError {
+	return NewError(
+		ErrLemonAlreadyHarvested,
+		"다른 사용자가 해당 레몬을 먼저 수확했습니다",
+		nil,
+		nil,
+	)
+}

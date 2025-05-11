@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS user_quiz_attempts
                ('started', 'done', 'timeout')),
     CONSTRAINT check_harvest_status
         CHECK (harvest_status IN
-               ('none', 'in_progress', 'success', 'timeout'))
+               ('none', 'in_progress', 'success','failure', 'timeout'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_user_id ON user_quiz_attempts (user_id);

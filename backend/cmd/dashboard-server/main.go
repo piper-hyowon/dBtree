@@ -88,7 +88,7 @@ func main() {
 
 	userHandler := userRest.NewHandler(userService, lemonStore, logger)
 
-	lemonService := lemon.NewService(lemonStore, quizStore)
+	lemonService := lemon.NewService(lemonStore, quizStore, logger)
 	lemonHandler := lemonRest.NewHandler(lemonService, logger)
 
 	quizService := quiz.NewService(quizStore, lemonStore, logger)

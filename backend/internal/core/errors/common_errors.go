@@ -7,6 +7,7 @@ import (
 
 // NewInternalErrorWithStack 내부 서버 오류 발생시 호출
 // 이미 DomainError 타입인 경우 중복 래핑을 방지하고 원본 에러를 그대로 반환(스택 보존)
+// + 서버 에러가 아닌 다른 에러로 처리된 경우도 여기서 그 에러를 보존해줌
 func NewInternalErrorWithStack(cause error, stack string) DomainError {
 	var domainErr DomainError
 	if errors.As(cause, &domainErr) {

@@ -21,10 +21,11 @@ type service struct {
 
 var _ lemon.Service = (*service)(nil)
 
-func NewService(store lemon.Store, quizStore quiz.Store) lemon.Service {
+func NewService(store lemon.Store, quizStore quiz.Store, logger *log.Logger) lemon.Service {
 	return &service{
 		store:     store,
 		quizStore: quizStore,
+		logger:    logger,
 	}
 }
 
@@ -115,6 +116,19 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 
 	txID, err := s.store.HarvestWithTransaction(ctx, positionID, userID, harvestAmount, now)
 	if err != nil {
+		// 다른 사람이 이미 수확
+		if errors.Is(err, errors.NewLemonAlreadyHarvestedError()) {
+			updateErr := s.quizStore.UpdateAttemptHarvestStatus(ctx, attemptID, quiz.HarvestStatusFailure, now)
+			fmt.Print(updateErr)
+			if updateErr != nil {
+				s.logger.Printf("수확 상태 업데이트 실패: %v", updateErr)
+				return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(
+					fmt.Errorf("수확 상태 업데이트 실패 (원인: %w)", updateErr),
+					string(debug.Stack()))
+			}
+
+			return lemon.HarvestResponse{}, err
+		}
 		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 

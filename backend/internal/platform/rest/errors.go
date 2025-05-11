@@ -23,7 +23,8 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 
 	case errors.ErrSessionExpired, errors.ErrAlreadyVerified,
 		errors.ErrResourceConflict, errors.ErrInsufficientLemons, errors.ErrHarvestCooldown,
-		errors.ErrLemonStorageFull, errors.ErrNoQuizInProgress, errors.ErrHarvestAlreadyProcessed:
+		errors.ErrLemonStorageFull, errors.ErrNoQuizInProgress, errors.ErrHarvestAlreadyProcessed,
+		errors.ErrLemonAlreadyHarvested:
 		return http.StatusConflict
 
 	case errors.ErrResourceNotFound:

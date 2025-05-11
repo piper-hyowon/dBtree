@@ -44,10 +44,11 @@ const (
 
 	ErrQuizInProgress          ErrorCode = 1600
 	ErrNoQuizPassed            ErrorCode = 1601
-	ErrHarvestAlreadyProcessed ErrorCode = 1604 // 이미 수확 처리가 완료
+	ErrHarvestAlreadyProcessed ErrorCode = 1602 // 이미 수확 처리가 완료
 	ErrQuizTimeExpired         ErrorCode = 1603
 	ErrClickCircleTimeExpired  ErrorCode = 1604
 	ErrNoQuizInProgress        ErrorCode = 1605
+	ErrLemonAlreadyHarvested   ErrorCode = 1606
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -77,6 +78,7 @@ var errorStrings = map[ErrorCode]string{
 	ErrQuizTimeExpired:        "time_expired",
 	ErrClickCircleTimeExpired: "click_circle_time_expired",
 	ErrNoQuizInProgress:       "no_quiz_in_progress",
+	ErrLemonAlreadyHarvested:  "lemon_already_harvested",
 }
 
 func (c ErrorCode) String() string {
@@ -127,6 +129,14 @@ func (e *baseDomainError) Unwrap() error {
 
 func (e *baseDomainError) Stack() string {
 	return e.stack
+}
+
+func (e *baseDomainError) Is(target error) bool {
+	t, ok := target.(*baseDomainError)
+	if !ok {
+		return false
+	}
+	return e.code == t.code
 }
 
 func NewError(code ErrorCode, message string, data any, cause error) DomainError {

@@ -63,7 +63,8 @@ const (
 	HarvestStatusNone       HarvestStatus = "none"        // 아직 수확 단계 아님(Default)
 	HarvestStatusInProgress HarvestStatus = "in_progress" // 원이 나타나서 클릭 대기 중
 	HarvestStatusSuccess    HarvestStatus = "success"     // 레몬 수확 성공
-	HarvestStatusTimeout    HarvestStatus = "timeout"     //원 클릭 시간 초과
+	HarvestStatusTimeout    HarvestStatus = "timeout"     // 원 클릭 시간 초과
+	HarvestStatusFailure    HarvestStatus = "failure"     // 수확 실패 (다른 사용자가 먼저 수확)
 )
 
 type Quiz struct {

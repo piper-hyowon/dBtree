@@ -8,7 +8,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"runtime/debug"
-	"strconv"
 	"time"
 )
 
@@ -340,7 +339,7 @@ func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int,
 	}
 
 	if !isAvailable {
-		return "", errors.NewResourceNotFoundError("available_lemon", strconv.Itoa(positionID))
+		return "", errors.NewLemonAlreadyHarvestedError()
 	}
 
 	// 레몬 수확 처리
