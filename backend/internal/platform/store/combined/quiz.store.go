@@ -56,17 +56,19 @@ func (q QuizStore) InProgress(ctx context.Context, userEmail string) (*quiz.Stat
 func (q QuizStore) CreateInProgress(ctx context.Context, userEmail string, info *quiz.StatusInfo, timeLimit int) (bool, error) {
 	key := keys.InProgressKey(userEmail)
 
-	exists, err := q.cache.Exists(ctx, key).Result()
+	// quiz_id 필드에 대해서만 HSETNX 사용
+	created, err := q.cache.HSetNX(ctx, key, "quiz_id", info.QuizID).Result()
 	if err != nil {
 		return false, errors.NewInternalErrorWithStack(fmt.Errorf("redis 서버 에러: %v", err), string(debug.Stack()))
 	}
-	if exists == 1 {
-		return false, errors.NewQuizInProgressError()
+
+	if !created {
+		return false, nil
 	}
 
 	pipe := q.cache.Pipeline()
 	pipe.HSet(ctx, key, map[string]interface{}{
-		"quiz_id":     info.QuizID,
+		//"quiz_id":     info.QuizID,
 		"position_id": info.PositionID,
 		"start_time":  info.StartTimestamp,
 		"attempt_id":  info.AttemptID,
@@ -75,6 +77,7 @@ func (q QuizStore) CreateInProgress(ctx context.Context, userEmail string, info 
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
+		_ = q.cache.Del(ctx, key)
 		return false, errors.NewInternalErrorWithStack(fmt.Errorf("redis 서버 에러: %v", err), string(debug.Stack()))
 	}
 
@@ -151,14 +154,14 @@ func (q QuizStore) ByPositionID(ctx context.Context, positionID int) (*quiz.Quiz
 
 func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 	query := `
-        SELECT id, question, options, correct_option_idx, 
-               difficulty, category, explanation, time_limit,
-               is_active, usage_count
-        FROM quizzes
-        WHERE is_active = false
-        ORDER BY usage_count ASC, RANDOM()
-        LIMIT 1
-    `
+			SELECT id, question, options, correct_option_idx, 
+				   difficulty, category, explanation, time_limit,
+				   is_active, usage_count
+			FROM quizzes
+			WHERE is_active = false
+			ORDER BY usage_count , RANDOM()
+			LIMIT 1
+		`
 
 	var quizData quiz.Quiz
 	var optionsJSON string

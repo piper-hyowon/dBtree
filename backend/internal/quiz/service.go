@@ -68,7 +68,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 		return nil, errors.NewQuizInProgressError()
 	}
 
-	// 퀴즈 시작 기록 (PostgreSQL)
+	// 퀴즈 시작 기록 (PostgresSQL)
 	attemptID, err := s.quizStore.CreateAttempt(ctx, userID, q.ID, positionID, startTime)
 	if err != nil {
 		_ = s.quizStore.DeleteInProgress(ctx, userEmail)
