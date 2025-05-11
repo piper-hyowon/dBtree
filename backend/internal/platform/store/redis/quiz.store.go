@@ -1,3 +1,0 @@
-package redis
-
-type Redis

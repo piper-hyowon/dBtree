@@ -13,21 +13,28 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 	switch code {
 	case errors.ErrInvalidParameter, errors.ErrMissingParameter:
 		return http.StatusBadRequest
+
 	case errors.ErrMethodNotAllowed:
 		return http.StatusMethodNotAllowed
+
 	case errors.ErrInvalidOTP, errors.ErrExpiredOTP, errors.ErrSessionNotFound,
 		errors.ErrInvalidToken, errors.ErrUnauthorized:
 		return http.StatusUnauthorized
-	case errors.ErrSessionExpired, errors.ErrAlreadyVerified:
+
+	case errors.ErrSessionExpired, errors.ErrAlreadyVerified,
+		errors.ErrResourceConflict, errors.ErrInsufficientLemons, errors.ErrHarvestCooldown,
+		errors.ErrLemonStorageFull, errors.ErrNoQuizInProgress, errors.ErrHarvestAlreadyProcessed:
 		return http.StatusConflict
-	case errors.ErrTooManyResends, errors.ErrTooEarlyResend:
-		return http.StatusTooManyRequests
+
 	case errors.ErrResourceNotFound:
 		return http.StatusNotFound
-	case errors.ErrResourceConflict, errors.ErrInsufficientLemons, errors.ErrHarvestCooldown, errors.ErrLemonStorageFull:
-		return http.StatusConflict
+
+	case errors.ErrTooManyResends, errors.ErrTooEarlyResend:
+		return http.StatusTooManyRequests
+
 	case errors.ErrInternalServer:
 		return http.StatusInternalServerError
+
 	default:
 		return http.StatusInternalServerError
 	}
@@ -74,7 +81,7 @@ func HandleError(w http.ResponseWriter, err error, logger *log.Logger) {
 
 	response := ErrorResponse{
 		Code:    int(domainErr.Code()),
-		Message: message,
+		Message: "[" + domainErr.Code().String() + "] " + message,
 	}
 
 	if data := domainErr.ErrorData(); data != nil {

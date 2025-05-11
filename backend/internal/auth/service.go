@@ -91,12 +91,24 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 	if session == nil {
 		return errors.NewSessionNotFoundError()
 	}
+
+	now := time.Now().UTC()
+
+	// 인증된 세션이고 토큰이 만료된 경우, 상태를 Pending 으로 변경
+	if session.Status == auth.Verified {
+		if session.TokenExpiresAt.Before(now) {
+			// 토큰이 만료되었으므로 세션 상태를 Pending 으로 변경
+			session.Status = auth.Pending
+			session.Token = "" // 토큰 삭제
+		} else {
+			return errors.NewSessionAlreadyVerifiedError()
+		}
+	}
+
 	// 재전송 횟수 제한
 	if session.ResendCount >= auth.MaxResendAttempts-1 {
 		return errors.NewTooManyResendsError(auth.MaxResendAttempts)
 	}
-
-	now := time.Now().UTC()
 
 	// 첫 재발송이면 CreatedAt(첫 발송시간)기준으로 체크
 	var lastSentTime time.Time

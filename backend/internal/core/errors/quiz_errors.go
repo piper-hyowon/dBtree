@@ -8,7 +8,16 @@ import (
 func NewQuizInProgressError() DomainError {
 	return NewError(
 		ErrQuizInProgress,
-		"이미 진행중인 퀴즈가 있음",
+		"이미 진행중인 퀴즈가 있음(시작 불가)",
+		nil,
+		nil,
+	)
+}
+
+func NewNoQuizInProgressError() DomainError {
+	return NewError(
+		ErrNoQuizInProgress,
+		"진행중인 퀴즈가 없음(제출 불가)",
 		nil,
 		nil,
 	)
@@ -23,10 +32,10 @@ func NewNoQuizPassedError() DomainError {
 	)
 }
 
-func NewQuizTimeExpiredError(submitTime time.Time, limitTime time.Time) DomainError {
+func NewHarvestAlreadyProcessedError() DomainError {
 	return NewError(
-		ErrQuizTimeExpired,
-		fmt.Sprintf("퀴즈 제한 시간 만료: %v(제출), %v(제한)", submitTime, limitTime),
+		ErrHarvestAlreadyProcessed,
+		"이미 처리된 수확 프로세스입니다",
 		nil,
 		nil,
 	)

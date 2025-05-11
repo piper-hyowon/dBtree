@@ -4,12 +4,19 @@ import (
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"runtime/debug"
+	"time"
+)
+
+const (
+	TimeBufferSeconds  = 3 // 만큼 더해서 퀴즈 상태 Redis TTL 에 활용(퀴즈 제한 시간보다 여유롭게 삭제)
+	HarvestTimeSeconds = 5 // 원 클릭 제한 시간
 )
 
 type StatusInfo struct {
 	QuizID         int
 	PositionID     int
 	StartTimestamp int64
+	AttemptID      int
 }
 
 type Difficulty string
@@ -42,6 +49,22 @@ func (c Category) IsValid() bool {
 	}
 	return false
 }
+
+// Status 퀴즈 상태
+type Status string
+
+// HarvestStatus 수확 상태
+type HarvestStatus string
+
+const (
+	StatusStarted           Status        = "started"     // 퀴즈 시작 / 정답 미제출
+	StatusDone              Status        = "done"        // 제출 완료(정답 여부는 is_correct로 구분)
+	StatusTimeout           Status        = "timeout"     // 제한 시간 초과
+	HarvestStatusNone       HarvestStatus = "none"        // 아직 수확 단계 아님(Default)
+	HarvestStatusInProgress HarvestStatus = "in_progress" // 원이 나타나서 클릭 대기 중
+	HarvestStatusSuccess    HarvestStatus = "success"     // 레몬 수확 성공
+	HarvestStatusTimeout    HarvestStatus = "timeout"     //원 클릭 시간 초과
+)
 
 type Quiz struct {
 	ID               int
@@ -92,4 +115,21 @@ func NewQuiz(question string,
 
 func (q *Quiz) CheckAnswer(optionIndex int) bool {
 	return optionIndex == q.CorrectOptionIdx
+}
+
+type Attempt struct {
+	ID              string `json:"id"`
+	UserID          string `json:"userID"`
+	QuizID          int    `json:"quizID"`
+	LemonPositionID int    `json:"lemonPositionID"`
+	IsCorrect       bool   `json:"isCorrect"`
+	SelectedOption  int    `json:"selectedOption"`
+
+	StartTime        time.Time `json:"startTime"`
+	SubmitTime       time.Time `json:"submitTime"`
+	TimeTaken        int       `json:"timeTaken"`        //   퀴즈 푸는데 걸린 시간(초)
+	TimeTakenClicked int       `json:"timeTakenClicked"` // 원 클릭하는데 걸린 시간(초)
+
+	Status        Status        `json:"status"`
+	HarvestStatus HarvestStatus `json:"harvestStatus"`
 }

@@ -15,10 +15,3 @@ const (
 func InProgressKey(userEmail string) string {
 	return fmt.Sprintf("%s:in_progress:%s", prefixQuiz, userEmail)
 }
-
-// UserPassKey 해당 positionID 레몬 퀴즈 통과 확인용
-// Value: 패스한 시각 timestamp
-// 레몬 수확시 패스한 시각에서 5초 이내인지 확인
-func UserPassKey(userEmail string, positionID int) string {
-	return fmt.Sprintf("%s:passed:%d:%s", prefixQuiz, positionID, userEmail)
-}

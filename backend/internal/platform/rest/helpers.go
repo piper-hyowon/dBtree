@@ -10,13 +10,7 @@ import (
 
 func DecodeJSONRequest(w http.ResponseWriter, r *http.Request, v interface{}, logger *log.Logger) bool {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		domainErr := errors.NewError(
-			errors.ErrInvalidParameter,
-			"잘못된 요청 형식",
-			nil,
-			err,
-		)
-		HandleError(w, domainErr, logger)
+		HandleError(w, errors.NewInvalidParameterError("JSON", "Error decoding JSON"), logger)
 		return false
 	}
 	return true

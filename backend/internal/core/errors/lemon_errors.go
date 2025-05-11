@@ -9,7 +9,7 @@ import (
 func NewHarvestCooldownError(nextHarvestTime time.Duration) DomainError {
 	return NewError(
 		ErrHarvestCooldown,
-		fmt.Sprintf("아직 레몬 수확 불가(%d 분 후에 가능)", nextHarvestTime.Minutes()),
+		fmt.Sprintf("아직 레몬 수확 불가(%f 분 후에 가능)", nextHarvestTime.Minutes()),
 		map[string]int{"nextHarvestTime": int(nextHarvestTime.Minutes())},
 		nil,
 	)

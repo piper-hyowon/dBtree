@@ -42,10 +42,12 @@ const (
 	ErrLemonStorageFull   ErrorCode = 1501
 	ErrInsufficientLemons ErrorCode = 1502
 
-	ErrQuizInProgress         ErrorCode = 1600
-	ErrNoQuizPassed           ErrorCode = 1601
-	ErrQuizTimeExpired        ErrorCode = 1602
-	ErrClickCircleTimeExpired ErrorCode = 1603
+	ErrQuizInProgress          ErrorCode = 1600
+	ErrNoQuizPassed            ErrorCode = 1601
+	ErrHarvestAlreadyProcessed ErrorCode = 1604 // 이미 수확 처리가 완료
+	ErrQuizTimeExpired         ErrorCode = 1603
+	ErrClickCircleTimeExpired  ErrorCode = 1604
+	ErrNoQuizInProgress        ErrorCode = 1605
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -74,6 +76,7 @@ var errorStrings = map[ErrorCode]string{
 	ErrNoQuizPassed:           "no_quiz_passed",
 	ErrQuizTimeExpired:        "time_expired",
 	ErrClickCircleTimeExpired: "click_circle_time_expired",
+	ErrNoQuizInProgress:       "no_quiz_in_progress",
 }
 
 func (c ErrorCode) String() string {

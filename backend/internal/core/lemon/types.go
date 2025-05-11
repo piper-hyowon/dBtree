@@ -2,6 +2,13 @@ package lemon
 
 import "time"
 
+type Lemon struct {
+	PositionID      int
+	IsAvailable     bool
+	LastHarvestedAt time.Time
+	NextAvailableAt time.Time
+}
+
 const (
 	WelcomeBonusAmount = 50
 )
