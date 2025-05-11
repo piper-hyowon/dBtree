@@ -47,7 +47,7 @@ func HandleError(w http.ResponseWriter, err error, logger *log.Logger) {
 	if !stdErrors.As(err, &domainErr) {
 		// stack 을 알 수 없음..(return errors.ErrInternalServer 가 아니라 그냥 return err 한 곳 인듯)
 		// TODO: 정적 검사 필요
-		SendJSONResponse(w, errorCodeToStatusCode(domainErr.Code()), ErrorResponse{
+		SendJSONResponse(w, http.StatusInternalServerError, ErrorResponse{
 			Code:    int(errors.ErrInternalServer),
 			Message: "알수 없는 오류가 발생했습니다",
 		})

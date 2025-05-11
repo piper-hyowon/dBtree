@@ -406,7 +406,7 @@ func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int,
 	return txID, nil
 }
 
-func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) (int, error) {
+func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) ([]int, error) {
 	query := `
         UPDATE lemons 
         SET is_available = true 
@@ -417,19 +417,20 @@ func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) (int, erro
 
 	rows, err := s.db.QueryContext(ctx, query, now)
 	if err != nil {
-		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 	}
 	defer rows.Close()
-	var regrown int
+
+	var positionIDs []int
 	for rows.Next() {
 		var posID int
 		if err := rows.Scan(&posID); err != nil {
-			return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
 		}
-		regrown++
+		positionIDs = append(positionIDs, posID)
 	}
 
-	return regrown, nil
+	return positionIDs, nil
 }
 
 func (s *LemonStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {

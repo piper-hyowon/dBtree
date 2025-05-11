@@ -17,10 +17,10 @@ CREATE TABLE IF NOT EXISTS quizzes (
                                            ),
 
                                        CONSTRAINT check_difficulty
-                                           CHECK (difficulty IN ('easy', 'normal')),
+                                           CHECK (difficulty IN ('easy', 'normal', 'hard')),
 
                                        CONSTRAINT check_category
-                                           CHECK (category IN ('basics', 'sql', 'design'))
+                                           CHECK (category IN ('basics', 'sql', 'design', 'performance', 'cloud'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_quizzes_difficulty ON quizzes (difficulty);

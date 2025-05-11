@@ -166,6 +166,7 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 	var quizData quiz.Quiz
 	var optionsJSON string
 	var difficultyStr, categoryStr string
+	var explanation sql.NullString
 
 	err := q.rdb.QueryRowContext(ctx, query).Scan(
 		&quizData.ID,
@@ -174,7 +175,7 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 		&quizData.CorrectOptionIdx,
 		&difficultyStr,
 		&categoryStr,
-		&quizData.Explanation,
+		&explanation,
 		&quizData.TimeLimit,
 		&quizData.IsActive,
 		&quizData.UsageCount,
@@ -185,6 +186,12 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 			return nil, errors.NewResourceNotFoundError("available_quiz", "random")
 		}
 		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	}
+
+	if explanation.Valid {
+		quizData.Explanation = explanation.String
+	} else {
+		quizData.Explanation = ""
 	}
 
 	var options []string
@@ -210,7 +217,7 @@ func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int
 	deactivateQuery := `
         UPDATE quizzes q
         SET is_active = false
-        FROM lemon_quiz_mappings m
+        FROM lemon_quiz m
         WHERE q.id = m.quiz_id AND m.lemon_position_id = $1
     `
 	_, err = tx.ExecContext(ctx, deactivateQuery, positionID)
@@ -220,7 +227,7 @@ func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int
 
 	// 2. 매핑 테이블 업데이트 (UPSERT 방식)
 	upsertQuery := `
-        INSERT INTO lemon_quiz_mappings (lemon_position_id, quiz_id)
+        INSERT INTO lemon_quiz (lemon_position_id, quiz_id)
         VALUES ($1, $2)
         ON CONFLICT (lemon_position_id)
         DO UPDATE SET quiz_id = EXCLUDED.quiz_id
@@ -252,7 +259,7 @@ func (q QuizStore) Deactivate(ctx context.Context, positionID int) error {
 	query := `
 		UPDATE quizzes qz
 		SET is_active = false
-		FROM lemon_quiz_mappings m
+		FROM lemon_quiz m
 		WHERE m.quiz_id = m.quiz_id AND m.lemon_position_id = $1`
 
 	_, err := q.rdb.ExecContext(ctx, query, positionID)

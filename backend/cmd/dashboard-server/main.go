@@ -150,7 +150,14 @@ func main() {
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
 
-	lemonScheduler := lemon.NewScheduler(lemonStore, logger, 1*time.Minute)
+	lemonScheduler := lemon.NewScheduler(lemonStore, quizStore, logger, 1*time.Minute)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	if err := lemonScheduler.InitializeLemons(ctx); err != nil {
+		logger.Printf("레몬 초기화 중 오류 발생: %v", err)
+	}
+	cancel()
+
 	lemonScheduler.Start()
 
 	// 종료 시그널

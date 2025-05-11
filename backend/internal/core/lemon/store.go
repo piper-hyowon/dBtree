@@ -20,6 +20,6 @@ type Store interface {
 	TotalHarvestedCount(ctx context.Context) (int, error) // 총 수확량 반환
 	UserTotalHarvestedCount(ctx context.Context, userID string) (int, error)
 	HarvestWithTransaction(ctx context.Context, positionID int, userID string, amount int, now time.Time) (string, error)
-	RegrowLemons(ctx context.Context, now time.Time) (int, error) // 수확후 일정시간이 지난 재생성된 레몬 수 반환
+	RegrowLemons(ctx context.Context, now time.Time) ([]int, error) // 수확후 일정시간이 지난 재생성된 레몬 수 반환
 	NextRegrowthTime(ctx context.Context) (*time.Time, error)
 }
