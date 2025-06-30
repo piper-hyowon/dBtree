@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 	"fmt"
+	"runtime"
 )
 
 var (
@@ -165,4 +166,35 @@ func NewErrorWithStack(code ErrorCode, message string, data any, cause error, st
 		cause:   cause,
 		stack:   stack,
 	}
+}
+
+// ===== Helper Functions =====
+
+// Wrap 일반 에러를 내부 서버 에러로 래핑
+// 호출 위치 스택 정보(파일:라인:함수명) 캡처
+func Wrap(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	pc, file, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(pc)
+	stack := fmt.Sprintf("%s:%d %s()", file, line, fn.Name())
+
+	return NewInternalErrorWithStack(err, stack)
+}
+
+func Wrapf(err error, format string, args ...interface{}) error {
+	if err == nil {
+		return nil
+	}
+
+	message := fmt.Sprintf(format, args...)
+	wrapped := fmt.Errorf("%s: %w", message, err)
+
+	pc, file, line, _ := runtime.Caller(1)
+	fn := runtime.FuncForPC(pc)
+	stack := fmt.Sprintf("%s:%d %s()", file, line, fn.Name())
+
+	return NewInternalErrorWithStack(wrapped, stack)
 }
