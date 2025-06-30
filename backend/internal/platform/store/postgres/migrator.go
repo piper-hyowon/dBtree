@@ -3,12 +3,10 @@ package postgres
 import (
 	"database/sql"
 	"embed"
-	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"io/fs"
 	"log"
 	"path/filepath"
-	"runtime/debug"
 	"sort"
 	"strings"
 )
@@ -37,12 +35,12 @@ func (m *Migrator) RunMigrations() error {
         )
     `)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 테이블 생성 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "마이그레이션 테이블 생성 실패")
 	}
 
 	rows, err := m.db.Query("SELECT version FROM schema_migrations")
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 목록 조회 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "마이그레이션 목록 조회 실패")
 	}
 	defer rows.Close()
 
@@ -50,14 +48,14 @@ func (m *Migrator) RunMigrations() error {
 	for rows.Next() {
 		var version string
 		if err := rows.Scan(&version); err != nil {
-			return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 버전 스캔 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "마이그레이션 버전 스캔 실패")
 		}
 		appliedMigrations[version] = true
 	}
 
 	entries, err := fs.ReadDir(migrationsFS, "migrations")
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 디렉토리 읽기 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "마이그레이션 디렉토리 읽기 실패")
 	}
 
 	var migrationFiles []string
@@ -78,31 +76,30 @@ func (m *Migrator) RunMigrations() error {
 
 		tx, err := m.db.Begin()
 		if err != nil {
-			return errors.NewInternalErrorWithStack(fmt.Errorf("트랜잭션 시작 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "트랜잭션 시작 실패")
 		}
 
 		content, err := fs.ReadFile(migrationsFS, filepath.Join("migrations", fileName))
 		if err != nil {
 			tx.Rollback()
-			return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 파일 읽기 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "마이그레이션 파일 읽기 실패")
 		}
 
 		m.logger.Printf("마이그레이션 적용 중: %s", fileName)
 		_, err = tx.Exec(string(content))
 		if err != nil {
 			tx.Rollback()
-
-			return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 실행 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "마이그레이션 실행 실패:")
 		}
 
 		_, err = tx.Exec("INSERT INTO schema_migrations (version) VALUES ($1)", version)
 		if err != nil {
 			tx.Rollback()
-			return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 버전 기록 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "마이그레이션 버전 기록 실패")
 		}
 
 		if err := tx.Commit(); err != nil {
-			return errors.NewInternalErrorWithStack(fmt.Errorf("마이그레이션 트랜잭션 커밋 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "마이그레이션 트랜잭션 커밋 실패")
 		}
 
 		m.logger.Printf("마이그레이션 %s 적용 완료", fileName)

@@ -4,12 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/quiz"
 	"github.com/piper-hyowon/dBtree/internal/platform/store/redis/keys"
 	"github.com/redis/go-redis/v9"
-	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -33,7 +31,7 @@ func NewQuizStore(cache *redis.Client, rdb *sql.DB) quiz.Store {
 func (q QuizStore) InProgress(ctx context.Context, userEmail string) (*quiz.StatusInfo, error) {
 	fields, err := q.cache.HGetAll(ctx, keys.InProgressKey(userEmail)).Result()
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("redis 서버 에러: %v", err), string(debug.Stack()))
+		return nil, errors.Wrapf(err, "redis 서버 에러")
 	}
 
 	if len(fields) == 0 {
@@ -59,7 +57,7 @@ func (q QuizStore) CreateInProgress(ctx context.Context, userEmail string, info 
 	// quiz_id 필드에 대해서만 HSETNX 사용
 	created, err := q.cache.HSetNX(ctx, key, "quiz_id", info.QuizID).Result()
 	if err != nil {
-		return false, errors.NewInternalErrorWithStack(fmt.Errorf("redis 서버 에러: %v", err), string(debug.Stack()))
+		return false, errors.Wrapf(err, "redis 서버 에러")
 	}
 
 	if !created {
@@ -78,7 +76,7 @@ func (q QuizStore) CreateInProgress(ctx context.Context, userEmail string, info 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		_ = q.cache.Del(ctx, key)
-		return false, errors.NewInternalErrorWithStack(fmt.Errorf("redis 서버 에러: %v", err), string(debug.Stack()))
+		return false, errors.Wrapf(err, "redis 서버 에러")
 	}
 
 	return true, nil
@@ -87,13 +85,13 @@ func (q QuizStore) CreateInProgress(ctx context.Context, userEmail string, info 
 func (q QuizStore) UpdateInProgress(ctx context.Context, userEmail string, attemptID int) error {
 	key := keys.InProgressKey(userEmail)
 	_, err := q.cache.HSet(ctx, key, "attempt_id", attemptID).Result()
-	return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	return errors.Wrap(err)
 }
 
 func (q QuizStore) DeleteInProgress(ctx context.Context, userEmail string) error {
 	_, err := q.cache.Del(ctx, keys.InProgressKey(userEmail)).Result()
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 	return nil
 }
@@ -133,7 +131,7 @@ func (q QuizStore) ByPositionID(ctx context.Context, positionID int) (*quiz.Quiz
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.NewResourceNotFoundError("quiz_for_lemon", strconv.Itoa(positionID))
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if explanation.Valid {
@@ -142,7 +140,7 @@ func (q QuizStore) ByPositionID(ctx context.Context, positionID int) (*quiz.Quiz
 
 	var options []string
 	if err = json.Unmarshal([]byte(optionsJSON), &options); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	quizData.Options = options
 
@@ -185,7 +183,7 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.NewResourceNotFoundError("available_quiz", "random")
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if explanation.Valid {
@@ -196,7 +194,7 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 
 	var options []string
 	if err = json.Unmarshal([]byte(optionsJSON), &options); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	quizData.Options = options
 
@@ -209,7 +207,7 @@ func (q QuizStore) Random(ctx context.Context) (*quiz.Quiz, error) {
 func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int) error {
 	tx, err := q.rdb.BeginTx(ctx, nil)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 	defer tx.Rollback()
 
@@ -222,7 +220,7 @@ func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int
     `
 	_, err = tx.ExecContext(ctx, deactivateQuery, positionID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	// 2. 매핑 테이블 업데이트 (UPSERT 방식)
@@ -234,7 +232,7 @@ func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int
     `
 	_, err = tx.ExecContext(ctx, upsertQuery, positionID, quizID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	// 3. 새 퀴즈 활성화 및 사용 횟수 증가
@@ -245,11 +243,11 @@ func (q QuizStore) AssignToLemon(ctx context.Context, quizID int, positionID int
     `
 	_, err = tx.ExecContext(ctx, activateQuery, quizID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -264,7 +262,7 @@ func (q QuizStore) Deactivate(ctx context.Context, positionID int) error {
 
 	_, err := q.rdb.ExecContext(ctx, query, positionID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 	return nil
 
@@ -283,7 +281,7 @@ func (q QuizStore) CreateAttempt(ctx context.Context, userID string, quizID int,
 	err := q.rdb.QueryRowContext(ctx, query,
 		userID, quizID, positionID, startTime).Scan(&attemptID)
 	if err != nil {
-		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return 0, errors.Wrap(err)
 	}
 
 	return attemptID, nil
@@ -315,7 +313,7 @@ func (q QuizStore) AttemptByID(ctx context.Context, id int) (*quiz.Attempt, erro
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	a.UserID = userID
@@ -343,7 +341,7 @@ func (q QuizStore) UpdateAttemptStatus(ctx context.Context, attemptID int, statu
 
 	_, err := q.rdb.ExecContext(ctx, query, status, isCorrect, selectedOption, submitTime, attemptID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -359,7 +357,7 @@ func (q QuizStore) UpdateAttemptHarvestStatus(ctx context.Context, attemptID int
 
 	_, err := q.rdb.ExecContext(ctx, query, harvestStatus, clickTime, attemptID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -367,5 +365,5 @@ func (q QuizStore) UpdateAttemptHarvestStatus(ctx context.Context, attemptID int
 
 func (q QuizStore) DeleteAttempt(ctx context.Context, attemptID int) error {
 	_, err := q.rdb.ExecContext(ctx, "DELETE FROM user_quiz_attempts WHERE id = $1", attemptID)
-	return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+	return errors.Wrap(err)
 }

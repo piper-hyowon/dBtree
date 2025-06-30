@@ -3,10 +3,8 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
-	"runtime/debug"
 
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"time"
@@ -27,8 +25,7 @@ func NewSessionStore(db *sql.DB) auth.SessionStore {
 func (s *SessionStore) Save(ctx context.Context, session *auth.Session) error {
 	exists, err := s.sessionExists(ctx, session.Email)
 	if err != nil {
-		return errors.NewInternalError(fmt.Errorf("세션 확인 실패: %w", err))
-
+		return errors.Wrapf(err, "세션 확인 실패")
 	}
 
 	var otp sql.NullString
@@ -106,7 +103,7 @@ func (s *SessionStore) Save(ctx context.Context, session *auth.Session) error {
 	}
 
 	if err != nil {
-		return errors.NewInternalError(fmt.Errorf("세션 저장 실패: %w", err))
+		return errors.Wrapf(err, "세션 저장 실패")
 	}
 
 	return nil
@@ -149,7 +146,7 @@ func (s *SessionStore) FindByEmail(ctx context.Context, email string) (*auth.Ses
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("세션 조회 실패: %w", err), string(debug.Stack()))
+		return nil, errors.Wrapf(err, "세션 조회 실패")
 	}
 
 	session := &auth.Session{
@@ -227,7 +224,7 @@ func (s *SessionStore) FindByToken(ctx context.Context, token string) (*auth.Ses
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalError(fmt.Errorf("토큰으로 세션 조회 실패: %w", err))
+		return nil, errors.Wrapf(err, "토큰으로 세션 조회 실패")
 	}
 
 	session := &auth.Session{
@@ -264,13 +261,12 @@ func (s *SessionStore) Delete(ctx context.Context, email string) error {
 
 	result, err := s.db.ExecContext(ctx, query, email)
 	if err != nil {
-		return errors.NewInternalError(fmt.Errorf("세션 삭제 실패: %w", err))
-
+		return errors.Wrapf(err, "세션 삭제 실패")
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return errors.NewInternalError(fmt.Errorf("세션 삭제 결과 확인 실패: %w", err))
+		return errors.Wrapf(err, "세션 삭제 결과 확인 실패")
 	}
 
 	if rowsAffected == 0 {
@@ -291,7 +287,7 @@ func (s *SessionStore) Cleanup(ctx context.Context) error {
 
 	_, err := s.db.ExecContext(ctx, query, now)
 	if err != nil {
-		return errors.NewInternalError(fmt.Errorf("만료된 세션 정리 실패: %w", err))
+		return errors.Wrapf(err, "만료된 세션 정리 실패")
 	}
 
 	return nil

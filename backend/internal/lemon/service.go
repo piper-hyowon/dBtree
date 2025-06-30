@@ -9,7 +9,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"github.com/piper-hyowon/dBtree/internal/core/quiz"
 	"log"
-	"runtime/debug"
 	"time"
 )
 
@@ -32,12 +31,12 @@ func NewService(store lemon.Store, quizStore quiz.Store, logger *log.Logger) lem
 func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatusResponse, error) {
 	positions, err := s.store.AvailablePositions(ctx)
 	if err != nil {
-		return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.TreeStatusResponse{}, errors.Wrap(err)
 	}
 
 	totalHarvested, err := s.store.TotalHarvestedCount(ctx)
 	if err != nil {
-		return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.TreeStatusResponse{}, errors.Wrap(err)
 	}
 
 	var nextRegrowthTime *time.Time
@@ -46,7 +45,7 @@ func (s *service) TreeStatus(ctx context.Context) (lemon.TreeStatusResponse, err
 		// 다음 재생성 시간 계산(가장 빠른 시간)
 		t, err := s.store.NextRegrowthTime(ctx)
 		if err != nil {
-			return lemon.TreeStatusResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return lemon.TreeStatusResponse{}, errors.Wrap(err)
 		}
 		nextRegrowthTime = t
 	} else {
@@ -64,7 +63,7 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	// 퀴즈 시도 기록 조회
 	attempt, err := s.quizStore.AttemptByID(ctx, attemptID)
 	if err != nil {
-		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.HarvestResponse{}, errors.Wrap(err)
 	}
 
 	if attempt == nil {
@@ -99,7 +98,7 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	// 사용자 잔액 조회
 	balanceBefore, err := s.store.UserBalance(ctx, userID)
 	if err != nil {
-		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.HarvestResponse{}, errors.Wrap(err)
 	}
 
 	harvestAmount := lemon.DefaultHarvestRules.BaseAmount
@@ -122,14 +121,13 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 			fmt.Print(updateErr)
 			if updateErr != nil {
 				s.logger.Printf("수확 상태 업데이트 실패: %v", updateErr)
-				return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(
-					fmt.Errorf("수확 상태 업데이트 실패 (원인: %w)", updateErr),
-					string(debug.Stack()))
+				return lemon.HarvestResponse{}, errors.Wrapf(updateErr, "수확 상태 업데이트 실패")
+
 			}
 
 			return lemon.HarvestResponse{}, err
 		}
-		return lemon.HarvestResponse{}, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return lemon.HarvestResponse{}, errors.Wrap(err)
 	}
 
 	// 수확 상태 업데이트

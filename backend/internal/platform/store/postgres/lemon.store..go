@@ -7,7 +7,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
-	"runtime/debug"
 	"time"
 )
 
@@ -40,7 +39,7 @@ func (s *LemonStore) ByPositionID(ctx context.Context, positionID int) (*lemon.L
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if lastHarvestedAtNull.Valid {
@@ -57,7 +56,7 @@ func (s *LemonStore) ByPositionID(ctx context.Context, positionID int) (*lemon.L
 func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transaction) error {
 	dbTx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 	defer dbTx.Rollback()
 
@@ -85,7 +84,7 @@ func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transactio
 	)
 
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	if tx.Status == lemon.StatusSuccessful {
@@ -104,12 +103,12 @@ func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transactio
 		)
 
 		if err != nil {
-			return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return errors.Wrap(err)
 		}
 	}
 
 	if err = dbTx.Commit(); err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -141,7 +140,7 @@ func (s *LemonStore) TransactionByID(ctx context.Context, id string) (*lemon.Tra
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	return &tx, nil
@@ -160,7 +159,7 @@ func (s *LemonStore) TransactionListByUserID(ctx context.Context, userID string,
 
 	rows, err := s.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	defer rows.Close()
 
@@ -179,13 +178,13 @@ func (s *LemonStore) TransactionListByUserID(ctx context.Context, userID string,
 			&tx.Note,
 		)
 		if err != nil {
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 		transactions = append(transactions, &tx)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	return transactions, nil
@@ -204,7 +203,7 @@ func (s *LemonStore) TransactionListByInstanceID(ctx context.Context, instanceID
 
 	rows, err := s.db.QueryContext(ctx, query, instanceID, limit, offset)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	defer rows.Close()
 
@@ -223,13 +222,13 @@ func (s *LemonStore) TransactionListByInstanceID(ctx context.Context, instanceID
 			&tx.Note,
 		)
 		if err != nil {
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 		transactions = append(transactions, &tx)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	return transactions, nil
@@ -245,7 +244,7 @@ func (s *LemonStore) UserBalance(ctx context.Context, userID string) (int, error
 			return 0, errors.NewResourceNotFoundError("user", userID)
 		}
 
-		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return 0, errors.Wrap(err)
 	}
 
 	return balance, nil
@@ -260,7 +259,7 @@ func (s *LemonStore) UserLastHarvestTime(ctx context.Context, userID string) (*t
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.NewResourceNotFoundError("user", userID)
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if !lastHarvestAt.Valid {
@@ -275,7 +274,7 @@ func (s *LemonStore) AvailablePositions(ctx context.Context) ([]int, error) {
 
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	defer rows.Close()
 
@@ -283,13 +282,13 @@ func (s *LemonStore) AvailablePositions(ctx context.Context) ([]int, error) {
 	for rows.Next() {
 		var posID int
 		if err := rows.Scan(&posID); err != nil {
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 		positions = append(positions, posID)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	return positions, nil
@@ -304,7 +303,7 @@ func (s *LemonStore) TotalHarvestedCount(ctx context.Context) (int, error) {
 
 	var count int
 	if err := s.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
-		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return 0, errors.Wrap(err)
 	}
 
 	return count, nil
@@ -319,7 +318,7 @@ func (s *LemonStore) UserTotalHarvestedCount(ctx context.Context, userID string)
 
 	var count int
 	if err := s.db.QueryRowContext(ctx, query, userID).Scan(&count); err != nil {
-		return 0, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return 0, errors.Wrap(err)
 	}
 
 	return count, nil
@@ -328,14 +327,14 @@ func (s *LemonStore) UserTotalHarvestedCount(ctx context.Context, userID string)
 func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int, userID string, harvestAmount int, now time.Time) (string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 	defer tx.Rollback()
 
 	var isAvailable bool
 	query := `SELECT is_available FROM lemons WHERE position_id = $1 FOR UPDATE`
 	if err := tx.QueryRowContext(ctx, query, positionID).Scan(&isAvailable); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	if !isAvailable {
@@ -352,14 +351,14 @@ func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int,
         WHERE position_id = $3
     `
 	if _, err := tx.ExecContext(ctx, updateQuery, now, nextTime, positionID); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	// 사용자 잔액 조회
 	var balance int
 	balanceQuery := `SELECT lemon_balance FROM users WHERE id = $1 FOR UPDATE`
 	if err := tx.QueryRowContext(ctx, balanceQuery, userID).Scan(&balance); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	newBalance := balance + harvestAmount
@@ -371,7 +370,7 @@ func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int,
         WHERE id = $4
     `
 	if _, err := tx.ExecContext(ctx, userUpdateQuery, now, now, newBalance, userID); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	txID := uuid.New().String()
@@ -396,11 +395,11 @@ func (s *LemonStore) HarvestWithTransaction(ctx context.Context, positionID int,
 		now,
 		note,
 	); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return "", errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return "", errors.Wrap(err)
 	}
 
 	return txID, nil
@@ -417,7 +416,7 @@ func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) ([]int, er
 
 	rows, err := s.db.QueryContext(ctx, query, now)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	defer rows.Close()
 
@@ -425,7 +424,7 @@ func (s *LemonStore) RegrowLemons(ctx context.Context, now time.Time) ([]int, er
 	for rows.Next() {
 		var posID int
 		if err := rows.Scan(&posID); err != nil {
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 		positionIDs = append(positionIDs, posID)
 	}
@@ -441,7 +440,7 @@ func (s *LemonStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {
     `
 	var nextTime sql.NullTime
 	if err := s.db.QueryRowContext(ctx, query).Scan(&nextTime); err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if !nextTime.Valid {

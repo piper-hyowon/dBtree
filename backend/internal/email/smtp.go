@@ -11,7 +11,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"math/rand"
 	"net/smtp"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -57,12 +56,12 @@ func NewService(config config.SMTPConfig) (email.Service, error) {
 func GetImage(id string) ([]byte, error) {
 	filename, ok := imageFilenames[id]
 	if !ok {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("알 수 없는 이미지 ID: %s", id), string(debug.Stack()))
+		return nil, errors.Wrap(fmt.Errorf("알 수 없는 이미지 ID: %s", id))
 	}
 
 	data, err := emailFS.ReadFile(filename)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("임베딩된 이미지 읽기 실패 %s: %w", filename, err), string(debug.Stack()))
+		return nil, errors.Wrapf(err, "임베딩된 이미지 읽기 실패 %s", filename)
 	}
 
 	return data, nil
@@ -104,13 +103,13 @@ func createSMTPClient(addr, host, username, password string) (*smtp.Client, erro
 
 	client, err := smtp.Dial(addr)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 서버 연결 실패: %w", err), string(debug.Stack()))
+		return nil, errors.Wrapf(err, "SMTP 서버 연결 실패")
 	}
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
 		if err = client.StartTLS(tlsConfig); err != nil {
 			client.Close()
-			return nil, errors.NewInternalErrorWithStack(fmt.Errorf("STARTTLS 시작 실패: %w", err), string(debug.Stack()))
+			return nil, errors.Wrapf(err, "STARTTLS 시작 실패")
 		}
 	}
 
@@ -118,7 +117,7 @@ func createSMTPClient(addr, host, username, password string) (*smtp.Client, erro
 		authApi := smtp.PlainAuth("", username, password, host)
 		if err = client.Auth(authApi); err != nil {
 			client.Close()
-			return nil, errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 인증 실패: %w", err), string(debug.Stack()))
+			return nil, errors.Wrapf(err, "SMTP 인증 실패")
 		}
 	}
 
@@ -131,7 +130,8 @@ func (s *service) SendOTP(ctx context.Context, to string, otp string) error {
 	}
 
 	if otp == "" {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("OTP 가 비어 있습니다"), string(debug.Stack()))
+		return errors.Wrap(errors.New("otp is empty"))
+
 	}
 
 	subject := "dBtree 인증 코드"
@@ -283,7 +283,7 @@ func (s *service) Send(ctx context.Context, to string, subject string, htmlBody 
 
 	client, err := s.getClient()
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 클라이언트 가져오기 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "SMTP 클라이언트 가져오기 실패")
 	}
 
 	if err := client.Reset(); err != nil {
@@ -294,7 +294,7 @@ func (s *service) Send(ctx context.Context, to string, subject string, htmlBody 
 
 		client, err = s.getClient()
 		if err != nil {
-			return errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 클라이언트 재연결 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "SMTP 클라이언트 재연결 실패")
 
 		}
 	}
@@ -308,7 +308,7 @@ func (s *service) Send(ctx context.Context, to string, subject string, htmlBody 
 		htmlBody
 
 	if err := s.sendEmailContent(client, to, []byte(message)); err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	return nil
@@ -335,7 +335,7 @@ func (s *service) SendWithImages(ctx context.Context, to string, subject string,
 
 	client, err := s.getClient()
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 클라이언트 가져오기 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "SMTP 클라이언트 가져오기 실패")
 	}
 
 	if err := client.Reset(); err != nil {
@@ -346,7 +346,7 @@ func (s *service) SendWithImages(ctx context.Context, to string, subject string,
 
 		client, err = s.getClient()
 		if err != nil {
-			return errors.NewInternalErrorWithStack(fmt.Errorf("SMTP 클라이언트 재연결 실패: %w", err), string(debug.Stack()))
+			return errors.Wrapf(err, "SMTP 클라이언트 재연결 실패")
 		}
 	}
 
@@ -410,7 +410,7 @@ func (s *service) SendWithImages(ctx context.Context, to string, subject string,
 	buf.WriteString(fmt.Sprintf("--%s--\r\n", mixedBoundary))
 
 	if err := s.sendEmailContent(client, to, buf.Bytes()); err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 
 	}
 
@@ -426,7 +426,7 @@ func (s *service) sendEmailContent(client *smtp.Client, to string, messageData [
 		}
 		s.clientMu.Unlock()
 
-		return errors.NewInternalErrorWithStack(fmt.Errorf("발신자 설정 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "발신자 설정 실패")
 	}
 
 	if err := client.Rcpt(to); err != nil {
@@ -436,17 +436,17 @@ func (s *service) sendEmailContent(client *smtp.Client, to string, messageData [
 			return errors.NewInvalidEmailError(err.Error())
 
 		}
-		return errors.NewInternalErrorWithStack(fmt.Errorf("수신자 설정 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "수신자 설정 실패")
 	}
 
 	wc, err := client.Data()
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("data 준비 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "data 준비 실패")
 	}
 
 	_, err = wc.Write(messageData)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(fmt.Errorf("이메일 내용 Write 실패: %w", err), string(debug.Stack()))
+		return errors.Wrapf(err, "이메일 내용 Write 실패")
 	}
 
 	if err := wc.Close(); err != nil {
@@ -455,7 +455,8 @@ func (s *service) sendEmailContent(client *smtp.Client, to string, messageData [
 			strings.Contains(errorMsg, "Message rejected") {
 			return errors.NewInvalidEmailError(string(errorMsg))
 		}
-		return errors.NewInternalErrorWithStack(fmt.Errorf("데이터 쓰기 Close 실패: %w", err), string(debug.Stack()))
+
+		return errors.Wrapf(err, "데이터 쓰기 Close 실패")
 	}
 
 	s.clientMu.Lock()

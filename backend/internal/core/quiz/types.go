@@ -3,7 +3,6 @@ package quiz
 import (
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
-	"runtime/debug"
 	"time"
 )
 
@@ -89,16 +88,15 @@ func NewQuiz(question string,
 	explanation string,
 	timeLimit int) (*Quiz, error) {
 	if !difficulty.IsValid() {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("invalid difficulty: %s", difficulty), string(debug.Stack()))
+		return nil, errors.Wrap(fmt.Errorf("invalid difficulty: %s", difficulty))
 	}
 
 	if !category.IsValid() {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("invalid category: %s", category), string(debug.Stack()))
+		return nil, errors.Wrap(fmt.Errorf("invalid category: %s", category))
 	}
 
 	if correctOptionIdx < 0 || correctOptionIdx >= len(options) {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("invalid correctOptionIdx(index out of range): %s", correctOptionIdx), string(debug.Stack()))
-
+		return nil, errors.Wrap(fmt.Errorf("invalid correctOptionIdx(index out of range): %s", correctOptionIdx))
 	}
 
 	return &Quiz{

@@ -8,7 +8,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"log"
-	"runtime/debug"
 )
 
 type service struct {
@@ -40,7 +39,7 @@ func (s *service) Delete(ctx context.Context, userID string, userEmail string) e
 	// 유저 테이블에서 소프트 딜리트
 	err := s.userStore.Delete(ctx, userID)
 	if err != nil {
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	// 유저 남은 세션 삭제

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
-	"runtime/debug"
 
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"time"
@@ -44,7 +43,7 @@ func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, 
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil // 유저가 없는 경우 에러 반환 X
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if lastHarvest.Valid {
@@ -74,7 +73,7 @@ func (s *UserStore) FindById(ctx context.Context, id string) (*user.User, error)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if lastHarvest.Valid {
@@ -113,7 +112,7 @@ func (s *UserStore) emailExists(ctx context.Context, email string) (bool, error)
 	var exists bool
 	err := s.db.QueryRowContext(ctx, query, email).Scan(&exists)
 	if err != nil {
-		return false, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return false, errors.Wrap(err)
 
 	}
 
@@ -131,7 +130,7 @@ func (s *UserStore) Delete(ctx context.Context, id string) error {
 	err = tx.QueryRowContext(ctx, `SELECT email FROM users WHERE id = $1 AND is_deleted = FALSE`, id).Scan(&email)
 	if err != nil {
 		// row 가 반드시 있어야함
-		return errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return errors.Wrap(err)
 	}
 
 	now := time.Now().UTC()

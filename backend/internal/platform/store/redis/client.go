@@ -2,12 +2,10 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
 	"github.com/redis/go-redis/v9"
 	"log"
-	"runtime/debug"
 	"time"
 )
 
@@ -37,7 +35,7 @@ func NewClient(config config.RedisConfig, logger *log.Logger) (Client, error) {
 	defer cancel()
 
 	if _, err := redisClient.Ping(ctx).Result(); err != nil {
-		return nil, errors.NewInternalErrorWithStack(fmt.Errorf("redis 연결 실패: %w", err), string(debug.Stack()))
+		return nil, errors.Wrapf(err, "redis 연결 실패")
 	}
 
 	return &client{

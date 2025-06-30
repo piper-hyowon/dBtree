@@ -7,7 +7,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
 	"log"
 	"net/http"
-	"runtime/debug"
 )
 
 type Handler struct {
@@ -34,7 +33,7 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request, positionID i
 	// 유저 수확 쿨타임 체크
 	availability, err := h.lemonService.CanHarvest(r.Context(), u.ID)
 	if err != nil {
-		rest.HandleError(w, errors.NewInternalErrorWithStack(err, string(debug.Stack())), h.logger)
+		rest.HandleError(w, errors.Wrap(err), h.logger)
 		return
 	}
 	if !availability.CanHarvest {

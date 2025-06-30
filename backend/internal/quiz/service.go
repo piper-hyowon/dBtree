@@ -6,7 +6,6 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"github.com/piper-hyowon/dBtree/internal/core/quiz"
 	"log"
-	"runtime/debug"
 	"strconv"
 	"time"
 )
@@ -31,7 +30,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 	// 이미 퀴즈 진행중이면 새로운 퀴즈 진행 불가
 	inProgress, err := s.quizStore.InProgress(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	if inProgress != nil {
 		return nil, errors.NewQuizInProgressError()
@@ -40,7 +39,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 	// 레몬 수확가능 상태 확인
 	l, err := s.lemonStore.ByPositionID(ctx, positionID)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	if !l.IsAvailable {
 		return nil, errors.NewResourceNotFoundError("available_lemon", strconv.Itoa(positionID))
@@ -49,7 +48,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 	// 퀴즈 가져오기
 	q, err := s.quizStore.ByPositionID(ctx, positionID)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	startTime := time.Now()
@@ -62,7 +61,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 		AttemptID:      0, // 임시값
 	}, q.TimeLimit)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 	if !created {
 		return nil, errors.NewQuizInProgressError()
@@ -72,7 +71,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 	attemptID, err := s.quizStore.CreateAttempt(ctx, userID, q.ID, positionID, startTime)
 	if err != nil {
 		_ = s.quizStore.DeleteInProgress(ctx, userEmail)
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	err = s.quizStore.UpdateInProgress(ctx, userEmail, attemptID)
@@ -88,7 +87,7 @@ func (s *service) StartQuiz(ctx context.Context, positionID int, userID string, 
 
 		if retryErr != nil || !created {
 			_ = s.quizStore.DeleteAttempt(ctx, attemptID)
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 	}
 
@@ -104,7 +103,7 @@ func (s *service) SubmitAnswer(ctx context.Context, userEmail string, attemptID 
 	// 진행중인 퀴즈 있는지 확인
 	inProgress, err := s.quizStore.InProgress(ctx, userEmail)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	if inProgress == nil {
@@ -118,7 +117,7 @@ func (s *service) SubmitAnswer(ctx context.Context, userEmail string, attemptID 
 	// 퀴즈 데이터 조회, 시간 체크
 	quizData, err := s.quizStore.ByPositionID(ctx, inProgress.PositionID)
 	if err != nil {
-		return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+		return nil, errors.Wrap(err)
 	}
 
 	now := time.Now()
@@ -157,7 +156,7 @@ func (s *service) SubmitAnswer(ctx context.Context, userEmail string, attemptID 
 		// 수확 상태 업데이트
 		err = s.quizStore.UpdateAttemptHarvestStatus(ctx, attemptID, quiz.HarvestStatusInProgress, now)
 		if err != nil {
-			return nil, errors.NewInternalErrorWithStack(err, string(debug.Stack()))
+			return nil, errors.Wrap(err)
 		}
 
 		harvestTimeout := now.Add(time.Duration(quiz.HarvestTimeSeconds) * time.Second)

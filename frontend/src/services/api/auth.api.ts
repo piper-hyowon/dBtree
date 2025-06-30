@@ -43,11 +43,11 @@ export const sendOTP = async (email: string): Promise<boolean> => {
     }
 };
 
-export const verifyOTP = async (email: string, otpCode: string): Promise<VerifyOTPResponse> => {
+export const verifyOTP = async (email: string, otp: string): Promise<VerifyOTPResponse> => {
     try {
         const response = await apiClient.post<VerifyOTPResponse>('/verify-otp?type=authentication', {
             email,
-            otpCode
+            otp
         });
 
         if (response.data.success && response.data.token) {
