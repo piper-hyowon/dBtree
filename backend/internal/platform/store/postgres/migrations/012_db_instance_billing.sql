@@ -29,9 +29,9 @@ CREATE TABLE IF NOT EXISTS db_instance_billing
 );
 
 -- 인덱스
-CREATE INDEX idx_billing_pending
+CREATE INDEX IF NOT EXISTS idx_billing_pending
     ON db_instance_billing (billing_cycle_start)
     WHERE status = 'pending';
 
-CREATE INDEX idx_billing_instance
+CREATE INDEX IF NOT EXISTS idx_billing_instance
     ON db_instance_billing (db_instance_id);
