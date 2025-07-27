@@ -1,26 +1,21 @@
-CREATE TABLE IF NOT EXISTS quizzes (
-                                       id SERIAL PRIMARY KEY,
-                                       question TEXT NOT NULL,
-                                       options JSONB NOT NULL,
-                                       correct_option_idx INTEGER NOT NULL,
-                                       difficulty VARCHAR(20) NOT NULL,
-                                       category VARCHAR(50) NOT NULL,
-                                       explanation TEXT,
-                                       time_limit INTEGER NOT NULL,
-                                       is_active BOOLEAN NOT NULL DEFAULT FALSE,
-                                       usage_count INTEGER NOT NULL DEFAULT 0,
-                                       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                                       updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+CREATE TABLE IF NOT EXISTS quizzes
+(
+    id                 SERIAL PRIMARY KEY,
+    question           TEXT                     NOT NULL,
+    options            JSONB                    NOT NULL,
+    correct_option_idx INTEGER                  NOT NULL,
+    difficulty         quiz_difficulty          NOT NULL,
+    category           quiz_category            NOT NULL,
+    explanation        TEXT,
+    time_limit         INTEGER                  NOT NULL,
+    is_active          BOOLEAN                  NOT NULL DEFAULT FALSE,
+    usage_count        INTEGER                  NOT NULL DEFAULT 0,
+    created_at         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
-                                       CONSTRAINT check_correct_option_valid CHECK (
-                                           (jsonb_array_length(options) > correct_option_idx) AND (correct_option_idx >= 0)
-                                           ),
-
-                                       CONSTRAINT check_difficulty
-                                           CHECK (difficulty IN ('easy', 'normal', 'hard')),
-
-                                       CONSTRAINT check_category
-                                           CHECK (category IN ('basics', 'sql', 'design', 'performance', 'cloud'))
+    CONSTRAINT check_correct_option_valid CHECK (
+        jsonb_array_length(options) > correct_option_idx AND correct_option_idx >= 0
+        )
 );
 
 CREATE INDEX IF NOT EXISTS idx_quizzes_difficulty ON quizzes (difficulty);

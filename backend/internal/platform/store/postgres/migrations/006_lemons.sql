@@ -20,3 +20,9 @@ VALUES (0, false),
        (8, false),
        (9, false)
 ON CONFLICT (position_id) DO NOTHING;
+
+
+CREATE TRIGGER update_lemons_timestamp
+    BEFORE UPDATE ON lemons
+    FOR EACH ROW
+EXECUTE FUNCTION update_timestamp_column();
