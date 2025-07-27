@@ -403,3 +403,149 @@ func (s *DBInstanceStore) Delete(ctx context.Context, externalID string) error {
 
 	return nil
 }
+
+func (s *DBInstanceStore) CreateBackupRecord(ctx context.Context, backup *dbservice.BackupRecord) error {
+	query := `
+        INSERT INTO db_instance_backups (
+            instance_id, external_id, name, type, status,
+            k8s_job_name
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6
+        ) RETURNING id, created_at
+    `
+
+	err := s.db.QueryRowContext(ctx, query,
+		backup.InstanceID,
+		backup.ExternalID,
+		backup.Name,
+		backup.Type,
+		backup.Status,
+		backup.K8sJobName,
+	).Scan(&backup.ID, &backup.CreatedAt)
+
+	if err != nil {
+		return errors.Wrap(err)
+	}
+
+	return nil
+}
+
+func (s *DBInstanceStore) ListBackupRecords(ctx context.Context, instanceID string) ([]*dbservice.BackupRecord, error) {
+	query := `
+        SELECT 
+            id, instance_id, external_id, name, type, status,
+            k8s_job_name, size_bytes, storage_path, error_message,
+            created_at, completed_at, expires_at
+        FROM db_instance_backups
+        WHERE external_id = $1
+        ORDER BY created_at DESC
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, instanceID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	defer rows.Close()
+
+	var backups []*dbservice.BackupRecord
+	for rows.Next() {
+		var b dbservice.BackupRecord
+		var sizeBytes sql.NullInt64
+		var storagePath, errorMessage sql.NullString
+		var completedTime, expiresTime sql.NullTime
+
+		err := rows.Scan(
+			&b.ID,
+			&b.InstanceID,
+			&b.ExternalID,
+			&b.Name,
+			&b.Type,
+			&b.Status,
+			&b.K8sJobName,
+			&sizeBytes,
+			&storagePath,
+			&errorMessage,
+			&b.CreatedAt,
+			&completedTime,
+			&expiresTime,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		// Nullable
+		if sizeBytes.Valid {
+			b.SizeBytes = sizeBytes.Int64
+		}
+		if storagePath.Valid {
+			b.StoragePath = storagePath.String
+		}
+		if errorMessage.Valid {
+			b.ErrorMessage = errorMessage.String
+		}
+		if completedTime.Valid {
+			b.CompletedAt = &completedTime.Time
+		}
+		if expiresTime.Valid {
+			b.ExpiresAt = &expiresTime.Time
+		}
+
+		backups = append(backups, &b)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return backups, nil
+}
+
+func (s *DBInstanceStore) UpdateBackupStatus(ctx context.Context, backupID int64, status dbservice.BackupStatus, updates map[string]interface{}) error {
+	query := `
+        UPDATE db_instance_backups 
+        SET status = $2, updated_at = NOW()
+    `
+
+	args := []interface{}{backupID, status}
+	argCount := 2
+
+	if sizeBytes, ok := updates["size_bytes"].(int64); ok {
+		argCount++
+		query += fmt.Sprintf(", size_bytes = $%d", argCount)
+		args = append(args, sizeBytes)
+	}
+
+	if storagePath, ok := updates["storage_path"].(string); ok {
+		argCount++
+		query += fmt.Sprintf(", storage_path = $%d", argCount)
+		args = append(args, storagePath)
+	}
+
+	if errorMsg, ok := updates["error_message"].(string); ok {
+		argCount++
+		query += fmt.Sprintf(", error_message = $%d", argCount)
+		args = append(args, errorMsg)
+	}
+
+	if completed, ok := updates["completed"].(bool); ok && completed {
+		query += ", completed_at = NOW()"
+	}
+
+	query += " WHERE id = $1"
+
+	result, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return errors.Wrap(err)
+	}
+
+	if rows == 0 {
+		return errors.NewResourceNotFoundError("backup", fmt.Sprintf("%d", backupID))
+	}
+
+	return nil
+}
