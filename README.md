@@ -1,3 +1,4 @@
+[English README](./README.en.md)
 ### 🌳 dBtree: 🍋 레몬나무에서 무료 데이터베이스를 수확하세요!
 
 [서비스 미리보기](https://dbtree.vercel.app/)
@@ -19,7 +20,9 @@
 <img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/35037c91-c8bc-413b-aa58-90212e461c35" />
 
 <hr>
-<img width="338" height="551" alt="Image" src="https://github.com/user-attachments/assets/1d2dc2b5-e78b-4bcd-9bf7-6791dc74f947" />
+
+<img width="338" height="551" alt="image" src="https://github.com/user-attachments/assets/478afbd5-48ac-4875-aeee-15636f1fcc75" />
+
 
 #### Architecture: Hexagonal Architecture
 
