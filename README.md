@@ -14,6 +14,10 @@
 - 🍋 획득한 레몬으로 Redis/MongoDB 인스턴스 프로비저닝
 - 📚 DB 학습과 실습을 동시에
 - 🎨 귀여운 UI로 즐거운 개발 경험
+  
+<img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/242e18a9-604a-43d8-a509-131ff0f02acb" />
+<hr>
+<img width="338" height="551" alt="Image" src="https://github.com/user-attachments/assets/1d2dc2b5-e78b-4bcd-9bf7-6791dc74f947" />
 
 #### Architecture: Hexagonal Architecture
 
