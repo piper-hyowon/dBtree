@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS db_instances
     -- 연결 정보
     endpoint              VARCHAR(255),
     port                  INTEGER CHECK (port > 0 AND port <= 65535),
-    password_encrypted    TEXT,
 
     -- 설정 (프리셋 기본값 + 사용자 커스텀)
     config                JSONB                               NOT NULL DEFAULT '{}',
@@ -54,9 +53,9 @@ CREATE TABLE IF NOT EXISTS db_instances
     CONSTRAINT unique_user_instance_name UNIQUE (user_id, name, deleted_at)
 );
 
-CREATE INDEX idx_db_instances_user_id ON db_instances (user_id);
-CREATE INDEX idx_db_instances_status ON db_instances (status) WHERE deleted_at IS NULL;
-CREATE INDEX idx_db_instances_billing ON db_instances (last_billed_at)
+CREATE INDEX IF NOT EXISTS idx_db_instances_user_id ON db_instances (user_id);
+CREATE INDEX IF NOT EXISTS idx_db_instances_status ON db_instances (status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_db_instances_billing ON db_instances (last_billed_at)
     WHERE status = 'running' AND deleted_at IS NULL;
 
 CREATE TRIGGER update_db_instances_timestamp

@@ -92,7 +92,6 @@ type DBInstance struct {
 	// Connection Info
 	Endpoint string
 	Port     int
-	Password string // 복호화된 값
 
 	Config       map[string]interface{}
 	BackupConfig BackupConfig
