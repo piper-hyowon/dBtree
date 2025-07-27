@@ -11,4 +11,11 @@ type DBInstanceStore interface {
 	Update(ctx context.Context, instance *DBInstance) error
 	UpdateStatus(ctx context.Context, id int64, status InstanceStatus, reason string) error
 	Delete(ctx context.Context, id string) error
+
+	CreateBackupRecord(ctx context.Context, backup *BackupRecord) error
+	ListBackupRecords(ctx context.Context, instanceID string) ([]*BackupRecord, error)
+}
+
+type PresetStore interface {
+	List(ctx context.Context) ([]*DBPreset, error)
 }

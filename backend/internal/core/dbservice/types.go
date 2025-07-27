@@ -153,17 +153,52 @@ func (d *DBInstance) ShouldPause(userBalance int) bool {
 
 // 프리셋
 type DBPreset struct {
-	ID            string
-	Type          DBType
-	Size          DBSize
-	Mode          DBMode
-	Name          string
-	Icon          string
-	Description   string
-	UseCases      []string
-	Resources     ResourceSpec
-	Cost          LemonCost
-	DefaultConfig map[string]interface{}
-	SortOrder     int
-	IsActive      bool
+	ID                  string
+	Type                DBType
+	Size                DBSize
+	Mode                DBMode
+	Name                string
+	Icon                string
+	Description         string
+	FriendlyDescription string
+	TechnicalTerms      map[string]interface{}
+	UseCases            []string
+	Resources           ResourceSpec
+	Cost                LemonCost
+	DefaultConfig       map[string]interface{}
+	SortOrder           int
+	IsActive            bool
 }
+
+// BackupRecord (백업 요청 메타데이터만, 실제 백업은 K8s)
+type BackupRecord struct {
+	ID           int64        `json:"id"`
+	InstanceID   int64        `json:"instanceId"`
+	ExternalID   string       `json:"externalId"`
+	Name         string       `json:"name"`
+	Type         BackupType   `json:"type"`
+	Status       BackupStatus `json:"status"`
+	K8sJobName   string       `json:"k8sJobName"` // K8s Job/CronJob 참조
+	SizeBytes    int64        `json:"sizeBytes"`
+	StoragePath  string       `json:"storagePath"` // S3/PVC 경로
+	CreatedAt    time.Time    `json:"createdAt"`
+	CompletedAt  *time.Time   `json:"completedAt"`
+	ExpiresAt    *time.Time   `json:"expiresAt"`    // 자동 삭제 예정일
+	ErrorMessage string       `json:"errorMessage"` // 실패시 에러 메시지
+}
+
+type BackupType string
+
+const (
+	BackupTypeManual    BackupType = "manual"
+	BackupTypeScheduled BackupType = "scheduled"
+)
+
+type BackupStatus string
+
+const (
+	BackupStatusPending   BackupStatus = "pending"
+	BackupStatusRunning   BackupStatus = "running"
+	BackupStatusCompleted BackupStatus = "completed"
+	BackupStatusFailed    BackupStatus = "failed"
+)

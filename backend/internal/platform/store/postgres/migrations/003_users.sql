@@ -1,4 +1,4 @@
-CREATE TABLE users
+CREATE TABLE IF NOT EXISTS  users
 (
     id                  UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
     email               VARCHAR(255) UNIQUE      NOT NULL,
@@ -14,8 +14,8 @@ CREATE TABLE users
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX users_email_unique_idx ON users (email) WHERE is_deleted = FALSE;
-CREATE INDEX users_is_deleted_idx ON users (is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS  users_email_unique_idx ON users (email) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS  users_is_deleted_idx ON users (is_deleted);
 
 CREATE TRIGGER update_users_timestamp
     BEFORE UPDATE
