@@ -31,3 +31,5 @@ CREATE TYPE db_status AS ENUM (
     'restoring',
     'upgrading'
     );
+
+CREATE TYPE billing_status AS ENUM ('pending', 'processed', 'failed', 'cancelled');
