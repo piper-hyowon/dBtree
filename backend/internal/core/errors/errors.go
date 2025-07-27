@@ -50,36 +50,47 @@ const (
 	ErrClickCircleTimeExpired  ErrorCode = 1604
 	ErrNoQuizInProgress        ErrorCode = 1605
 	ErrLemonAlreadyHarvested   ErrorCode = 1606
+
+	ErrInvalidStatusTransition ErrorCode = 1700
+	ErrInstanceQuotaExceeded   ErrorCode = 1701
+	ErrInvalidInstanceName     ErrorCode = 1702
+	ErrInvalidResourceSpec     ErrorCode = 1703
+	ErrInstanceNotReady        ErrorCode = 1704
 )
 
 var errorStrings = map[ErrorCode]string{
-	ErrUnknown:                "unknown_error",
-	ErrInternalServer:         "internal_server_error",
-	ErrInvalidParameter:       "invalid_parameter",
-	ErrMissingParameter:       "missing_parameter",
-	ErrMethodNotAllowed:       "method_not_allowed",
-	ErrEndpointNotFound:       "endpoint_not_found",
-	ErrInvalidOTP:             "invalid_otp",
-	ErrExpiredOTP:             "expired_otp",
-	ErrSessionNotFound:        "session_not_found",
-	ErrTooManyResends:         "too_many_resends",
-	ErrTooEarlyResend:         "too_early_resend",
-	ErrInvalidToken:           "invalid_token",
-	ErrUnauthorized:           "unauthorized",
-	ErrSessionExpired:         "session_expired",
-	ErrAlreadyVerified:        "already_verified",
-	ErrInvalidEmail:           "invalid_email",
-	ErrResourceNotFound:       "resource_not_found",
-	ErrResourceConflict:       "resource_conflict",
-	ErrHarvestCooldown:        "harvest_cooldown",
-	ErrLemonStorageFull:       "lemon_storage_full",
-	ErrInsufficientLemons:     "insufficient_lemons",
-	ErrQuizInProgress:         "quiz_in_progress",
-	ErrNoQuizPassed:           "no_quiz_passed",
-	ErrQuizTimeExpired:        "time_expired",
-	ErrClickCircleTimeExpired: "click_circle_time_expired",
-	ErrNoQuizInProgress:       "no_quiz_in_progress",
-	ErrLemonAlreadyHarvested:  "lemon_already_harvested",
+	ErrUnknown:                 "unknown_error",
+	ErrInternalServer:          "internal_server_error",
+	ErrInvalidParameter:        "invalid_parameter",
+	ErrMissingParameter:        "missing_parameter",
+	ErrMethodNotAllowed:        "method_not_allowed",
+	ErrEndpointNotFound:        "endpoint_not_found",
+	ErrInvalidOTP:              "invalid_otp",
+	ErrExpiredOTP:              "expired_otp",
+	ErrSessionNotFound:         "session_not_found",
+	ErrTooManyResends:          "too_many_resends",
+	ErrTooEarlyResend:          "too_early_resend",
+	ErrInvalidToken:            "invalid_token",
+	ErrUnauthorized:            "unauthorized",
+	ErrSessionExpired:          "session_expired",
+	ErrAlreadyVerified:         "already_verified",
+	ErrInvalidEmail:            "invalid_email",
+	ErrResourceNotFound:        "resource_not_found",
+	ErrResourceConflict:        "resource_conflict",
+	ErrHarvestCooldown:         "harvest_cooldown",
+	ErrLemonStorageFull:        "lemon_storage_full",
+	ErrInsufficientLemons:      "insufficient_lemons",
+	ErrQuizInProgress:          "quiz_in_progress",
+	ErrNoQuizPassed:            "no_quiz_passed",
+	ErrQuizTimeExpired:         "time_expired",
+	ErrClickCircleTimeExpired:  "click_circle_time_expired",
+	ErrNoQuizInProgress:        "no_quiz_in_progress",
+	ErrLemonAlreadyHarvested:   "lemon_already_harvested",
+	ErrInvalidStatusTransition: "invalid_status_transition",
+	ErrInstanceQuotaExceeded:   "instance_quota_exceeded",
+	ErrInvalidInstanceName:     "invalid_instance_name",
+	ErrInvalidResourceSpec:     "invalid_resource_spec",
+	ErrInstanceNotReady:        "instance_not_ready",
 }
 
 func (c ErrorCode) String() string {

@@ -11,7 +11,8 @@ import (
 
 func errorCodeToStatusCode(code errors.ErrorCode) int {
 	switch code {
-	case errors.ErrInvalidParameter, errors.ErrMissingParameter:
+	case errors.ErrInvalidParameter, errors.ErrMissingParameter,
+		errors.ErrInvalidInstanceName, errors.ErrInvalidResourceSpec:
 		return http.StatusBadRequest
 
 	case errors.ErrMethodNotAllowed:
@@ -24,7 +25,7 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 	case errors.ErrSessionExpired, errors.ErrAlreadyVerified,
 		errors.ErrResourceConflict, errors.ErrInsufficientLemons, errors.ErrHarvestCooldown,
 		errors.ErrLemonStorageFull, errors.ErrNoQuizInProgress, errors.ErrHarvestAlreadyProcessed,
-		errors.ErrLemonAlreadyHarvested:
+		errors.ErrLemonAlreadyHarvested, errors.ErrInvalidStatusTransition, errors.ErrInstanceQuotaExceeded:
 		return http.StatusConflict
 
 	case errors.ErrResourceNotFound:
@@ -35,6 +36,9 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 
 	case errors.ErrInternalServer:
 		return http.StatusInternalServerError
+
+	case errors.ErrInstanceNotReady:
+		return http.StatusServiceUnavailable
 
 	default:
 		return http.StatusInternalServerError
