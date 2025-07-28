@@ -5,7 +5,55 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - dbtree.dbtree.cloud
+  - ""
+  resources:
+  - configmaps
+  - persistentvolumeclaims
+  - secrets
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dbtree.cloud
   resources:
   - dbinstances
   verbs:
@@ -17,16 +65,28 @@ rules:
   - update
   - watch
 - apiGroups:
-  - dbtree.dbtree.cloud
+  - dbtree.cloud
   resources:
   - dbinstances/finalizers
   verbs:
   - update
 - apiGroups:
-  - dbtree.dbtree.cloud
+  - dbtree.cloud
   resources:
   - dbinstances/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
