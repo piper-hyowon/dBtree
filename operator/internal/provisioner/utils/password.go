@@ -23,20 +23,20 @@ import (
 
 // GeneratePassword generates a secure random password
 func GeneratePassword() (string, error) {
-	// Generate 32 bytes of random data
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+	const passwordLength = 32
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+
+	// Generate a secure random password of the desired length
+	password := make([]byte, passwordLength)
+	for i := range password {
+		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		password[i] = charset[randomIndex.Int64()]
 	}
 
-	// Encode to base64 for a readable password
-	// This will produce a 44 character string
-	password := base64.URLEncoding.EncodeToString(bytes)
-
-	// Remove padding characters for cleaner password
-	password = password[:32]
-
-	return password, nil
+	return string(password), nil
 }
 
 // GenerateSecureToken generates a secure random token
