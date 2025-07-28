@@ -20,7 +20,7 @@
 <img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/35037c91-c8bc-413b-aa58-90212e461c35" />
 
 
-<img width="915" height="543" alt="image" src="https://github.com/user-attachments/assets/49804fd6-617d-4634-b644-de771fd08271" />
+<img width="915" height="543" alt="image" src="https://github.com/user-attachments/assets/8deeaf40-50f2-467a-8126-9dc264af18cc" />
 
 
 #### Architecture: Hexagonal Architecture
