@@ -7,7 +7,7 @@
 
 #### 🛠 기술 스택
 - **Backend**: Go (표준 라이브러리 중심), PostgreSQL, Redis
-- **Infrastructure**: Kubernetes (Custom Resource Definition)
+- **Infrastructure**: Kubernetes Operator 패턴
 - **Frontend**: React
 
 #### ✨ 서비스 특징
@@ -19,9 +19,8 @@
 
 <img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/35037c91-c8bc-413b-aa58-90212e461c35" />
 
-<hr>
 
-<img width="338" height="551" alt="image" src="https://github.com/user-attachments/assets/478afbd5-48ac-4875-aeee-15636f1fcc75" />
+<img width="915" height="543" alt="image" src="https://github.com/user-attachments/assets/49804fd6-617d-4634-b644-de771fd08271" />
 
 
 #### Architecture: Hexagonal Architecture
