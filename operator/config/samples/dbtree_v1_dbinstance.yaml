@@ -6,4 +6,18 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: dbinstance-sample
 spec:
-  # TODO(user): Add fields here
+  name: my-mongodb
+  type: mongodb
+  size: small
+  mode: standalone
+  resources:
+    cpu: 1
+    memory: 1024
+    disk: 10
+  network:
+    private: true
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retentionDays: 7
+  userId: "user123"
