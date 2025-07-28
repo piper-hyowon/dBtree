@@ -19,6 +19,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -89,7 +90,94 @@ func (p *MongoDBProvisioner) Delete(ctx context.Context, instance *dbtreev1.DBIn
 
 // Update modifies existing MongoDB resources
 func (p *MongoDBProvisioner) Update(ctx context.Context, instance *dbtreev1.DBInstance) error {
-	// TODO: Implement update logic for scaling, config changes, etc.
+	namespace := instance.GetUserNamespace()
+
+	// 1. Update StatefulSet (for resource changes)
+	sts := &appsv1.StatefulSet{}
+	if err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.GetStatefulSetName(),
+		Namespace: namespace,
+	}, sts); err != nil {
+		return fmt.Errorf("failed to get statefulset: %w", err)
+	}
+
+	// Check if resources need update
+	currentResources := &sts.Spec.Template.Spec.Containers[0].Resources
+	desiredResources := p.getResourceRequirements(instance)
+
+	resourcesChanged := false
+	if !currentResources.Requests.Cpu().Equal(*desiredResources.Requests.Cpu()) ||
+		!currentResources.Requests.Memory().Equal(*desiredResources.Requests.Memory()) {
+		resourcesChanged = true
+	}
+
+	// Check if replicas need update (for scaling)
+	replicasChanged := false
+	desiredReplicas := p.getReplicas(instance)
+	if *sts.Spec.Replicas != desiredReplicas {
+		replicasChanged = true
+		sts.Spec.Replicas = &desiredReplicas
+	}
+
+	// Update resources if changed
+	if resourcesChanged {
+		sts.Spec.Template.Spec.Containers[0].Resources = desiredResources
+	}
+
+	// Apply StatefulSet changes
+	if resourcesChanged || replicasChanged {
+		if err := p.client.Update(ctx, sts); err != nil {
+			return fmt.Errorf("failed to update statefulset: %w", err)
+		}
+	}
+
+	// 2. Update ConfigMap (for configuration changes)
+	cm := &corev1.ConfigMap{}
+	if err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.GetConfigMapName(),
+		Namespace: namespace,
+	}, cm); err != nil {
+		return fmt.Errorf("failed to get configmap: %w", err)
+	}
+
+	// Generate new config
+	newConfig := p.generateMongoConfig(instance)
+	if cm.Data["mongod.conf"] != newConfig {
+		cm.Data["mongod.conf"] = newConfig
+		if err := p.client.Update(ctx, cm); err != nil {
+			return fmt.Errorf("failed to update configmap: %w", err)
+		}
+
+		// Restart pods to apply config changes
+		// This is done by updating an annotation
+		if sts.Spec.Template.Annotations == nil {
+			sts.Spec.Template.Annotations = make(map[string]string)
+		}
+		sts.Spec.Template.Annotations["dbtree.cloud/config-hash"] = fmt.Sprintf("%d", time.Now().Unix())
+		if err := p.client.Update(ctx, sts); err != nil {
+			return fmt.Errorf("failed to trigger pod restart: %w", err)
+		}
+	}
+
+	// 3. Update Service if port changed
+	if instance.Status.Port != 0 {
+		svc := &corev1.Service{}
+		if err := p.client.Get(ctx, types.NamespacedName{
+			Name:      instance.GetServiceName(),
+			Namespace: namespace,
+		}, svc); err != nil {
+			return fmt.Errorf("failed to get service: %w", err)
+		}
+
+		if svc.Spec.Ports[0].Port != instance.GetDefaultPort() {
+			svc.Spec.Ports[0].Port = instance.GetDefaultPort()
+			svc.Spec.Ports[0].TargetPort = intstr.FromInt32(int32(int(instance.GetDefaultPort())))
+			if err := p.client.Update(ctx, svc); err != nil {
+				return fmt.Errorf("failed to update service: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -208,7 +296,7 @@ func (p *MongoDBProvisioner) createService(ctx context.Context, instance *dbtree
 				{
 					Name:       "mongodb",
 					Port:       mongoDBPort,
-					TargetPort: intstr.FromInt(mongoDBPort),
+					TargetPort: intstr.FromInt32(mongoDBPort),
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},

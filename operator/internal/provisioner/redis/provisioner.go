@@ -19,6 +19,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -89,7 +90,90 @@ func (p *RedisProvisioner) Delete(ctx context.Context, instance *dbtreev1.DBInst
 
 // Update modifies existing Redis resources
 func (p *RedisProvisioner) Update(ctx context.Context, instance *dbtreev1.DBInstance) error {
-	// TODO: Implement update logic
+	namespace := instance.GetUserNamespace()
+
+	// 1. Update StatefulSet
+	sts := &appsv1.StatefulSet{}
+	if err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.GetStatefulSetName(),
+		Namespace: namespace,
+	}, sts); err != nil {
+		return fmt.Errorf("failed to get statefulset: %w", err)
+	}
+
+	updateNeeded := false
+
+	// Check resources
+	currentResources := &sts.Spec.Template.Spec.Containers[0].Resources
+	desiredResources := p.getResourceRequirements(instance)
+
+	if !currentResources.Requests.Cpu().Equal(*desiredResources.Requests.Cpu()) ||
+		!currentResources.Requests.Memory().Equal(*desiredResources.Requests.Memory()) {
+		sts.Spec.Template.Spec.Containers[0].Resources = desiredResources
+		updateNeeded = true
+	}
+
+	// Check replicas (only for cluster mode)
+	if instance.Spec.Mode == dbtreev1.DBModeCluster || instance.Spec.Mode == dbtreev1.DBModeSentinel {
+		desiredReplicas := p.getReplicas(instance)
+		if *sts.Spec.Replicas != desiredReplicas {
+			sts.Spec.Replicas = &desiredReplicas
+			updateNeeded = true
+		}
+	}
+
+	// Apply StatefulSet updates
+	if updateNeeded {
+		if err := p.client.Update(ctx, sts); err != nil {
+			return fmt.Errorf("failed to update statefulset: %w", err)
+		}
+	}
+
+	// 2. Update ConfigMap
+	cm := &corev1.ConfigMap{}
+	if err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.GetConfigMapName(),
+		Namespace: namespace,
+	}, cm); err != nil {
+		return fmt.Errorf("failed to get configmap: %w", err)
+	}
+
+	// Generate new config
+	newConfig := p.generateRedisConfig(instance)
+	if cm.Data["redis.conf"] != newConfig {
+		cm.Data["redis.conf"] = newConfig
+		if err := p.client.Update(ctx, cm); err != nil {
+			return fmt.Errorf("failed to update configmap: %w", err)
+		}
+
+		// Trigger rolling restart
+		if sts.Spec.Template.Annotations == nil {
+			sts.Spec.Template.Annotations = make(map[string]string)
+		}
+		sts.Spec.Template.Annotations["dbtree.cloud/config-hash"] = fmt.Sprintf("%d", time.Now().Unix())
+		if err := p.client.Update(ctx, sts); err != nil {
+			return fmt.Errorf("failed to trigger pod restart: %w", err)
+		}
+	}
+
+	// 3. Update Service
+	svc := &corev1.Service{}
+	if err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.GetServiceName(),
+		Namespace: namespace,
+	}, svc); err != nil {
+		return fmt.Errorf("failed to get service: %w", err)
+	}
+
+	// Check if port needs update
+	if instance.Status.Port != 0 && svc.Spec.Ports[0].Port != instance.GetDefaultPort() {
+		svc.Spec.Ports[0].Port = instance.GetDefaultPort()
+		svc.Spec.Ports[0].TargetPort = intstr.FromInt(int(instance.GetDefaultPort()))
+		if err := p.client.Update(ctx, svc); err != nil {
+			return fmt.Errorf("failed to update service: %w", err)
+		}
+	}
+
 	return nil
 }
 
