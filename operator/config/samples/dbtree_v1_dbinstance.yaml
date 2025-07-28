@@ -1,0 +1,23 @@
+apiVersion: dbtree.dbtree.cloud/v1
+kind: DBInstance
+metadata:
+  labels:
+    app.kubernetes.io/name: dbtree-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: dbinstance-sample
+spec:
+  name: my-mongodb
+  type: mongodb
+  size: small
+  mode: standalone
+  resources:
+    cpu: 1
+    memory: 1024
+    disk: 10
+  network:
+    private: true
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retentionDays: 7
+  userId: "user123"
