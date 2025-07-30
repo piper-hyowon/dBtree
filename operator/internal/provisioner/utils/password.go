@@ -19,6 +19,7 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"math/big"
 )
 
 // GeneratePassword generates a secure random password

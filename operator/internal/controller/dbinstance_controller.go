@@ -22,7 +22,6 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -76,15 +75,10 @@ type DBInstanceReconciler struct {
 // +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// the DBInstance object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
+// internal/controller/dbinstance_controller.go - 주요 변경 부분
+
 func (r *DBInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -92,7 +86,6 @@ func (r *DBInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	instance := &dbtreev1.DBInstance{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		if apierrors.IsNotFound(err) {
-			// Object not found, could have been deleted
 			return ctrl.Result{}, nil
 		}
 		log.Error(err, "Failed to get DBInstance")
@@ -112,12 +105,7 @@ func (r *DBInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	// Ensure user namespace exists
-	namespace := instance.GetUserNamespace()
-	if err := r.ensureNamespace(ctx, namespace, instance.Spec.UserID); err != nil {
-		log.Error(err, "Failed to ensure namespace", "namespace", namespace)
-		return r.setErrorCondition(ctx, instance, "NamespaceCreationFailed", err.Error())
-	}
+	// 네임스페이스는 백엔드에서 이미 생성함!
 
 	// Get provisioner based on database type
 	prov := r.getProvisioner(instance.Spec.Type)
@@ -170,30 +158,34 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 		return r.setErrorCondition(ctx, instance, "ProvisioningFailed", err.Error())
 	}
 
-	// Create NetworkPolicy
-	if err := r.createNetworkPolicy(ctx, instance); err != nil {
-		log.Error(err, "Failed to create NetworkPolicy")
-		return r.setErrorCondition(ctx, instance, "NetworkPolicyCreationFailed", err.Error())
+	// Wait for pods to be ready
+	sts := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Name:      instance.GetStatefulSetName(),
+		Namespace: instance.GetUserNamespace(),
+	}, sts); err != nil {
+		log.Error(err, "Failed to get StatefulSet")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	// Create backup CronJob if enabled
-	if instance.NeedsBackup() {
-		if err := r.createBackupCronJob(ctx, instance); err != nil {
-			log.Error(err, "Failed to create backup CronJob")
-			return r.setErrorCondition(ctx, instance, "BackupCreationFailed", err.Error())
-		}
+	// Check if pods are ready
+	if sts.Status.ReadyReplicas != *sts.Spec.Replicas {
+		log.Info("Waiting for pods to be ready",
+			"ready", sts.Status.ReadyReplicas,
+			"desired", *sts.Spec.Replicas)
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	// Update status to running
 	instance.Status.State = dbtreev1.StatusRunning
 	instance.Status.StatusReason = "Provisioning completed successfully"
-	instance.Status.K8sNamespace = instance.GetUserNamespace()
+	instance.Status.K8sNamespace = instance.Namespace
 	instance.Status.K8sResourceName = instance.GetStatefulSetName()
 
 	// Set endpoint and port
-	instance.Status.Endpoint = instance.GetServiceName() + "." + instance.GetUserNamespace() + ".svc.cluster.local"
+	instance.Status.Endpoint = instance.GetServiceName() + "." + instance.Namespace + ".svc.cluster.local"
 	instance.Status.Port = instance.GetDefaultPort()
-	instance.Status.SecretRef = instance.GetSecretName()
+	instance.Status.SecretRef = instance.Spec.SecretRef.Name
 
 	// Set conditions
 	instance.SetCondition(ConditionTypeProvisioned, metav1.ConditionTrue,
@@ -204,14 +196,16 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 	if err := r.updateStatus(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	log.Info("Instance provisioned successfully",
+		"endpoint", instance.Status.Endpoint,
+		"port", instance.Status.Port)
+
 	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // handleRunning monitors the running instance
 func (r *DBInstanceReconciler) handleRunning(ctx context.Context, instance *dbtreev1.DBInstance, prov provisioner.Provisioner) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
-	log.Info("Handling running state")
-
 	// Check if StatefulSet is ready
 	sts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, types.NamespacedName{
@@ -231,14 +225,14 @@ func (r *DBInstanceReconciler) handleRunning(ctx context.Context, instance *dbtr
 	}
 
 	// Check readiness
-	if sts.Status.ReadyReplicas != sts.Status.Replicas {
+	if sts.Status.ReadyReplicas != *sts.Spec.Replicas {
 		instance.SetCondition(ConditionTypeReady, metav1.ConditionFalse,
 			"PodsNotReady", fmt.Sprintf("Only %d/%d pods are ready",
-				sts.Status.ReadyReplicas, sts.Status.Replicas))
+				sts.Status.ReadyReplicas, *sts.Spec.Replicas))
 		if err := r.updateStatus(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	// All good, ensure Ready condition is True
@@ -246,7 +240,7 @@ func (r *DBInstanceReconciler) handleRunning(ctx context.Context, instance *dbtr
 		"AllPodsReady", "All pods are ready")
 
 	// Requeue after 1 minute to check again
-	return ctrl.Result{RequeueAfter: time.Minute}, r.updateStatus(ctx, instance)
+	return ctrl.Result{RequeueAfter: 10 * time.Minute}, r.updateStatus(ctx, instance)
 }
 
 // handlePaused scales down the instance
@@ -264,7 +258,7 @@ func (r *DBInstanceReconciler) handlePaused(ctx context.Context, instance *dbtre
 			return ctrl.Result{}, err
 		}
 		// Already scaled down
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	// Scale to 0
@@ -286,7 +280,7 @@ func (r *DBInstanceReconciler) handlePaused(ctx context.Context, instance *dbtre
 	if err := r.updateStatus(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
 // handleStopped handles stopped state
@@ -315,38 +309,21 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 	if controllerutil.ContainsFinalizer(instance, dbInstanceFinalizer) {
 		log.Info("Handling deletion")
 
-		// Get provisioner
-		prov := r.getProvisioner(instance.Spec.Type)
-		if prov != nil {
-			if err := prov.Delete(ctx, instance); err != nil {
-				log.Error(err, "Failed to delete resources")
-				return ctrl.Result{}, err
-			}
-		}
+		namespace := instance.GetUserNamespace()
 
-		// Delete NetworkPolicy
-		netpol := &networkingv1.NetworkPolicy{}
+		// Delete PVC
+		pvc := &corev1.PersistentVolumeClaim{}
+		pvcName := instance.GetPVCName()
 		if err := r.Get(ctx, types.NamespacedName{
-			Name:      instance.GetNetworkPolicyName(),
-			Namespace: instance.GetUserNamespace(),
-		}, netpol); err == nil {
-			if err := r.Delete(ctx, netpol); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, err
+			Name:      pvcName,
+			Namespace: namespace,
+		}, pvc); err == nil {
+			if err := r.Delete(ctx, pvc); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete PVC", "name", pvcName)
 			}
 		}
 
-		// Delete backup CronJob if exists
-		cronJob := &batchv1.CronJob{}
-		if err := r.Get(ctx, types.NamespacedName{
-			Name:      instance.GetBackupCronJobName(),
-			Namespace: instance.GetUserNamespace(),
-		}, cronJob); err == nil {
-			if err := r.Delete(ctx, cronJob); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Remove finalizer
+		// Finalizer 제거
 		controllerutil.RemoveFinalizer(instance, dbInstanceFinalizer)
 		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
@@ -376,7 +353,7 @@ func (r *DBInstanceReconciler) ensureNamespace(ctx context.Context, name, userID
 			},
 		}
 
-		if err := r.Create(ctx, ns); err != nil {
+		if err := r.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
 			return err
 		}
 	}
@@ -386,17 +363,23 @@ func (r *DBInstanceReconciler) ensureNamespace(ctx context.Context, name, userID
 
 // createNetworkPolicy creates a NetworkPolicy for the instance
 func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance *dbtreev1.DBInstance) error {
+	labels := map[string]string{
+		"app.kubernetes.io/name":      string(instance.Spec.Type),
+		"app.kubernetes.io/instance":  instance.Name,
+		"app.kubernetes.io/component": "database",
+		"app.kubernetes.io/part-of":   "dbtree",
+		"dbtree.cloud/instance-uid":   string(instance.UID),
+	}
+
 	np := &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetNetworkPolicyName(),
 			Namespace: instance.GetUserNamespace(),
+			Labels:    labels,
 		},
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  instance.Name,
-					"app.kubernetes.io/component": "database",
-				},
+				MatchLabels: labels,
 			},
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
@@ -414,8 +397,9 @@ func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance
 						{
 							Port: &intstr.IntOrString{
 								Type:   intstr.Int,
-								IntVal: instance.GetDefaultPort(),
+								IntVal: int32(instance.GetDefaultPort()),
 							},
+							Protocol: &protocolTCP,
 						},
 					},
 				},
@@ -423,7 +407,6 @@ func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance
 			Egress: []networkingv1.NetworkPolicyEgressRule{
 				{
 					// Allow DNS
-					To: []networkingv1.NetworkPolicyPeer{},
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
 							Port: &intstr.IntOrString{
@@ -431,6 +414,13 @@ func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance
 								IntVal: 53,
 							},
 							Protocol: &protocolUDP,
+						},
+						{
+							Port: &intstr.IntOrString{
+								Type:   intstr.Int,
+								IntVal: 53,
+							},
+							Protocol: &protocolTCP,
 						},
 					},
 				},
@@ -446,77 +436,10 @@ func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance
 		},
 	}
 
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, np, r.Scheme); err != nil {
-		return err
-	}
-
 	// Create or update
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, np, func() error {
 		// Update spec if needed
-		return nil
-	})
-
-	return err
-}
-
-// createBackupCronJob creates a CronJob for backups
-func (r *DBInstanceReconciler) createBackupCronJob(ctx context.Context, instance *dbtreev1.DBInstance) error {
-	// This is a simplified version. In production, you'd need proper backup containers
-	cronJob := &batchv1.CronJob{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      instance.GetBackupCronJobName(),
-			Namespace: instance.GetUserNamespace(),
-		},
-		Spec: batchv1.CronJobSpec{
-			Schedule: instance.Spec.Backup.Schedule,
-			JobTemplate: batchv1.JobTemplateSpec{
-				Spec: batchv1.JobSpec{
-					Template: corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							RestartPolicy: corev1.RestartPolicyOnFailure,
-							Containers: []corev1.Container{
-								{
-									Name:    "backup",
-									Image:   r.getBackupImage(instance.Spec.Type),
-									Command: r.getBackupCommand(instance.Spec.Type),
-									Env: []corev1.EnvVar{
-										{
-											Name:  "DB_HOST",
-											Value: instance.GetServiceName(),
-										},
-										{
-											Name:  "DB_PORT",
-											Value: fmt.Sprintf("%d", instance.GetDefaultPort()),
-										},
-									},
-									EnvFrom: []corev1.EnvFromSource{
-										{
-											SecretRef: &corev1.SecretEnvSource{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: instance.GetSecretName(),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, cronJob, r.Scheme); err != nil {
-		return err
-	}
-
-	// Create or update
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, cronJob, func() error {
-		// Update schedule if changed
-		cronJob.Spec.Schedule = instance.Spec.Backup.Schedule
+		np.Spec.PodSelector.MatchLabels = labels
 		return nil
 	})
 
@@ -574,12 +497,14 @@ func (r *DBInstanceReconciler) setErrorCondition(ctx context.Context, instance *
 	return ctrl.Result{RequeueAfter: time.Minute}, r.updateStatus(ctx, instance)
 }
 
-// SetupWithManager sets up the controller with the Manager.
+// SetupWithManager sets up the controller with the Manager
 func (r *DBInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		// Uncomment the following line adding a pointer to an instance of the controlled resource as an argument
-		// For().
 		For(&dbtreev1.DBInstance{}).
+		Owns(&appsv1.StatefulSet{}).
+		Owns(&corev1.Service{}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
 		Named("dbinstance").
 		Complete(r)
 }

@@ -59,9 +59,9 @@ func NewProvisioner(client client.Client, scheme *runtime.Scheme) provisioner.Pr
 func (p *MongoDBProvisioner) Provision(ctx context.Context, instance *dbtreev1.DBInstance) error {
 	namespace := instance.GetUserNamespace()
 
-	// Create Secret
-	if err := p.createSecret(ctx, instance, namespace); err != nil {
-		return fmt.Errorf("failed to create secret: %w", err)
+	// Ensure Secret exists (created by backend)
+	if err := p.ensureSecret(ctx, instance, namespace); err != nil {
+		return fmt.Errorf("failed to ensure secret: %w", err)
 	}
 
 	// Create ConfigMap
@@ -209,47 +209,49 @@ func (p *MongoDBProvisioner) GetStatus(ctx context.Context, instance *dbtreev1.D
 
 // createSecret creates the MongoDB credentials secret
 func (p *MongoDBProvisioner) createSecret(ctx context.Context, instance *dbtreev1.DBInstance, namespace string) error {
-	// Check if secret already exists
-	existingSecret := &corev1.Secret{}
+	tempSecretName := instance.Annotations["dbtree.cloud/temp-secret"]
+	if tempSecretName == "" {
+		return fmt.Errorf("temp secret name not provided")
+	}
+
+	tempSecret := &corev1.Secret{}
 	err := p.client.Get(ctx, types.NamespacedName{
-		Name:      instance.GetSecretName(),
+		Name:      tempSecretName,
 		Namespace: namespace,
-	}, existingSecret)
-
-	if err == nil {
-		// Secret already exists, don't regenerate password
-		return nil
-	}
-
-	// Generate secure password
-	password, err := utils.GeneratePassword()
+	}, tempSecret)
 	if err != nil {
-		return fmt.Errorf("failed to generate password: %w", err)
+		return fmt.Errorf("failed to get temp secret: %w", err)
 	}
+
+	password := string(tempSecret.Data["password"])
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetSecretName(),
 			Namespace: namespace,
 		},
-		Type: corev1.SecretTypeOpaque,
 		StringData: map[string]string{
+			"username":                   "admin",
+			"password":                   password,
 			"MONGO_INITDB_ROOT_USERNAME": "admin",
 			"MONGO_INITDB_ROOT_PASSWORD": password,
 			"MONGO_INITDB_DATABASE":      "admin",
-			"username":                   "admin",
-			"password":                   password,
 			"connection-string": fmt.Sprintf("mongodb://admin:%s@%s:%d/admin",
 				password, instance.GetServiceName(), mongoDBPort),
 		},
 	}
 
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, secret, p.scheme); err != nil {
-		return err
+	// 임시 Secret 삭제
+	if err := p.client.Delete(ctx, tempSecret); err != nil {
+		fmt.Println(err, "Failed to delete temp secret", "name", tempSecretName)
+		// 삭제 실패해도 계속 진행
 	}
 
-	// Create secret
+	// Annotation 제거
+	delete(instance.Annotations, "dbtree.cloud/temp-secret")
+	if err := p.client.Update(ctx, instance); err != nil {
+		fmt.Println(err, "Failed to remove annotation")
+	}
 	return p.client.Create(ctx, secret)
 }
 
@@ -257,20 +259,30 @@ func (p *MongoDBProvisioner) createSecret(ctx context.Context, instance *dbtreev
 func (p *MongoDBProvisioner) createConfigMap(ctx context.Context, instance *dbtreev1.DBInstance, namespace string) error {
 	config := p.generateMongoConfig(instance)
 
+	initScript := `
+db = db.getSiblingDB('admin');
+db.createUser({
+  user: process.env.MONGO_INITDB_ROOT_USERNAME,
+  pwd: process.env.MONGO_INITDB_ROOT_PASSWORD,
+  roles: [{ role: 'root', db: 'admin' }]
+});
+`
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetConfigMapName(),
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			"mongod.conf": config,
+			"mongod.conf":  config,
+			"init-user.js": initScript,
 		},
 	}
 
 	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, cm, p.scheme); err != nil {
-		return err
-	}
+	//if err := controllerutil.SetControllerReference(instance, cm, p.scheme); err != nil {
+	//	return err
+	//}
 
 	// Create or update
 	_, err := controllerutil.CreateOrUpdate(ctx, p.client, cm, func() error {
@@ -309,9 +321,9 @@ func (p *MongoDBProvisioner) createService(ctx context.Context, instance *dbtree
 	}
 
 	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, svc, p.scheme); err != nil {
-		return err
-	}
+	//if err := controllerutil.SetControllerReference(instance, svc, p.scheme); err != nil {
+	//	return err
+	//}
 
 	// Create or update
 	_, err := controllerutil.CreateOrUpdate(ctx, p.client, svc, func() error {
@@ -359,7 +371,7 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 								{
 									SecretRef: &corev1.SecretEnvSource{
 										LocalObjectReference: corev1.LocalObjectReference{
-											Name: instance.GetSecretName(),
+											Name: instance.Spec.SecretRef.Name, // Use referenced secret
 										},
 									},
 								},
@@ -373,8 +385,46 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 									Name:      "config",
 									MountPath: "/etc/mongod",
 								},
+								{
+									Name:      "init-scripts",
+									MountPath: "/docker-entrypoint-initdb.d",
+								},
 							},
-							Command: p.getCommand(instance),
+							Command: []string{
+								"/bin/bash",
+								"-c",
+								`# Check if initialization is needed
+    if [ ! -f /data/db/.mongodb_initialized ]; then
+        echo "First run detected, initializing MongoDB..."
+        
+        # Start MongoDB without auth
+        mongod --fork --logpath /var/log/mongodb/init.log --dbpath /data/db --bind_ip 127.0.0.1
+        
+        # Wait for MongoDB to start
+        sleep 5
+        
+        # Run init script
+        mongosh --eval "
+            db = db.getSiblingDB('admin');
+            db.createUser({
+                user: '$MONGO_INITDB_ROOT_USERNAME',
+                pwd: '$MONGO_INITDB_ROOT_PASSWORD',
+                roles: [{ role: 'root', db: 'admin' }]
+            });
+            print('User created successfully');
+        "
+        
+        # Shutdown MongoDB
+        mongod --shutdown --dbpath /data/db
+        
+        # Mark as initialized
+        touch /data/db/.mongodb_initialized
+        echo "Initialization complete"
+    fi
+    
+    # Start MongoDB normally
+    exec mongod --config /etc/mongod/mongod.conf`,
+							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
 									Exec: &corev1.ExecAction{
@@ -410,6 +460,22 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: instance.GetConfigMapName(),
+									},
+								},
+							},
+						},
+						{
+							Name: "init-scripts",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: instance.GetConfigMapName(),
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  "init-user.js",
+											Path: "init-user.js",
+										},
 									},
 								},
 							},
@@ -462,9 +528,9 @@ func (p *MongoDBProvisioner) getLabels(instance *dbtreev1.DBInstance) map[string
 		"app.kubernetes.io/part-of":   "dbtree",
 		"dbtree.cloud/db-type":        string(instance.Spec.Type),
 		"dbtree.cloud/db-size":        string(instance.Spec.Size),
+		"dbtree.cloud/instance-uid":   string(instance.UID), // 추가!
 	}
 }
-
 func (p *MongoDBProvisioner) getReplicas(instance *dbtreev1.DBInstance) int32 {
 	// Parse config for custom replica count
 	config, _ := utils.ParseMongoDBConfig(instance.Spec.Config)
@@ -538,8 +604,6 @@ systemLog:
   logAppend: true
 storage:
   dbPath: /data/db
-  journal:
-    enabled: true
 net:
   port: 27017
   bindIp: 0.0.0.0
@@ -547,8 +611,9 @@ net:
 
 	// Add security if auth is enabled
 	if config == nil || config.AuthEnabled {
-		mongoConf += `security:
-  authorization: enabled
+		// TODO:
+		mongoConf += `# security:
+  # authorization: enabled
 `
 	}
 
@@ -568,4 +633,52 @@ net:
 	}
 
 	return mongoConf
+}
+
+func (p *MongoDBProvisioner) ensureSecret(ctx context.Context, instance *dbtreev1.DBInstance, namespace string) error {
+	// Secret이 이미 backend에서 생성되었으므로, 존재 여부만 확인
+	if instance.Spec.SecretRef == nil {
+		return fmt.Errorf("secretRef is required but not provided")
+	}
+
+	secret := &corev1.Secret{}
+	err := p.client.Get(ctx, types.NamespacedName{
+		Name:      instance.Spec.SecretRef.Name,
+		Namespace: namespace,
+	}, secret)
+
+	if err != nil {
+		return fmt.Errorf("failed to get secret %s: %w", instance.Spec.SecretRef.Name, err)
+	}
+
+	// Validate secret has required fields
+	requiredFields := []string{
+		"username",
+		"password",
+		"MONGO_INITDB_ROOT_USERNAME",
+		"MONGO_INITDB_ROOT_PASSWORD",
+	}
+
+	for _, field := range requiredFields {
+		if _, ok := secret.Data[field]; !ok {
+			return fmt.Errorf("secret %s is missing required field: %s", secret.Name, field)
+		}
+	}
+
+	// Add connection string if not present
+	if _, ok := secret.Data["connection-string"]; !ok {
+		password := string(secret.Data["password"])
+		username := string(secret.Data["username"])
+
+		connectionString := fmt.Sprintf("mongodb://%s:%s@%s:%d/admin",
+			username, password, instance.GetServiceName(), mongoDBPort)
+
+		secret.Data["connection-string"] = []byte(connectionString)
+
+		if err := p.client.Update(ctx, secret); err != nil {
+			return fmt.Errorf("failed to update secret with connection string: %w", err)
+		}
+	}
+
+	return nil
 }

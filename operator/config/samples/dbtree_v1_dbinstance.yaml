@@ -1,4 +1,4 @@
-apiVersion: dbtree.dbtree.cloud/v1
+apiVersion: dbtree.cloud/v1
 kind: DBInstance
 metadata:
   labels:
@@ -14,8 +14,6 @@ spec:
     cpu: 1
     memory: 1024
     disk: 10
-  network:
-    private: true
   backup:
     enabled: true
     schedule: "0 2 * * *"
