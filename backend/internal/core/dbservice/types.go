@@ -1,6 +1,7 @@
 package dbservice
 
 import (
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -23,11 +24,13 @@ type DBMode string
 
 const (
 	// MongoDB
+
 	ModeStandalone DBMode = "standalone"
 	ModeReplicaSet DBMode = "replica_set"
 	ModeSharded    DBMode = "sharded"
 
 	// Redis
+
 	ModeBasic    DBMode = "basic"
 	ModeSentinel DBMode = "sentinel"
 	ModeCluster  DBMode = "cluster"
@@ -61,15 +64,16 @@ type LemonCost struct {
 }
 
 type BackupConfig struct {
-	Enabled       bool
-	Schedule      string // cron format
-	RetentionDays int
+	Enabled       bool   `json:"enabled"`
+	Schedule      string `json:"schedule,omitempty"` // cron format
+	RetentionDays int    `json:"retentionDays,omitempty"`
+	StorageSize   string `json:"storageSize,omitempty"` // 10Gi
 }
 
 type DBInstance struct {
 	ID         int64
-	ExternalID string
-	UserID     string
+	ExternalID string // UUID as string (DB에는 UUID)
+	UserID     string // UUID as string
 
 	// 기본 정보
 	Name              string
@@ -88,6 +92,7 @@ type DBInstance struct {
 	// K8s
 	K8sNamespace    string
 	K8sResourceName string
+	K8sSecretRef    string
 
 	// Connection Info
 	Endpoint string
@@ -106,7 +111,7 @@ type DBInstance struct {
 func (d *DBInstance) CanTransitionTo(target InstanceStatus) bool {
 	transitions := map[InstanceStatus][]InstanceStatus{
 		StatusProvisioning: {StatusRunning, StatusError},
-		StatusRunning:      {StatusPaused, StatusStopped, StatusMaintenance, StatusBackingUp},
+		StatusRunning:      {StatusPaused, StatusStopped, StatusMaintenance, StatusBackingUp, StatusDeleting},
 		StatusPaused:       {StatusRunning, StatusDeleting},
 		StatusStopped:      {StatusRunning, StatusDeleting},
 		StatusError:        {StatusDeleting},
@@ -137,7 +142,7 @@ func (d *DBInstance) CanStop() bool {
 }
 
 func (d *DBInstance) CanDelete() bool {
-	return d.CanTransitionTo(StatusDeleting)
+	return d.Status != StatusDeleting
 }
 
 func (d *DBInstance) CalculateHourlyCost() int {
@@ -172,19 +177,19 @@ type DBPreset struct {
 
 // BackupRecord (백업 요청 메타데이터만, 실제 백업은 K8s)
 type BackupRecord struct {
-	ID           int64        `json:"id"`
-	InstanceID   int64        `json:"instanceId"`
-	ExternalID   string       `json:"externalId"`
-	Name         string       `json:"name"`
-	Type         BackupType   `json:"type"`
-	Status       BackupStatus `json:"status"`
-	K8sJobName   string       `json:"k8sJobName"` // K8s Job/CronJob 참조
-	SizeBytes    int64        `json:"sizeBytes"`
-	StoragePath  string       `json:"storagePath"` // S3/PVC 경로
-	CreatedAt    time.Time    `json:"createdAt"`
-	CompletedAt  *time.Time   `json:"completedAt"`
-	ExpiresAt    *time.Time   `json:"expiresAt"`    // 자동 삭제 예정일
-	ErrorMessage string       `json:"errorMessage"` // 실패시 에러 메시지
+	ID           int64
+	InstanceID   int64
+	ExternalID   uuid.UUID
+	Name         string
+	Type         BackupType
+	Status       BackupStatus
+	K8sJobName   string // K8s Job/CronJob 참조
+	SizeBytes    int64
+	StoragePath  string // S3/PVC 경로
+	CreatedAt    time.Time
+	CompletedAt  *time.Time
+	ExpiresAt    *time.Time // 자동 삭제 예정일
+	ErrorMessage string     // 실패시 에러 메시지
 }
 
 type BackupType string
@@ -202,3 +207,47 @@ const (
 	BackupStatusCompleted BackupStatus = "completed"
 	BackupStatusFailed    BackupStatus = "failed"
 )
+
+type InstanceMetrics struct {
+	InstanceID          uuid.UUID `json:"instanceId"`
+	CPUUsage            string    `json:"cpuUsage"`
+	MemoryUsage         string    `json:"memoryUsage"`
+	DiskUsage           string    `json:"diskUsage"`
+	Connections         int       `json:"connections"`
+	OperationsPerSecond int       `json:"operationsPerSecond,omitempty"`
+	Timestamp           time.Time `json:"timestamp"`
+}
+
+// CalculateCustomCost 프리셋이 아닐경우 직접 계산
+func CalculateCustomCost(dbType DBType, resources ResourceSpec) LemonCost {
+	var base int
+
+	// 메모리 기반 비용
+	switch dbType {
+	case Redis:
+		base = resources.Memory / 512 // 512MB당 1레몬
+	case MongoDB:
+		base = resources.Memory / 1024 * 3 // 1GB당 3레몬
+	}
+
+	// CPU 추가 비용 (1 vCPU 초과분에 대해)
+	if resources.CPU > 1 {
+		base += (resources.CPU - 1) * 2
+	}
+
+	// 디스크 추가 비용 (10GB 초과분에 대해)
+	if resources.Disk > 10 {
+		base += (resources.Disk - 10) / 10
+	}
+
+	// 최소값 보장
+	if base < 1 {
+		base = 1
+	}
+
+	return LemonCost{
+		CreationCost:  base * 10,
+		HourlyLemons:  base,
+		MinimumLemons: base * 24,
+	}
+}
