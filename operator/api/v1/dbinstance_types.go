@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -130,6 +131,10 @@ type DBInstanceSpec struct {
 	// Deployment mode
 	// +kubebuilder:validation:Required
 	Mode DBMode `json:"mode"`
+
+	// Reference to the credentials secret
+	// +kubebuilder:validation:Required
+	SecretRef *corev1.LocalObjectReference `json:"secretRef"`
 
 	// Created from preset ID (optional, matches backend)
 	// +optional

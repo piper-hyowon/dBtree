@@ -37,6 +37,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	dbtreev1 "github.com/piper-hyowon/dBtree/operator/api/v1"
 	"github.com/piper-hyowon/dBtree/operator/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
@@ -48,6 +49,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(dbtreev1.AddToScheme(scheme))
 
 	// +kubebuilder:scaffold:scheme
 }
@@ -80,7 +82,7 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 	opts := zap.Options{
-		Development: true,
+		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
