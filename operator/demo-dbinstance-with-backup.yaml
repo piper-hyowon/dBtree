@@ -1,0 +1,46 @@
+apiVersion: dbtree.cloud/v1
+kind: DBInstance
+metadata:
+  name: demo-mongodb
+  namespace: user-demo-user-456
+spec:
+  name: demo-mongodb
+  type: mongodb
+  size: small
+  mode: standalone
+  secretRef:
+    name: demo-mongodb-secret
+  resources:
+    cpu: 1
+    memory: 512
+    disk: 5
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+    retentionDays: 7
+    storageType: "pvc"
+    storageSize: "10Gi"
+  userId: "demo-user-456"
+
+---
+apiVersion: dbtree.cloud/v1
+kind: DBInstance
+metadata:
+  name: demo-mongodb
+  namespace: user-demo-user-456
+spec:
+  name: demo-mongodb
+  type: mongodb
+  size: small
+  mode: standalone
+  secretRef:
+    name: demo-mongodb-secret
+  resources:
+    cpu: 1
+    memory: 512
+    disk: 5
+  backup:
+    enabled: true
+    schedule: "*/5 * * * *"  # 5분마다
+    retentionDays: 1
+  userId: "demo-user-456"
