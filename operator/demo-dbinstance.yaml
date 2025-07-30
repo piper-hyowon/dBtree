@@ -1,0 +1,19 @@
+apiVersion: dbtree.cloud/v1
+kind: DBInstance
+metadata:
+  name: demo-mongodb
+  namespace: user-demo-user-456
+spec:
+  name: demo-mongodb
+  type: mongodb
+  size: small
+  mode: standalone
+  secretRef:
+    name: demo-mongodb-secret
+  resources:
+    cpu: 1
+    memory: 512
+    disk: 5
+  backup:
+    enabled: false
+  userId: "demo-user-456"
