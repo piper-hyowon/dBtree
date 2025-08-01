@@ -32,5 +32,5 @@ type DBInstanceStore interface {
 
 type PresetStore interface {
 	Detail(ctx context.Context, id string) (*DBPreset, error)
-	List(ctx context.Context) ([]*DBPreset, error)
+	ListByType(ctx context.Context, dbType DBType) ([]*DBPreset, error)
 }

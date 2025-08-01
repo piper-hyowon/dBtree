@@ -71,7 +71,6 @@ type RedisConfig struct {
 type K8sConfig struct {
 	InCluster      bool   // Pod 내부 실행 여부
 	KubeConfigPath string // 로컬 개발시 kubeconfig 경로
-	Namespace      string // DB 인스턴스를 생성할 네임스페이스
 }
 
 func NewConfig() (*Config, error) {
@@ -168,7 +167,6 @@ func NewConfig() (*Config, error) {
 
 	k8sInCluster := getEnvString("K8S_IN_CLUSTER", "false") == "true"
 	k8sConfigPath := getEnvString("KUBECONFIG", "")
-	k8sNamespace := getEnvString("K8S_NAMESPACE", "dbtree-instances")
 
 	return &Config{
 		Server: ServerConfig{
@@ -216,7 +214,6 @@ func NewConfig() (*Config, error) {
 		K8s: K8sConfig{
 			InCluster:      k8sInCluster,
 			KubeConfigPath: k8sConfigPath,
-			Namespace:      k8sNamespace,
 		},
 	}, nil
 }
