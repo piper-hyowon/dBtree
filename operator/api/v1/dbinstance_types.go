@@ -100,7 +100,8 @@ type BackupConfig struct {
 	Enabled bool `json:"enabled"`
 
 	// Backup schedule in cron format
-	// +kubebuilder:validation:Pattern="^(\\*|([0-9]|[1-5][0-9])) (\\*|([0-9]|1[0-9]|2[0-3])) (\\*|([1-9]|[1-2][0-9]|3[0-1])) (\\*|([1-9]|1[0-2])) (\\*|([0-6]))$"
+	// Standard cron format: minute hour day month weekday
+	// Examples: "0 2 * * *" (daily at 2am), "*/30 * * * *" (every 30 minutes)
 	// +optional
 	Schedule string `json:"schedule,omitempty"`
 
@@ -109,6 +110,23 @@ type BackupConfig struct {
 	// +kubebuilder:validation:Maximum=90
 	// +optional
 	RetentionDays int32 `json:"retentionDays,omitempty"`
+
+	// Storage size for backup PVC (e.g., "10Gi")
+	// +optional
+	// +kubebuilder:default="10Gi"
+	StorageSize string `json:"storageSize,omitempty"`
+}
+
+func (d *DBInstance) GetBackupPVCName() string {
+	return d.Name + "-backup-pvc"
+}
+
+// GetBackupStorageSize returns the backup storage size with default
+func (d *DBInstance) GetBackupStorageSize() string {
+	if d.Spec.Backup.StorageSize != "" {
+		return d.Spec.Backup.StorageSize
+	}
+	return "10Gi" // 기본값
 }
 
 // DBInstanceSpec defines the desired state of DBInstance

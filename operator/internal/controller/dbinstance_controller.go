@@ -19,9 +19,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/ptr"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -77,8 +81,6 @@ type DBInstanceReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch;create
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 
-// internal/controller/dbinstance_controller.go - 주요 변경 부분
-
 func (r *DBInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -105,7 +107,7 @@ func (r *DBInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	// 네임스페이스는 백엔드에서 이미 생성함!
+	// 네임스페이스는 백엔드에서 이미 생성함
 
 	// Get provisioner based on database type
 	prov := r.getProvisioner(instance.Spec.Type)
@@ -158,6 +160,20 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 		return r.setErrorCondition(ctx, instance, "ProvisioningFailed", err.Error())
 	}
 
+	// Create NetworkPolicy
+	if err := r.createNetworkPolicy(ctx, instance); err != nil {
+		log.Error(err, "Failed to create NetworkPolicy")
+		return r.setErrorCondition(ctx, instance, "NetworkPolicyCreationFailed", err.Error())
+	}
+
+	// Create backup CronJob if enabled
+	if instance.NeedsBackup() {
+		if err := r.createBackupCronJob(ctx, instance); err != nil {
+			log.Error(err, "Failed to create backup CronJob")
+			return r.setErrorCondition(ctx, instance, "BackupCreationFailed", err.Error())
+		}
+	}
+
 	// Wait for pods to be ready
 	sts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, types.NamespacedName{
@@ -201,11 +217,13 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 		"endpoint", instance.Status.Endpoint,
 		"port", instance.Status.Port)
 
-	return ctrl.Result{RequeueAfter: time.Minute}, nil
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
 // handleRunning monitors the running instance
 func (r *DBInstanceReconciler) handleRunning(ctx context.Context, instance *dbtreev1.DBInstance, prov provisioner.Provisioner) (ctrl.Result, error) {
+	log := log.FromContext(ctx)
+
 	// Check if StatefulSet is ready
 	sts := &appsv1.StatefulSet{}
 	if err := r.Get(ctx, types.NamespacedName{
@@ -239,8 +257,52 @@ func (r *DBInstanceReconciler) handleRunning(ctx context.Context, instance *dbtr
 	instance.SetCondition(ConditionTypeReady, metav1.ConditionTrue,
 		"AllPodsReady", "All pods are ready")
 
-	// Requeue after 1 minute to check again
-	return ctrl.Result{RequeueAfter: 10 * time.Minute}, r.updateStatus(ctx, instance)
+	// Check if backup configuration changed
+	if instance.NeedsBackup() {
+		cronJob := &batchv1.CronJob{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.GetBackupCronJobName(),
+			Namespace: instance.GetUserNamespace(),
+		}, cronJob)
+
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				// Backup enabled but CronJob doesn't exist, create it
+				log.Info("Creating backup CronJob as backup is now enabled")
+				if err := r.createBackupCronJob(ctx, instance); err != nil {
+					log.Error(err, "Failed to create backup CronJob")
+				}
+			}
+		} else {
+			// Check if schedule changed
+			if cronJob.Spec.Schedule != instance.Spec.Backup.Schedule {
+				log.Info("Updating backup schedule",
+					"old", cronJob.Spec.Schedule,
+					"new", instance.Spec.Backup.Schedule)
+				cronJob.Spec.Schedule = instance.Spec.Backup.Schedule
+				if err := r.Update(ctx, cronJob); err != nil {
+					log.Error(err, "Failed to update backup schedule")
+				}
+			}
+		}
+	} else {
+		// Backup disabled, check if CronJob exists and delete it
+		cronJob := &batchv1.CronJob{}
+		err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.GetBackupCronJobName(),
+			Namespace: instance.GetUserNamespace(),
+		}, cronJob)
+
+		if err == nil {
+			log.Info("Deleting backup CronJob as backup is now disabled")
+			if err := r.Delete(ctx, cronJob); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete backup CronJob")
+			}
+		}
+	}
+
+	// Requeue after 5 minutes to check again
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, r.updateStatus(ctx, instance)
 }
 
 // handlePaused scales down the instance
@@ -312,18 +374,53 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 		namespace := instance.GetUserNamespace()
 
 		// Delete PVC
-		pvc := &corev1.PersistentVolumeClaim{}
-		pvcName := instance.GetPVCName()
-		if err := r.Get(ctx, types.NamespacedName{
-			Name:      pvcName,
-			Namespace: namespace,
-		}, pvc); err == nil {
-			if err := r.Delete(ctx, pvc); err != nil && !apierrors.IsNotFound(err) {
-				log.Error(err, "Failed to delete PVC", "name", pvcName)
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(namespace),
+			client.MatchingLabels{
+				"app.kubernetes.io/instance": instance.Name,
+			},
+		}
+
+		if err := r.List(ctx, pvcList, listOpts...); err == nil {
+			for _, pvc := range pvcList.Items {
+				if err := r.Delete(ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
+					log.Error(err, "Failed to delete PVC", "name", pvc.Name)
+				}
 			}
 		}
 
-		// Finalizer 제거
+		// Delete NetworkPolicy
+		netpol := &networkingv1.NetworkPolicy{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.GetNetworkPolicyName(),
+			Namespace: namespace,
+		}, netpol); err == nil {
+			if err := r.Delete(ctx, netpol); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete NetworkPolicy")
+			}
+		}
+
+		// Delete backup CronJob if exists
+		cronJob := &batchv1.CronJob{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.GetBackupCronJobName(),
+			Namespace: namespace,
+		}, cronJob); err == nil {
+			if err := r.Delete(ctx, cronJob); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete backup CronJob")
+			}
+		}
+
+		// Get provisioner and call Delete
+		prov := r.getProvisioner(instance.Spec.Type)
+		if prov != nil {
+			if err := prov.Delete(ctx, instance); err != nil {
+				log.Error(err, "Failed to delete resources via provisioner")
+			}
+		}
+
+		// Remove finalizer
 		controllerutil.RemoveFinalizer(instance, dbInstanceFinalizer)
 		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
@@ -331,34 +428,6 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// ensureNamespace creates user namespace if it doesn't exist
-func (r *DBInstanceReconciler) ensureNamespace(ctx context.Context, name, userID string) error {
-	ns := &corev1.Namespace{}
-	err := r.Get(ctx, types.NamespacedName{Name: name}, ns)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-
-		// Create namespace
-		ns = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Labels: map[string]string{
-					"dbtree.cloud/user-id": userID,
-					"dbtree.cloud/managed": "true",
-				},
-			},
-		}
-
-		if err := r.Create(ctx, ns); err != nil && !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // createNetworkPolicy creates a NetworkPolicy for the instance
@@ -446,6 +515,156 @@ func (r *DBInstanceReconciler) createNetworkPolicy(ctx context.Context, instance
 	return err
 }
 
+// createBackupCronJob creates a CronJob for backup
+func (r *DBInstanceReconciler) createBackupCronJob(ctx context.Context, instance *dbtreev1.DBInstance) error {
+	if err := r.createBackupPVC(ctx, instance); err != nil {
+		return fmt.Errorf("failed to create backup PVC: %w", err)
+	}
+
+	// Backup container configuration
+	backupContainer := corev1.Container{
+		Name:    "backup",
+		Image:   r.getBackupImage(instance.Spec.Type),
+		Command: r.getBackupCommand(instance.Spec.Type),
+		Env: []corev1.EnvVar{
+			{
+				Name:  "DB_HOST",
+				Value: instance.GetServiceName(),
+			},
+			{
+				Name:  "DB_PORT",
+				Value: fmt.Sprintf("%d", instance.GetDefaultPort()),
+			},
+			{
+				Name:  "BACKUP_RETENTION_DAYS",
+				Value: fmt.Sprintf("%d", instance.Spec.Backup.RetentionDays),
+			},
+		},
+		EnvFrom: []corev1.EnvFromSource{
+			{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: instance.GetSecretName(),
+					},
+				},
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      "backup-storage",
+				MountPath: "/backup",
+			},
+		},
+	}
+
+	cronJob := &batchv1.CronJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.GetBackupCronJobName(),
+			Namespace: instance.GetUserNamespace(),
+			Labels: map[string]string{
+				"app.kubernetes.io/name":      "backup",
+				"app.kubernetes.io/instance":  instance.Name,
+				"app.kubernetes.io/component": "backup",
+				"app.kubernetes.io/part-of":   "dbtree",
+			},
+		},
+		Spec: batchv1.CronJobSpec{
+			Schedule:                   instance.Spec.Backup.Schedule,
+			ConcurrencyPolicy:          batchv1.ForbidConcurrent,
+			SuccessfulJobsHistoryLimit: ptr.To(int32(3)),
+			FailedJobsHistoryLimit:     ptr.To(int32(1)),
+			JobTemplate: batchv1.JobTemplateSpec{
+				Spec: batchv1.JobSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							RestartPolicy: corev1.RestartPolicyOnFailure,
+							Containers:    []corev1.Container{backupContainer},
+							Volumes: []corev1.Volume{
+								{
+									Name: "backup-storage",
+									VolumeSource: corev1.VolumeSource{
+										PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+											ClaimName: instance.GetBackupPVCName(),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Set owner reference
+	if err := controllerutil.SetControllerReference(instance, cronJob, r.Scheme); err != nil {
+		return err
+	}
+
+	// Create or update
+	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, cronJob, func() error {
+		// Update schedule if changed
+		cronJob.Spec.Schedule = instance.Spec.Backup.Schedule
+		return nil
+	})
+
+	return err
+}
+
+// createBackupPVC creates a PVC for backup storage
+func (r *DBInstanceReconciler) createBackupPVC(ctx context.Context, instance *dbtreev1.DBInstance) error {
+	storageSize := "10Gi" // Default backup storage size
+	if instance.Spec.Backup.StorageSize != "" {
+		storageSize = instance.Spec.Backup.StorageSize
+	}
+
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      instance.GetBackupPVCName(),
+			Namespace: instance.GetUserNamespace(),
+			Labels: map[string]string{
+				"app.kubernetes.io/name":      "backup",
+				"app.kubernetes.io/instance":  instance.Name,
+				"app.kubernetes.io/component": "backup",
+				"app.kubernetes.io/part-of":   "dbtree",
+			},
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse(storageSize),
+				},
+			},
+		},
+	}
+
+	// Set owner reference
+	if err := controllerutil.SetControllerReference(instance, pvc, r.Scheme); err != nil {
+		return err
+	}
+
+	// Check if PVC already exists
+	existingPVC := &corev1.PersistentVolumeClaim{}
+	err := r.Get(ctx, types.NamespacedName{
+		Name:      pvc.Name,
+		Namespace: pvc.Namespace,
+	}, existingPVC)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Create PVC
+			return r.Create(ctx, pvc)
+		}
+		return err
+	}
+
+	// PVC already exists
+	return nil
+}
+
 // getProvisioner returns the appropriate provisioner for the database type
 func (r *DBInstanceReconciler) getProvisioner(dbType dbtreev1.DBType) provisioner.Provisioner {
 	switch dbType {
@@ -466,19 +685,83 @@ func (r *DBInstanceReconciler) getBackupImage(dbType dbtreev1.DBType) string {
 	case dbtreev1.DBTypeRedis:
 		return "redis:7.2"
 	default:
-		return ""
+		return "busybox:latest"
 	}
 }
 
 // getBackupCommand returns the backup command for the database type
 func (r *DBInstanceReconciler) getBackupCommand(dbType dbtreev1.DBType) []string {
+	timestamp := "$(date +%Y%m%d_%H%M%S)"
+
 	switch dbType {
 	case dbtreev1.DBTypeMongoDB:
-		return []string{"mongodump", "--host", "$(DB_HOST)", "--port", "$(DB_PORT)"}
+		return []string{
+			"/bin/bash", "-c",
+			fmt.Sprintf(`
+#!/bin/bash
+set -e
+
+TIMESTAMP=%s
+BACKUP_DIR="/backup/mongodb-${TIMESTAMP}"
+
+echo "Starting MongoDB backup at ${TIMESTAMP}"
+
+# Create backup
+mongodump \
+  --host="${DB_HOST}" \
+  --port="${DB_PORT}" \
+  --username="${MONGO_INITDB_ROOT_USERNAME}" \
+  --password="${MONGO_INITDB_ROOT_PASSWORD}" \
+  --authenticationDatabase=admin \
+  --out="${BACKUP_DIR}"
+
+# Compress backup
+cd /backup
+tar -czf "mongodb-${TIMESTAMP}.tar.gz" "mongodb-${TIMESTAMP}"
+rm -rf "mongodb-${TIMESTAMP}"
+
+echo "Backup completed: mongodb-${TIMESTAMP}.tar.gz"
+
+# Clean old backups
+find /backup -name "mongodb-*.tar.gz" -mtime +${BACKUP_RETENTION_DAYS} -exec rm {} \;
+
+echo "Cleanup completed"
+`, timestamp),
+		}
 	case dbtreev1.DBTypeRedis:
-		return []string{"redis-cli", "-h", "$(DB_HOST)", "-p", "$(DB_PORT)", "BGSAVE"}
+		return []string{
+			"/bin/bash",
+			"-c",
+			fmt.Sprintf(`
+#!/bin/bash
+set -e
+
+TIMESTAMP=%s
+BACKUP_FILE="/backup/redis-${TIMESTAMP}.rdb"
+
+echo "Starting Redis backup at ${TIMESTAMP}"
+
+# Trigger BGSAVE
+redis-cli -h "${DB_HOST}" -p "${DB_PORT}" BGSAVE
+
+# Wait for backup to complete
+while [ $(redis-cli -h "${DB_HOST}" -p "${DB_PORT}" LASTSAVE) -eq $(redis-cli -h "${DB_HOST}" -p "${DB_PORT}" LASTSAVE) ]; do
+  sleep 1
+done
+
+# Copy dump file
+redis-cli -h "${DB_HOST}" -p "${DB_PORT}" --rdb "${BACKUP_FILE}"
+
+echo "Backup completed: redis-${TIMESTAMP}.rdb"
+
+# Clean old backups
+find /backup -name "redis-*.rdb" -mtime +${BACKUP_RETENTION_DAYS} -exec rm {} \;
+
+echo "Cleanup completed"
+`, timestamp),
+		}
 	default:
-		return []string{}
+		return []string{"echo", "Backup not supported for this database type"}
 	}
 }
 
@@ -505,6 +788,7 @@ func (r *DBInstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&batchv1.CronJob{}).
 		Named("dbinstance").
 		Complete(r)
 }
