@@ -36,6 +36,17 @@ const (
 	ModeCluster  DBMode = "cluster"
 )
 
+func (t DBType) DefaultMode() DBMode {
+	switch t {
+	case MongoDB:
+		return ModeStandalone
+	case Redis:
+		return ModeBasic
+	default:
+		return ""
+	}
+}
+
 type InstanceStatus string
 
 const (
@@ -55,6 +66,15 @@ type ResourceSpec struct {
 	CPU    int `json:"cpu"`
 	Memory int `json:"memory"` // MB
 	Disk   int `json:"disk"`   // GB
+}
+
+func (r ResourceSpec) CalculateSize() DBSize {
+	if r.Memory <= 512 && r.CPU <= 1 {
+		return SizeSmall
+	} else if r.Memory <= 2048 && r.CPU <= 2 {
+		return SizeMedium
+	}
+	return SizeLarge
 }
 
 type LemonCost struct {
@@ -92,7 +112,7 @@ type DBInstance struct {
 	// K8s
 	K8sNamespace    string
 	K8sResourceName string
-	K8sSecretRef    string
+	K8sSecretRef    string // Secret 리소스 참조
 
 	// Connection Info
 	Endpoint string

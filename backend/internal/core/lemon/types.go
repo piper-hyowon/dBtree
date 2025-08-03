@@ -17,10 +17,11 @@ const (
 type ActionType string
 
 const (
-	ActionWelcomeBonus     ActionType = "welcome_bonus"     // 회원가입 보너스
-	ActionHarvest          ActionType = "harvest"           // 레몬 수확
-	ActionInstanceCreate   ActionType = "instance_create"   // DB 인스턴스 생성
-	ActionInstanceMaintain ActionType = "instance_maintain" // 인스턴스 유지 비용
+	ActionWelcomeBonus         ActionType = "welcome_bonus"          // 회원가입 보너스
+	ActionHarvest              ActionType = "harvest"                // 레몬 수확
+	ActionInstanceCreate       ActionType = "instance_create"        // DB 인스턴스 생성
+	ActionInstanceMaintain     ActionType = "instance_maintain"      // 인스턴스 유지 비용
+	ActionInstanceCreateRefund ActionType = "instance_create_refund" // 인스턴스 생성 실패 환불
 )
 
 type Status string

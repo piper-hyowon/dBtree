@@ -6,8 +6,7 @@ import (
 
 type Service interface {
 	// CRUD
-
-	CreateInstance(ctx context.Context, userID string, req *CreateInstanceRequest) (*DBInstance, error)
+	CreateInstance(ctx context.Context, userID string, req *CreateInstanceRequest) (*CreateInstanceResponse, error)
 	Instance(ctx context.Context, userID, instanceID string) (*DBInstance, error)
 	ListInstances(ctx context.Context, userID string, filters ListInstancesRequest) ([]*DBInstance, error)
 	UpdateInstance(ctx context.Context, userID, instanceID string, req *UpdateInstanceRequest) (*DBInstance, error)
