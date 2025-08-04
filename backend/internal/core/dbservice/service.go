@@ -6,7 +6,7 @@ import (
 
 type Service interface {
 	// CRUD
-	CreateInstance(ctx context.Context, userID string, req *CreateInstanceRequest) (*CreateInstanceResponse, error)
+	CreateInstance(ctx context.Context, userID string, userLemon int, req *CreateInstanceRequest) (*CreateInstanceResponse, error)
 	Instance(ctx context.Context, userID, instanceID string) (*DBInstance, error)
 	ListInstances(ctx context.Context, userID string, filters ListInstancesRequest) ([]*DBInstance, error)
 	UpdateInstance(ctx context.Context, userID, instanceID string, req *UpdateInstanceRequest) (*DBInstance, error)
@@ -26,7 +26,7 @@ type Service interface {
 
 	// Metrics
 
-	InstanceMetrics(ctx context.Context, userID, instanceID string) (*InstanceMetrics, error)
+	InstanceMetrics(ctx context.Context, instanceID string) (*InstanceMetrics, error)
 
 	// Presets & Cost
 
