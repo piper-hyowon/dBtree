@@ -32,12 +32,9 @@ func (h *Handler) TreeStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CanHarvest(w http.ResponseWriter, r *http.Request) {
-	u := rest.GetUserFromContext(r.Context())
-	if u == nil {
-		//rest.HandleError(w, errors.NewError(
-		//	errors.ErrInternalServer,
-		//	"인증 정보 없음", nil, nil), h.logger)
-		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
@@ -77,7 +74,11 @@ func (h *Handler) HarvestLemon(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u := rest.GetUserFromContext(r.Context())
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
 	if u == nil {
 		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
 		return

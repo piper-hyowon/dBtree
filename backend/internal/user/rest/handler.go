@@ -24,16 +24,13 @@ func NewHandler(userService user.Service, lemonStore lemon.Store, logger *log.Lo
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	u := rest.GetUserFromContext(r.Context())
-	if u == nil {
-		//rest.HandleError(w, errors.NewError(
-		//	errors.ErrInternalServer,
-		//	"인증 정보 없음", nil, nil), h.logger)
-		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
-	err := h.userService.Delete(r.Context(), u.ID, u.Email)
+	err = h.userService.Delete(r.Context(), u.ID, u.Email)
 	if err != nil {
 		rest.HandleError(w, err, h.logger)
 		return
@@ -43,12 +40,9 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
-	u := rest.GetUserFromContext(r.Context())
-	if u == nil {
-		//rest.HandleError(w, errors.NewError(
-		//	errors.ErrInternalServer,
-		//	"인증 정보 없음", nil, nil), h.logger)
-		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
