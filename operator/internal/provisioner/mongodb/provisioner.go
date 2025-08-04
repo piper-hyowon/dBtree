@@ -259,23 +259,13 @@ func (p *MongoDBProvisioner) createSecret(ctx context.Context, instance *dbtreev
 func (p *MongoDBProvisioner) createConfigMap(ctx context.Context, instance *dbtreev1.DBInstance, namespace string) error {
 	config := p.generateMongoConfig(instance)
 
-	initScript := `
-db = db.getSiblingDB('admin');
-db.createUser({
-  user: process.env.MONGO_INITDB_ROOT_USERNAME,
-  pwd: process.env.MONGO_INITDB_ROOT_PASSWORD,
-  roles: [{ role: 'root', db: 'admin' }]
-});
-`
-
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetConfigMapName(),
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			"mongod.conf":  config,
-			"init-user.js": initScript,
+			"mongod.conf": config,
 		},
 	}
 
@@ -367,15 +357,35 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 								},
 							},
 							Resources: p.getResourceRequirements(instance),
-							EnvFrom: []corev1.EnvFromSource{
+							Env: []corev1.EnvVar{
 								{
-									SecretRef: &corev1.SecretEnvSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: instance.Spec.SecretRef.Name, // Use referenced secret
+									Name: "MONGO_INITDB_ROOT_USERNAME",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: instance.Spec.SecretRef.Name,
+											},
+											Key: "username",
 										},
 									},
 								},
+								{
+									Name: "MONGO_INITDB_ROOT_PASSWORD",
+									ValueFrom: &corev1.EnvVarSource{
+										SecretKeyRef: &corev1.SecretKeySelector{
+											LocalObjectReference: corev1.LocalObjectReference{
+												Name: instance.Spec.SecretRef.Name,
+											},
+											Key: "password",
+										},
+									},
+								},
+								{
+									Name:  "MONGO_INITDB_DATABASE",
+									Value: "admin",
+								},
 							},
+
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "data",
@@ -385,45 +395,6 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 									Name:      "config",
 									MountPath: "/etc/mongod",
 								},
-								{
-									Name:      "init-scripts",
-									MountPath: "/docker-entrypoint-initdb.d",
-								},
-							},
-							Command: []string{
-								"/bin/bash",
-								"-c",
-								`# Check if initialization is needed
-    if [ ! -f /data/db/.mongodb_initialized ]; then
-        echo "First run detected, initializing MongoDB..."
-        
-        # Start MongoDB without auth
-        mongod --fork --logpath /var/log/mongodb/init.log --dbpath /data/db --bind_ip 127.0.0.1
-        
-        # Wait for MongoDB to start
-        sleep 5
-        
-        # Run init script
-        mongosh --eval "
-            db = db.getSiblingDB('admin');
-            db.createUser({
-                user: '$MONGO_INITDB_ROOT_USERNAME',
-                pwd: '$MONGO_INITDB_ROOT_PASSWORD',
-                roles: [{ role: 'root', db: 'admin' }]
-            });
-            print('User created successfully');
-        "
-        
-        # Shutdown MongoDB
-        mongod --shutdown --dbpath /data/db
-        
-        # Mark as initialized
-        touch /data/db/.mongodb_initialized
-        echo "Initialization complete"
-    fi
-    
-    # Start MongoDB normally
-    exec mongod --config /etc/mongod/mongod.conf`,
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -432,11 +403,14 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 											"mongosh",
 											"--eval",
 											"db.adminCommand('ping')",
+											"--quiet",
 										},
 									},
 								},
 								InitialDelaySeconds: 30,
 								PeriodSeconds:       10,
+								TimeoutSeconds:      5,
+								FailureThreshold:    3,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -445,11 +419,14 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 											"mongosh",
 											"--eval",
 											"db.adminCommand('ping')",
+											"--quiet",
 										},
 									},
 								},
-								InitialDelaySeconds: 5,
+								InitialDelaySeconds: 10,
 								PeriodSeconds:       5,
+								TimeoutSeconds:      5,
+								FailureThreshold:    3,
 							},
 						},
 					},
@@ -461,20 +438,10 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: instance.GetConfigMapName(),
 									},
-								},
-							},
-						},
-						{
-							Name: "init-scripts",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetConfigMapName(),
-									},
 									Items: []corev1.KeyToPath{
 										{
-											Key:  "init-user.js",
-											Path: "init-user.js",
+											Key:  "mongod.conf",
+											Path: "mongod.conf",
 										},
 									},
 								},
@@ -629,6 +596,8 @@ net:
 	if instance.Spec.Mode == dbtreev1.DBModeReplicaSet {
 		mongoConf += `replication:
   replSetName: rs0
+setParameter:
+  enableMajorityReadConcern: true
 `
 	}
 

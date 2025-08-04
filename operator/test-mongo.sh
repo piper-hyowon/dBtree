@@ -15,6 +15,7 @@ kubectl delete configmap --all -n $NAMESPACE 2>/dev/null
 kubectl delete secret --all -n $NAMESPACE 2>/dev/null
 
 sleep 5
+kubectl create namespace $NAMESPACE 2>/dev/null || true
 
 echo "Secret 생성..."
 kubectl apply -f new-secret.yaml
