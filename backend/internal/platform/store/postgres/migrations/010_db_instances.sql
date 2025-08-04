@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS db_instances
     name                  VARCHAR(255)                        NOT NULL,
     type                  db_type                             NOT NULL,
     size                  db_size                             NOT NULL,
-    mode                  VARCHAR(50)                         NOT NULL,
+    mode                  db_mode                             NOT NULL,
 
     -- 프리셋 참조 (통계용)
     created_from_preset   VARCHAR(100),
@@ -58,6 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_db_instances_status ON db_instances (status) WHER
 CREATE INDEX IF NOT EXISTS idx_db_instances_billing ON db_instances (last_billed_at)
     WHERE status = 'running' AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS update_db_instances_timestamp ON db_instances;
 CREATE TRIGGER update_db_instances_timestamp
     BEFORE UPDATE
     ON db_instances

@@ -21,7 +21,7 @@ VALUES (0, false),
        (9, false)
 ON CONFLICT (position_id) DO NOTHING;
 
-
+DROP TRIGGER IF EXISTS update_lemons_timestamp ON lemons;
 CREATE TRIGGER update_lemons_timestamp
     BEFORE UPDATE ON lemons
     FOR EACH ROW

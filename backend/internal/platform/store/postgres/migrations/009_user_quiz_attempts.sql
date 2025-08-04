@@ -29,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz_id ON user_quiz_attempts (quiz
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_result ON user_quiz_attempts (status);
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_created_at ON user_quiz_attempts (created_at);
 
+DROP TRIGGER IF EXISTS update_user_quiz_attempts_timestamp ON user_quiz_attempts;
 CREATE TRIGGER update_user_quiz_attempts_timestamp
     BEFORE UPDATE
     ON user_quiz_attempts

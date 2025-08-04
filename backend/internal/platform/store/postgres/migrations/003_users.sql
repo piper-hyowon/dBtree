@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS  users
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS  users_email_unique_idx ON users (email) WHERE is_deleted = FALSE;
-CREATE INDEX IF NOT EXISTS  users_is_deleted_idx ON users (is_deleted);
+CREATE UNIQUE INDEX IF NOT EXISTS  idx_users_email_unique ON users (email) WHERE is_deleted = FALSE;
+CREATE INDEX IF NOT EXISTS  idx_users_is_deleted ON users (is_deleted);
+
+DROP TRIGGER IF EXISTS update_users_timestamp ON users;
 
 CREATE TRIGGER update_users_timestamp
     BEFORE UPDATE
