@@ -27,3 +27,9 @@ type PresetStore interface {
 	Find(ctx context.Context, id string) (*DBPreset, error)
 	ListByType(ctx context.Context, dbType DBType) ([]*DBPreset, error)
 }
+
+type PortStore interface {
+	AllocatePort(ctx context.Context, instanceID string) (int, error)
+	ReleasePort(ctx context.Context, instanceID string) error
+	GetPort(ctx context.Context, instanceID string) (int, error)
+}

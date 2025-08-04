@@ -13,3 +13,7 @@ func NewDBIStore(_ bool, db *sql.DB) dbservice.DBInstanceStore {
 func NewPresetStore(_ bool, db *sql.DB) dbservice.PresetStore {
 	return postgres.NewPresetStore(db)
 }
+
+func NewPortStore(_ bool, db *sql.DB) dbservice.PortStore {
+	return postgres.NewPortStore(db)
+}

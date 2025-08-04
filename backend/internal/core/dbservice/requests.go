@@ -25,9 +25,11 @@ type CreateInstanceResponse struct {
 }
 
 type Credentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	URI      string `json:"uri"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	ExternalHost string `json:"externalHost,omitempty"`
+	ExternalPort int    `json:"externalPort,omitempty"`
+	ExternalURI  string `json:"externalUri,omitempty"`
 }
 
 type UpdateInstanceRequest struct {

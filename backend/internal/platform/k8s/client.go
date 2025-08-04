@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"log"
 	"path/filepath"
 	"time"
@@ -34,6 +35,8 @@ type Client interface {
 	UpdateDBInstance(ctx context.Context, namespace, name string, instance *unstructured.Unstructured) error
 	DeleteDBInstance(ctx context.Context, namespace, name string) error
 	DBInstance(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error)
+
+	CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error
 }
 
 type client struct {
@@ -256,4 +259,25 @@ func (c *client) DBInstance(ctx context.Context, namespace, name string) (*unstr
 	}
 
 	return instance, nil
+}
+
+func (c *client) CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name + "-external",
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeNodePort,
+			Ports: []corev1.ServicePort{{
+				Port:       targetPort,
+				TargetPort: intstr.FromInt32(targetPort),
+				NodePort:   nodePort,
+			}},
+			Selector: selector,
+		},
+	}
+
+	_, err := c.clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
+	return err
 }
