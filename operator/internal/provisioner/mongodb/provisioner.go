@@ -407,10 +407,10 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 										},
 									},
 								},
-								InitialDelaySeconds: 30,
+								InitialDelaySeconds: 60,
 								PeriodSeconds:       10,
-								TimeoutSeconds:      5,
-								FailureThreshold:    3,
+								TimeoutSeconds:      10,
+								FailureThreshold:    5,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -423,10 +423,10 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 										},
 									},
 								},
-								InitialDelaySeconds: 10,
+								InitialDelaySeconds: 30,
 								PeriodSeconds:       5,
-								TimeoutSeconds:      5,
-								FailureThreshold:    3,
+								TimeoutSeconds:      10,
+								FailureThreshold:    5,
 							},
 						},
 					},
@@ -489,15 +489,18 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 
 func (p *MongoDBProvisioner) getLabels(instance *dbtreev1.DBInstance) map[string]string {
 	return map[string]string{
+		"app":                         instance.Name,
+		"dbtree.cloud/instance-id":    instance.Spec.ExternalID,
 		"app.kubernetes.io/name":      "mongodb",
 		"app.kubernetes.io/instance":  instance.Name,
 		"app.kubernetes.io/component": "database",
 		"app.kubernetes.io/part-of":   "dbtree",
 		"dbtree.cloud/db-type":        string(instance.Spec.Type),
 		"dbtree.cloud/db-size":        string(instance.Spec.Size),
-		"dbtree.cloud/instance-uid":   string(instance.UID), // 추가!
+		"dbtree.cloud/instance-uid":   string(instance.UID),
 	}
 }
+
 func (p *MongoDBProvisioner) getReplicas(instance *dbtreev1.DBInstance) int32 {
 	// Parse config for custom replica count
 	config, _ := utils.ParseMongoDBConfig(instance.Spec.Config)

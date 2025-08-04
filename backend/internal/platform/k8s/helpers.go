@@ -32,10 +32,11 @@ type BackupSpec struct {
 
 func BuildDBInstanceSpec(params DBInstanceParams) map[string]interface{} {
 	spec := map[string]interface{}{
-		"name": params.Name,
-		"type": params.Type,
-		"size": params.Size,
-		"mode": params.Mode,
+		"name":       params.Name,
+		"type":       params.Type,
+		"size":       params.Size,
+		"mode":       params.Mode,
+		"externalId": params.ExternalID,
 		"secretRef": map[string]interface{}{
 			"name": params.SecretRef,
 		},
