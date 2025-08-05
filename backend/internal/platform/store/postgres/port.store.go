@@ -7,6 +7,12 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 )
 
+// TODO: 값 설정
+const (
+	MinNodePort = 30000
+	MaxNodePort = 31999
+)
+
 type PortStore struct {
 	db *sql.DB
 }
@@ -18,39 +24,42 @@ func NewPortStore(db *sql.DB) dbservice.PortStore {
 }
 
 func (s *PortStore) AllocatePort(ctx context.Context, instanceID string) (int, error) {
-	var port int
+	// 이미 할당된 포트가 있는지 확인
+	var existingPort int
+	err := s.db.QueryRowContext(ctx,
+		"SELECT port FROM port_allocations WHERE instance_id = $1",
+		instanceID).Scan(&existingPort)
 
-	err := s.db.QueryRowContext(ctx, `
-        INSERT INTO port_allocations (instance_id, port)
-        SELECT $1, port FROM (
-            SELECT generate_series(30000, 31999) AS port
-        ) AS available_ports
-        WHERE port NOT IN (
-            SELECT port FROM port_allocations
-        )
-        ORDER BY port
-        LIMIT 1
-        RETURNING port
-    `, instanceID).Scan(&port)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, errors.NewError(errors.ErrInternalServer,
-				"사용 가능한 포트가 없습니다", nil, nil)
-		}
-		return 0, errors.Wrap(err)
+	if err == nil {
+		return existingPort, nil
 	}
 
-	return port, nil
+	// 사용 가능한 첫 번째 포트 찾기
+	for port := MinNodePort; port <= MaxNodePort; port++ {
+		_, err := s.db.ExecContext(ctx,
+			"INSERT INTO port_allocations (instance_id, port) VALUES ($1, $2)",
+			instanceID, port)
+
+		if err == nil {
+			return port, nil
+		}
+
+		// UNIQUE 제약 위반이면 다음 포트 시도
+		if isUniqueViolation(err, "port_allocations_port_key") {
+			continue
+		}
+
+		return 0, err
+	}
+
+	return 0, errors.New("no available ports")
 }
 
 func (s *PortStore) ReleasePort(ctx context.Context, instanceID string) error {
-	_, err := s.db.ExecContext(ctx, `
-        DELETE FROM port_allocations 
-        WHERE instance_id = $1
-    `, instanceID)
-
-	return errors.Wrap(err)
+	_, err := s.db.ExecContext(ctx,
+		"DELETE FROM port_allocations WHERE instance_id = $1",
+		instanceID)
+	return err
 }
 
 func (s *PortStore) GetPort(ctx context.Context, instanceID string) (int, error) {
