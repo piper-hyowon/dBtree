@@ -14,6 +14,11 @@ type ErrorResponse struct {
 }
 
 func SendJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	if statusCode == http.StatusNoContent {
+		w.WriteHeader(statusCode)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
