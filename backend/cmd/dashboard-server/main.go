@@ -3,16 +3,21 @@ package main
 import (
 	"context"
 	stdErrors "errors"
+	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
+	"github.com/piper-hyowon/dBtree/internal/dbservice"
+	dbsRest "github.com/piper-hyowon/dBtree/internal/dbservice/rest"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/lemon"
 	lemonRest "github.com/piper-hyowon/dBtree/internal/lemon/rest"
+	"github.com/piper-hyowon/dBtree/internal/platform/k8s"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
 	"github.com/piper-hyowon/dBtree/internal/quiz"
 	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
+	"regexp"
 	"strconv"
 
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
@@ -64,10 +69,19 @@ func main() {
 	}
 	defer redisClient.Close()
 
+	k8sClient, err := k8s.NewClient(appConfig.K8s, logger)
+	if err != nil {
+		logger.Fatalf("K8S 연결 실패: %v", err)
+	}
+	fmt.Println(k8sClient.RESTConfig())
+
 	sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	quizStore := quiz.NewStore(redisClient.Redis(), pgClient.DB())
+	dbiStore := dbservice.NewDBIStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	presetStore := dbservice.NewPresetStore(appConfig.UseLocalMemoryStore, pgClient.DB())
+	portStore := dbservice.NewPortStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
 	authService := auth.NewService(
 		sessionStore,
@@ -94,7 +108,16 @@ func main() {
 	quizService := quiz.NewService(quizStore, lemonStore, logger)
 	quizHandler := quizRest.NewHandler(quizService, lemonService, logger)
 
+	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
+		userStore, k8sClient, portStore, logger)
+	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
+
 	r := router.New(logger)
+
+	r.POST("/db/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
+	r.GET("/db/instances", authMiddleware.RequireAuth(dbsHandler.ListInstances))
+	r.GET("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.GetInstanceWithSync))
+	r.GET("/db/presets", dbsHandler.ListPresets)
 
 	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
@@ -190,4 +213,27 @@ func cleanupSessions(sessionStore coreauth.SessionStore, intervalHours int, logg
 			logger.Printf("세션 정리 오류: %v", err)
 		}
 	}
+}
+
+// TODO: 적절한 위치로 옮기기 잠시 여기에..
+func validateInstanceName(name string) error {
+	if name == "" {
+		return errors.NewMissingParameterError("name")
+	}
+
+	if len(name) < 3 {
+		return errors.NewInvalidParameterError("name", "3 글자 이상")
+	}
+
+	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, name)
+	if !matched {
+		return errors.NewInvalidParameterError("name",
+			"인스턴스 이름은 소문자, 숫자, 하이픈(-)만 사용 가능하며, 시작과 끝은 영문자와 숫자만 가능")
+	}
+
+	if len(name) > 63 {
+		return errors.NewInvalidParameterError("name", "인스턴스 이름은 63자 이하여야 합니다")
+	}
+
+	return nil
 }

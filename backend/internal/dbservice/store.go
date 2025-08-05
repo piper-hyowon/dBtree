@@ -6,6 +6,14 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/store/postgres"
 )
 
-func NewDBInstanceStore(_ bool, db *sql.DB) dbservice.DBInstanceStore {
+func NewDBIStore(_ bool, db *sql.DB) dbservice.DBInstanceStore {
 	return postgres.NewDBInstanceStore(db)
+}
+
+func NewPresetStore(_ bool, db *sql.DB) dbservice.PresetStore {
+	return postgres.NewPresetStore(db)
+}
+
+func NewPortStore(_ bool, db *sql.DB) dbservice.PortStore {
+	return postgres.NewPortStore(db)
 }

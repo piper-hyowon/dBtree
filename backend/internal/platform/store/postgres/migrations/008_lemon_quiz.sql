@@ -13,6 +13,7 @@ CREATE INDEX IF NOT EXISTS idx_lemon_quiz_quiz_id ON lemon_quiz (quiz_id);
 
 COMMENT ON TABLE lemon_quiz IS '레몬과 퀴즈의 1:1 매핑 테이블';
 
+DROP TRIGGER IF EXISTS update_lemon_quiz_timestamp   ON lemon_quiz;
 CREATE TRIGGER update_lemon_quiz_timestamp
     BEFORE UPDATE
     ON lemon_quiz

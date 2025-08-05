@@ -237,11 +237,6 @@ func (p *RedisProvisioner) createSecret(ctx context.Context, instance *dbtreev1.
 		},
 	}
 
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, secret, p.scheme); err != nil {
-		return err
-	}
-
 	// Create secret
 	return p.client.Create(ctx, secret)
 }

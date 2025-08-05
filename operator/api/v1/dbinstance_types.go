@@ -175,6 +175,10 @@ type DBInstanceSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Type=object
 	Config *runtime.RawExtension `json:"config,omitempty"`
+
+	// ExternalID from backend (백엔드의 DBInstance.ExternalID)
+	// +kubebuilder:validation:Required
+	ExternalID string `json:"externalId"`
 }
 
 // InstanceMetrics matches backend's metrics fields

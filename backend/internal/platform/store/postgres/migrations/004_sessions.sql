@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS sessions
 CREATE INDEX IF NOT EXISTS idx_sessions_email ON sessions (email);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions (token);
 
+DROP TRIGGER IF EXISTS update_sessions_timestamp on sessions;
 CREATE TRIGGER update_sessions_timestamp
     BEFORE UPDATE ON sessions
     FOR EACH ROW

@@ -5,9 +5,27 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/piper-hyowon/dBtree/internal/core/dbservice"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
-	"strings"
+)
+
+const (
+	instanceColumns = `
+        id, external_id, user_id, name, type, size, mode,
+        created_from_preset,
+        cpu, memory, disk,
+        creation_cost, hourly_cost,
+        status, status_reason,
+        k8s_namespace, k8s_resource_name,
+        endpoint, port,
+        config,
+        backup_enabled, backup_schedule, backup_retention_days,
+        created_at, updated_at, last_billed_at, paused_at, deleted_at
+    `
+
+	selectInstancesQuery = "SELECT " + instanceColumns + " FROM db_instances"
 )
 
 type DBInstanceStore struct {
@@ -17,297 +35,119 @@ type DBInstanceStore struct {
 var _ dbservice.DBInstanceStore = (*DBInstanceStore)(nil)
 
 func NewDBInstanceStore(db *sql.DB) dbservice.DBInstanceStore {
-	return &DBInstanceStore{
-		db: db,
-	}
+	return &DBInstanceStore{db: db}
 }
 
 func (s *DBInstanceStore) Create(ctx context.Context, instance *dbservice.DBInstance) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-	defer tx.Rollback()
+	return withTx(ctx, s.db, func(ctx context.Context, tx *sql.Tx) error {
+		query := `
+            INSERT INTO db_instances (
+                external_id, user_id, name, type, size, mode,
+                created_from_preset,
+                cpu, memory, disk,
+                creation_cost, hourly_cost,
+                status, config,
+                backup_enabled, backup_schedule, backup_retention_days,
+                k8s_namespace, k8s_resource_name
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                $11, $12, $13, $14, $15, $16, $17, $18, $19
+            ) RETURNING id, created_at, updated_at
+        `
 
-	query := `
-        INSERT INTO db_instances (
-            external_id, user_id, name, type, size, mode,
-            created_from_preset, 
-            cpu, memory, disk,
-            creation_cost, hourly_cost, minimum_lemons,
-            status, config,
-            backup_enabled, backup_schedule, backup_retention_days
-        ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-            $11, $12, $13, $14, $15, $16, $17, $18
-        ) RETURNING id, created_at, updated_at
-    `
-
-	configJSON, err := json.Marshal(instance.Config)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	var backupSchedule sql.NullString
-	var backupRetentionDays sql.NullInt32
-
-	if instance.BackupConfig.Schedule != "" {
-		backupSchedule = sql.NullString{String: instance.BackupConfig.Schedule, Valid: true}
-	}
-	if instance.BackupConfig.RetentionDays > 0 {
-		backupRetentionDays = sql.NullInt32{Int32: int32(instance.BackupConfig.RetentionDays), Valid: true}
-	}
-
-	err = tx.QueryRowContext(ctx, query,
-		instance.ExternalID,
-		instance.UserID,
-		instance.Name,
-		instance.Type,
-		instance.Size,
-		instance.Mode,
-		instance.CreatedFromPreset,
-		instance.Resources.CPU,
-		instance.Resources.Memory,
-		instance.Resources.Disk,
-		instance.Cost.CreationCost,
-		instance.Cost.HourlyLemons,
-		instance.Cost.MinimumLemons,
-		instance.Status,
-		configJSON,
-		instance.BackupConfig.Enabled,
-		backupSchedule,
-		backupRetentionDays,
-	).Scan(&instance.ID, &instance.CreatedAt, &instance.UpdatedAt)
-
-	if err != nil {
-		// 이름 중복 체크
-		if strings.Contains(err.Error(), "unique_user_instance_name") {
-			return errors.NewInstanceNameConflictError(instance.Name)
+		configJSON, err := json.Marshal(instance.Config)
+		if err != nil {
+			return fmt.Errorf("marshal config: %w", err)
 		}
-		return errors.Wrap(err)
-	}
 
-	return tx.Commit()
+		err = tx.QueryRowContext(ctx, query,
+			instance.ExternalID,
+			instance.UserID,
+			instance.Name,
+			instance.Type,
+			instance.Size,
+			instance.Mode,
+			instance.CreatedFromPreset,
+			instance.Resources.CPU,
+			instance.Resources.Memory,
+			instance.Resources.Disk,
+			instance.Cost.CreationCost,
+			instance.Cost.HourlyLemons,
+			instance.Status,
+			configJSON,
+			instance.BackupConfig.Enabled,
+			toNullString(instance.BackupConfig.Schedule),
+			toNullInt32(instance.BackupConfig.RetentionDays),
+			instance.K8sNamespace,
+			instance.K8sResourceName,
+		).Scan(&instance.ID, &instance.CreatedAt, &instance.UpdatedAt)
+
+		if err != nil {
+			if isUniqueViolation(err, "unique_user_instance_name") {
+				return errors.NewInstanceNameConflictError(instance.Name)
+			}
+			return errors.Wrap(err)
+		}
+
+		return nil
+	})
 }
 
-func (s *DBInstanceStore) Detail(ctx context.Context, externalID string) (*dbservice.DBInstance, error) {
-	query := `
-        SELECT 
-            id, external_id, user_id, name, type, size, mode,
-            created_from_preset,
-            cpu, memory, disk,
-            creation_cost, hourly_cost, minimum_lemons,
-            status, status_reason,
-            k8s_namespace, k8s_resource_name,
-            endpoint, port,
-            config,
-            backup_enabled, backup_schedule, backup_retention_days,
-            created_at, updated_at, last_billed_at, paused_at, deleted_at
-        FROM db_instances 
-        WHERE external_id = $1 AND deleted_at IS NULL
-    `
+func (s *DBInstanceStore) Find(ctx context.Context, externalID string) (*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + " WHERE external_id = $1 AND deleted_at IS NULL"
 
-	var instance dbservice.DBInstance
-	var statusReason sql.NullString
-	var createdFromPreset sql.NullString
-	var k8sNamespace, k8sResourceName sql.NullString
-	var endpoint sql.NullString
-	var port sql.NullInt32
-	var configJSON []byte
-	var backupSchedule sql.NullString
-	var backupRetentionDays sql.NullInt32
-	var lastBilledAt, pausedAt, deletedAt sql.NullTime
-
-	err := s.db.QueryRowContext(ctx, query, externalID).Scan(
-		&instance.ID,
-		&instance.ExternalID,
-		&instance.UserID,
-		&instance.Name,
-		&instance.Type,
-		&instance.Size,
-		&instance.Mode,
-		&createdFromPreset,
-		&instance.Resources.CPU,
-		&instance.Resources.Memory,
-		&instance.Resources.Disk,
-		&instance.Cost.CreationCost,
-		&instance.Cost.HourlyLemons,
-		&instance.Cost.MinimumLemons,
-		&instance.Status,
-		&statusReason,
-		&k8sNamespace,
-		&k8sResourceName,
-		&endpoint,
-		&port,
-		&configJSON,
-		&instance.BackupConfig.Enabled,
-		&backupSchedule,
-		&backupRetentionDays,
-		&instance.CreatedAt,
-		&instance.UpdatedAt,
-		&lastBilledAt,
-		&pausedAt,
-		&deletedAt,
-	)
-
+	row := s.db.QueryRowContext(ctx, query, externalID)
+	instance, err := scanInstance(row)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, errors.Wrap(err)
+		return nil, fmt.Errorf("find instance: %w", err)
 	}
 
-	// Nullable 값 처리
-	if createdFromPreset.Valid {
-		instance.CreatedFromPreset = &createdFromPreset.String
-	}
-	if statusReason.Valid {
-		instance.StatusReason = statusReason.String
-	}
-	if k8sNamespace.Valid {
-		instance.K8sNamespace = k8sNamespace.String
-	}
-	if k8sResourceName.Valid {
-		instance.K8sResourceName = k8sResourceName.String
-	}
-	if endpoint.Valid {
-		instance.Endpoint = endpoint.String
-	}
-	if port.Valid {
-		instance.Port = int(port.Int32)
-	}
-	if backupSchedule.Valid {
-		instance.BackupConfig.Schedule = backupSchedule.String
-	}
-	if backupRetentionDays.Valid {
-		instance.BackupConfig.RetentionDays = int(backupRetentionDays.Int32)
-	}
-	if lastBilledAt.Valid {
-		instance.LastBilledAt = &lastBilledAt.Time
-	}
-	if pausedAt.Valid {
-		instance.PausedAt = &pausedAt.Time
-	}
-	if deletedAt.Valid {
-		instance.DeletedAt = &deletedAt.Time
-	}
-
-	// JSONB 파싱
-	if len(configJSON) > 0 {
-		if err := json.Unmarshal(configJSON, &instance.Config); err != nil {
-			return nil, errors.Wrap(err)
-		}
-	} else {
-		instance.Config = make(map[string]interface{})
-	}
-
-	return &instance, nil
+	return instance, nil
 }
 
-func (s *DBInstanceStore) List(ctx context.Context, userID string, filters map[string]interface{}) ([]*dbservice.DBInstance, error) {
-	query := `
-        SELECT 
-            id, external_id, user_id, name, type, size, mode,
-            cpu, memory, disk,
-            hourly_cost,
-            status, status_reason,
-            endpoint, port,
-            created_at, updated_at
-        FROM db_instances 
+func (s *DBInstanceStore) FindByUserAndName(ctx context.Context, userID, name string) (*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + " WHERE user_id = $1 AND name = $2 AND deleted_at IS NULL"
+
+	row := s.db.QueryRowContext(ctx, query, userID, name)
+	instance, err := scanInstance(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find instance by name: %w", err)
+	}
+
+	return instance, nil
+}
+
+func (s *DBInstanceStore) List(ctx context.Context, userID string) ([]*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + ` 
         WHERE user_id = $1 AND deleted_at IS NULL
+        ORDER BY created_at DESC
     `
 
-	args := []interface{}{userID}
-	argCount := 1
+	return s.queryInstances(ctx, query, userID)
+}
 
-	// 필터 적용
-	if status, ok := filters["status"].(string); ok && status != "" {
-		argCount++
-		query += fmt.Sprintf(" AND status = $%d", argCount)
-		args = append(args, status)
-	}
+func (s *DBInstanceStore) ListRunning(ctx context.Context) ([]*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + ` 
+        WHERE status = $1 AND deleted_at IS NULL
+        ORDER BY created_at DESC
+    `
 
-	if dbType, ok := filters["type"].(string); ok && dbType != "" {
-		argCount++
-		query += fmt.Sprintf(" AND type = $%d", argCount)
-		args = append(args, dbType)
-	}
+	return s.queryInstances(ctx, query, dbservice.StatusRunning)
+}
 
-	if name, ok := filters["name"].(string); ok && name != "" {
-		argCount++
-		query += fmt.Sprintf(" AND name ILIKE $%d", argCount)
-		args = append(args, "%"+name+"%")
-	}
+func (s *DBInstanceStore) ListPausedBefore(ctx context.Context, before time.Time) ([]*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + ` 
+        WHERE status = $1 AND paused_at < $2 AND deleted_at IS NULL
+        ORDER BY paused_at ASC
+    `
 
-	query += " ORDER BY created_at DESC"
-
-	// 페이징
-	if limit, ok := filters["limit"].(int); ok && limit > 0 {
-		argCount++
-		query += fmt.Sprintf(" LIMIT $%d", argCount)
-		args = append(args, limit)
-
-		if offset, ok := filters["offset"].(int); ok && offset > 0 {
-			argCount++
-			query += fmt.Sprintf(" OFFSET $%d", argCount)
-			args = append(args, offset)
-		}
-	}
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-	defer rows.Close()
-
-	var instances []*dbservice.DBInstance
-	for rows.Next() {
-		var i dbservice.DBInstance
-		var statusReason sql.NullString
-		var endpoint sql.NullString
-		var port sql.NullInt32
-
-		err := rows.Scan(
-			&i.ID,
-			&i.ExternalID,
-			&i.UserID,
-			&i.Name,
-			&i.Type,
-			&i.Size,
-			&i.Mode,
-			&i.Resources.CPU,
-			&i.Resources.Memory,
-			&i.Resources.Disk,
-			&i.Cost.HourlyLemons,
-			&i.Status,
-			&statusReason,
-			&endpoint,
-			&port,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-
-		if statusReason.Valid {
-			i.StatusReason = statusReason.String
-		}
-		if endpoint.Valid {
-			i.Endpoint = endpoint.String
-		}
-		if port.Valid {
-			i.Port = int(port.Int32)
-		}
-
-		instances = append(instances, &i)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	return instances, nil
+	return s.queryInstances(ctx, query, dbservice.StatusPaused, before)
 }
 
 func (s *DBInstanceStore) Update(ctx context.Context, instance *dbservice.DBInstance) error {
@@ -338,19 +178,10 @@ func (s *DBInstanceStore) Update(ctx context.Context, instance *dbservice.DBInst
 	)
 
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("update instance: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	if rows == 0 {
-		return errors.NewResourceNotFoundError("db_instance", fmt.Sprintf("%d", instance.ID))
-	}
-
-	return nil
+	return checkRowsAffected(result, "instance", fmt.Sprintf("%d", instance.ID))
 }
 
 func (s *DBInstanceStore) UpdateStatus(ctx context.Context, id int64, status dbservice.InstanceStatus, reason string) error {
@@ -364,19 +195,26 @@ func (s *DBInstanceStore) UpdateStatus(ctx context.Context, id int64, status dbs
 
 	result, err := s.db.ExecContext(ctx, query, id, status, reason)
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("update status: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
+	return checkRowsAffected(result, "instance", fmt.Sprintf("%d", id))
+}
+
+func (s *DBInstanceStore) UpdateBillingTime(ctx context.Context, id int64, billedAt time.Time) error {
+	query := `
+        UPDATE db_instances SET
+            last_billed_at = $2,
+            updated_at = NOW()
+        WHERE id = $1 AND deleted_at IS NULL
+    `
+
+	result, err := s.db.ExecContext(ctx, query, id, billedAt)
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("update billing time: %w", err)
 	}
 
-	if rows == 0 {
-		return errors.NewResourceNotFoundError("db_instance", fmt.Sprintf("%d", id))
-	}
-
-	return nil
+	return checkRowsAffected(result, "instance", fmt.Sprintf("%d", id))
 }
 
 func (s *DBInstanceStore) Delete(ctx context.Context, externalID string) error {
@@ -389,22 +227,13 @@ func (s *DBInstanceStore) Delete(ctx context.Context, externalID string) error {
 
 	result, err := s.db.ExecContext(ctx, query, externalID)
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("delete instance: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	if rows == 0 {
-		return errors.NewResourceNotFoundError("db_instance", externalID)
-	}
-
-	return nil
+	return checkRowsAffected(result, "instance", externalID)
 }
 
-func (s *DBInstanceStore) CreateBackupRecord(ctx context.Context, backup *dbservice.BackupRecord) error {
+func (s *DBInstanceStore) CreateBackup(ctx context.Context, backup *dbservice.BackupRecord) error {
 	query := `
         INSERT INTO db_instance_backups (
             instance_id, external_id, name, type, status,
@@ -424,128 +253,134 @@ func (s *DBInstanceStore) CreateBackupRecord(ctx context.Context, backup *dbserv
 	).Scan(&backup.ID, &backup.CreatedAt)
 
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("create backup: %w", err)
 	}
 
 	return nil
 }
 
-func (s *DBInstanceStore) ListBackupRecords(ctx context.Context, instanceID string) ([]*dbservice.BackupRecord, error) {
+func (s *DBInstanceStore) FindBackup(ctx context.Context, backupID string) (*dbservice.BackupRecord, error) {
 	query := `
-        SELECT 
+        SELECT
             id, instance_id, external_id, name, type, status,
             k8s_job_name, size_bytes, storage_path, error_message,
             created_at, completed_at, expires_at
         FROM db_instance_backups
         WHERE external_id = $1
+    `
+
+	row := s.db.QueryRowContext(ctx, query, backupID)
+	backup, err := scanBackup(row)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find backup: %w", err)
+	}
+
+	return backup, nil
+}
+
+func (s *DBInstanceStore) ListBackups(ctx context.Context, instanceID string) ([]*dbservice.BackupRecord, error) {
+	query := `
+        SELECT
+            id, instance_id, external_id, name, type, status,
+            k8s_job_name, size_bytes, storage_path, error_message,
+            created_at, completed_at, expires_at
+        FROM db_instance_backups
+        WHERE instance_id IN (
+            SELECT id FROM db_instances WHERE external_id = $1
+        )
         ORDER BY created_at DESC
     `
 
 	rows, err := s.db.QueryContext(ctx, query, instanceID)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		return nil, fmt.Errorf("list backups: %w", err)
 	}
 	defer rows.Close()
 
-	var backups []*dbservice.BackupRecord
+	backups := make([]*dbservice.BackupRecord, 0, 10)
+
 	for rows.Next() {
-		var b dbservice.BackupRecord
-		var sizeBytes sql.NullInt64
-		var storagePath, errorMessage sql.NullString
-		var completedTime, expiresTime sql.NullTime
-
-		err := rows.Scan(
-			&b.ID,
-			&b.InstanceID,
-			&b.ExternalID,
-			&b.Name,
-			&b.Type,
-			&b.Status,
-			&b.K8sJobName,
-			&sizeBytes,
-			&storagePath,
-			&errorMessage,
-			&b.CreatedAt,
-			&completedTime,
-			&expiresTime,
-		)
+		backup, err := scanBackup(rows)
 		if err != nil {
-			return nil, errors.Wrap(err)
+			return nil, fmt.Errorf("scan backup: %w", err)
 		}
-
-		// Nullable
-		if sizeBytes.Valid {
-			b.SizeBytes = sizeBytes.Int64
-		}
-		if storagePath.Valid {
-			b.StoragePath = storagePath.String
-		}
-		if errorMessage.Valid {
-			b.ErrorMessage = errorMessage.String
-		}
-		if completedTime.Valid {
-			b.CompletedAt = &completedTime.Time
-		}
-		if expiresTime.Valid {
-			b.ExpiresAt = &expiresTime.Time
-		}
-
-		backups = append(backups, &b)
+		backups = append(backups, backup)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 
 	return backups, nil
 }
 
-func (s *DBInstanceStore) UpdateBackupStatus(ctx context.Context, backupID int64, status dbservice.BackupStatus, updates map[string]interface{}) error {
+func (s *DBInstanceStore) UpdateBackupStatus(ctx context.Context, backupID string, status dbservice.BackupStatus, errorMsg string) error {
 	query := `
-        UPDATE db_instance_backups 
+        UPDATE db_instance_backups
         SET status = $2, updated_at = NOW()
     `
 
 	args := []interface{}{backupID, status}
-	argCount := 2
 
-	if sizeBytes, ok := updates["size_bytes"].(int64); ok {
-		argCount++
-		query += fmt.Sprintf(", size_bytes = $%d", argCount)
-		args = append(args, sizeBytes)
-	}
-
-	if storagePath, ok := updates["storage_path"].(string); ok {
-		argCount++
-		query += fmt.Sprintf(", storage_path = $%d", argCount)
-		args = append(args, storagePath)
-	}
-
-	if errorMsg, ok := updates["error_message"].(string); ok {
-		argCount++
-		query += fmt.Sprintf(", error_message = $%d", argCount)
+	if errorMsg != "" {
+		query += ", error_message = $3"
 		args = append(args, errorMsg)
 	}
 
-	if completed, ok := updates["completed"].(bool); ok && completed {
+	if status == dbservice.BackupStatusCompleted {
 		query += ", completed_at = NOW()"
 	}
 
-	query += " WHERE id = $1"
+	query += " WHERE external_id = $1"
 
 	result, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return errors.Wrap(err)
+		return fmt.Errorf("update backup status: %w", err)
 	}
 
-	rows, err := result.RowsAffected()
+	return checkRowsAffected(result, "backup", backupID)
+}
+
+func (s *DBInstanceStore) queryInstances(ctx context.Context, query string, args ...interface{}) ([]*dbservice.DBInstance, error) {
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return errors.Wrap(err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var instances []*dbservice.DBInstance
+	for rows.Next() {
+		instance, err := scanInstance(rows)
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, instance)
 	}
 
-	if rows == 0 {
-		return errors.NewResourceNotFoundError("backup", fmt.Sprintf("%d", backupID))
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return instances, nil
+}
+
+func (s *DBInstanceStore) CountActive(ctx context.Context, userID string) (int, error) {
+	query := `
+        SELECT COUNT(*) 
+        FROM db_instances 
+        WHERE user_id = $1 
+        AND deleted_at IS NULL 
+        AND status NOT IN ('deleting')
+    `
+
+	var count int
+	err := s.db.QueryRowContext(ctx, query, userID).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err)
+	}
+
+	return count, nil
 }

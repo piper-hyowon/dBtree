@@ -24,9 +24,9 @@ func NewHandler(quizService quiz.Service, lemonService lemon.Service, logger *lo
 }
 
 func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request, positionID int) {
-	u := rest.GetUserFromContext(r.Context())
-	if u == nil {
-		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 
@@ -51,9 +51,9 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request, positionID i
 }
 
 func (h *Handler) SubmitAnswer(w http.ResponseWriter, r *http.Request) {
-	u := rest.GetUserFromContext(r.Context())
-	if u == nil {
-		rest.HandleError(w, errors.NewUnauthorizedError(), h.logger)
+	u, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
 		return
 	}
 

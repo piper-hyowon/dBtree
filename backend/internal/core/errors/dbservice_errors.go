@@ -2,14 +2,13 @@ package errors
 
 import (
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/core/dbservice"
 )
 
-func NewInvalidStatusTransitionError(current, target dbservice.InstanceStatus) DomainError {
+func NewInvalidStatusTransitionError(current, target string) DomainError {
 	return NewError(
 		ErrInvalidStatusTransition,
 		fmt.Sprintf("상태 %s -> %s 변경 불가", current, target),
-		map[string]string{"current": string(current), "target": string(target)},
+		map[string]string{"current": current, "target": target},
 		nil,
 	)
 }

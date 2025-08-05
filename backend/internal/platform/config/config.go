@@ -18,6 +18,7 @@ type Config struct {
 	Postgres            PostgresConfig
 	UseLocalMemoryStore bool
 	Redis               RedisConfig
+	K8s                 K8sConfig
 }
 
 type CORSConfig struct {
@@ -26,6 +27,7 @@ type CORSConfig struct {
 }
 
 type ServerConfig struct {
+	PublicHost          string
 	Port                int
 	ReadTimeoutSeconds  int
 	WriteTimeoutSeconds int
@@ -67,10 +69,16 @@ type RedisConfig struct {
 	ConnectString string
 }
 
+type K8sConfig struct {
+	InCluster      bool   // Pod 내부 실행 여부
+	KubeConfigPath string // 로컬 개발시 kubeconfig 경로
+}
+
 func NewConfig() (*Config, error) {
 	debugLogging := getEnvString("DEBUG_LOGGING", "false") == "true"
 	useLocalMemoryStore := getEnvString("USE_LOCAL_MEMORY_STORE", "true") == "true"
 	port, err := getEnvInt("SERVER_PORT", 8080)
+	publicHost := getEnvString("SERVER_PUBLIC_HOST", "localhost") // TODO?
 	if err != nil {
 		return nil, err
 	}
@@ -159,8 +167,12 @@ func NewConfig() (*Config, error) {
 		return nil, fmt.Errorf("REDIS 환경 변수 확인")
 	}
 
+	k8sInCluster := getEnvString("K8S_IN_CLUSTER", "false") == "true"
+	k8sConfigPath := getEnvString("KUBECONFIG", "")
+
 	return &Config{
 		Server: ServerConfig{
+			PublicHost:          publicHost,
 			Port:                port,
 			ReadTimeoutSeconds:  readTimeout,
 			WriteTimeoutSeconds: writeTimeout,
@@ -201,6 +213,10 @@ func NewConfig() (*Config, error) {
 		},
 		Redis: RedisConfig{
 			ConnectString: redisConnectString,
+		},
+		K8s: K8sConfig{
+			InCluster:      k8sInCluster,
+			KubeConfigPath: k8sConfigPath,
 		},
 	}, nil
 }

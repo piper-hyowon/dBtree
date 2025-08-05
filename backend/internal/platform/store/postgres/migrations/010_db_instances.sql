@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS db_instances
     name                  VARCHAR(255)                        NOT NULL,
     type                  db_type                             NOT NULL,
     size                  db_size                             NOT NULL,
-    mode                  VARCHAR(50)                         NOT NULL,
+    mode                  db_mode                             NOT NULL,
 
     -- 프리셋 참조 (통계용)
     created_from_preset   VARCHAR(100),
@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS db_instances
     -- 비용
     creation_cost         INTEGER CHECK (creation_cost >= 0)  NOT NULL,
     hourly_cost           INTEGER CHECK (hourly_cost >= 0)    NOT NULL,
-    minimum_lemons        INTEGER CHECK (minimum_lemons >= 0) NOT NULL DEFAULT 24, -- 최소 24시간
 
     -- 상태
     status                db_status                           NOT NULL DEFAULT 'provisioning',
@@ -58,6 +57,7 @@ CREATE INDEX IF NOT EXISTS idx_db_instances_status ON db_instances (status) WHER
 CREATE INDEX IF NOT EXISTS idx_db_instances_billing ON db_instances (last_billed_at)
     WHERE status = 'running' AND deleted_at IS NULL;
 
+DROP TRIGGER IF EXISTS update_db_instances_timestamp ON db_instances;
 CREATE TRIGGER update_db_instances_timestamp
     BEFORE UPDATE
     ON db_instances

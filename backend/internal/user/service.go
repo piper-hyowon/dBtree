@@ -49,7 +49,7 @@ func (s *service) Delete(ctx context.Context, userID string, userEmail string) e
 	}
 
 	// 탈퇴 이메일 발송
-	u := rest.GetUserFromContext(ctx)
+	u, _ := rest.GetUserFromContext(ctx)
 	if u != nil && u.Email != "" {
 		go func(email string) {
 			sendCtx := context.Background()

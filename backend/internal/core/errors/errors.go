@@ -56,6 +56,8 @@ const (
 	ErrInvalidInstanceName     ErrorCode = 1702
 	ErrInvalidResourceSpec     ErrorCode = 1703
 	ErrInstanceNotReady        ErrorCode = 1704
+
+	ErrLimitExceeded ErrorCode = 1805
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -91,6 +93,7 @@ var errorStrings = map[ErrorCode]string{
 	ErrInvalidInstanceName:     "invalid_instance_name",
 	ErrInvalidResourceSpec:     "invalid_resource_spec",
 	ErrInstanceNotReady:        "instance_not_ready",
+	ErrLimitExceeded:           "limit_exceeded",
 }
 
 func (c ErrorCode) String() string {
@@ -110,6 +113,9 @@ type DomainError interface {
 	Code() ErrorCode
 	ErrorData() any
 	Stack() string
+	Unwrap() error
+	Is(target error) bool
+	WithData(data interface{}) DomainError
 }
 
 type baseDomainError struct {
@@ -149,6 +155,11 @@ func (e *baseDomainError) Is(target error) bool {
 		return false
 	}
 	return e.code == t.code
+}
+
+func (e *baseDomainError) WithData(data interface{}) DomainError {
+	e.data = data
+	return e
 }
 
 func NewError(code ErrorCode, message string, data any, cause error) DomainError {

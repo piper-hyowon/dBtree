@@ -94,6 +94,9 @@ spec:
               createdFromPreset:
                 description: Created from preset ID (optional, matches backend)
                 type: string
+              externalId:
+                description: ExternalID from backend (백엔드의 DBInstance.ExternalID)
+                type: string
               mode:
                 description: Deployment mode
                 enum:
@@ -164,6 +167,7 @@ spec:
                 type: string
             required:
             - backup
+            - externalId
             - mode
             - name
             - resources

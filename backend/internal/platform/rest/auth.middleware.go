@@ -50,12 +50,12 @@ func (m *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func GetUserFromContext(ctx context.Context) *user.User {
+func GetUserFromContext(ctx context.Context) (*user.User, error) {
 	u, ok := ctx.Value(corecontext.UserKey).(*user.User)
 	if !ok {
-		return nil
+		return nil, errors.NewUnauthorizedError()
 	}
-	return u
+	return u, nil
 }
 
 func GetTokenFromContext(ctx context.Context) string {

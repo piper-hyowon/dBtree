@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+
+	"github.com/lib/pq"
 	"github.com/piper-hyowon/dBtree/internal/core/dbservice"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 )
@@ -20,82 +23,122 @@ func NewPresetStore(db *sql.DB) dbservice.PresetStore {
 	}
 }
 
-func (s *PresetStore) List(ctx context.Context) ([]*dbservice.DBPreset, error) {
-	query := `
-        SELECT id, type, size, mode, name, icon, description, friendly_description,
-               technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
-               default_config, sort_order, is_active
-        FROM db_presets 
-        WHERE is_active = true
-        ORDER BY sort_order
+func (s *PresetStore) Find(ctx context.Context, id string) (*dbservice.DBPreset, error) {
+	const query = `
+        SELECT 
+            id, type, size, mode, name, icon, description, friendly_description,
+            technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
+            default_config, sort_order
+        FROM db_presets
+        WHERE id = $1 AND is_active = true
     `
 
-	rows, err := s.db.QueryContext(ctx, query)
+	row := s.db.QueryRowContext(ctx, query, id)
+	preset, err := s.scanPreset(row)
 	if err != nil {
-		return nil, errors.Wrap(err)
+		if err == sql.ErrNoRows {
+			return nil, errors.NewResourceNotFoundError("preset", id)
+		}
+		return nil, fmt.Errorf("find preset: %w", err)
+	}
+
+	return preset, nil
+}
+
+func (s *PresetStore) ListByType(ctx context.Context, dbType dbservice.DBType) ([]*dbservice.DBPreset, error) {
+	const query = `
+        SELECT 
+            id, type, size, mode, name, icon, description, friendly_description,
+            technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
+            default_config, sort_order
+        FROM db_presets 
+        WHERE type = $1 AND is_active = true
+        ORDER BY sort_order, id
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, dbType)
+	if err != nil {
+		return nil, fmt.Errorf("list presets by type: %w", err)
 	}
 	defer rows.Close()
 
-	var presets []*dbservice.DBPreset
+	presets := make([]*dbservice.DBPreset, 0, 5)
+
 	for rows.Next() {
-		var p dbservice.DBPreset
-		var technicalTermsJSON, useCasesJSON, defaultConfigJSON []byte
-
-		err := rows.Scan(
-			&p.ID,
-			&p.Type,
-			&p.Size,
-			&p.Mode,
-			&p.Name,
-			&p.Icon,
-			&p.Description,
-			&p.FriendlyDescription,
-			&technicalTermsJSON, // JSONB → map[string]interface{}
-			&useCasesJSON,       // JSONB → []string
-			&p.Resources.CPU,
-			&p.Resources.Memory,
-			&p.Resources.Disk,
-			&p.Cost.CreationCost,
-			&p.Cost.HourlyLemons,
-			&defaultConfigJSON, // JSONB → map[string]interface{}
-			&p.SortOrder,
-			&p.IsActive,
-		)
+		preset, err := s.scanPreset(rows)
 		if err != nil {
-			return nil, errors.Wrap(err)
+			return nil, fmt.Errorf("scan preset: %w", err)
 		}
-
-		// JSON 파싱
-		if len(technicalTermsJSON) > 0 {
-			if err := json.Unmarshal(technicalTermsJSON, &p.TechnicalTerms); err != nil {
-				return nil, errors.Wrap(err)
-			}
-		} else {
-			p.TechnicalTerms = make(map[string]interface{})
-		}
-
-		if len(useCasesJSON) > 0 {
-			if err := json.Unmarshal(useCasesJSON, &p.UseCases); err != nil {
-				return nil, errors.Wrap(err)
-			}
-		} else {
-			p.UseCases = []string{}
-		}
-
-		if len(defaultConfigJSON) > 0 {
-			if err := json.Unmarshal(defaultConfigJSON, &p.DefaultConfig); err != nil {
-				return nil, errors.Wrap(err)
-			}
-		} else {
-			p.DefaultConfig = make(map[string]interface{})
-		}
-
-		presets = append(presets, &p)
+		presets = append(presets, preset)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, fmt.Errorf("iterate rows: %w", err)
 	}
 
 	return presets, nil
+}
+
+func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }) (*dbservice.DBPreset, error) {
+	var (
+		preset             dbservice.DBPreset
+		technicalTermsJSON []byte
+		defaultConfigJSON  []byte
+		useCasesArr        pq.StringArray
+	)
+
+	err := scanner.Scan(
+		&preset.ID,
+		&preset.Type,
+		&preset.Size,
+		&preset.Mode,
+		&preset.Name,
+		&preset.Icon,
+		&preset.Description,
+		&preset.FriendlyDescription,
+		&technicalTermsJSON,
+		&useCasesArr,
+		&preset.Resources.CPU,
+		&preset.Resources.Memory,
+		&preset.Resources.Disk,
+		&preset.Cost.CreationCost,
+		&preset.Cost.HourlyLemons,
+		&defaultConfigJSON,
+		&preset.SortOrder,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// JSONB 필드 파싱
+	if err := s.parseJSONFields(&preset, technicalTermsJSON, defaultConfigJSON); err != nil {
+		return nil, err
+	}
+
+	preset.UseCases = []string(useCasesArr)
+	preset.IsActive = true
+
+	return &preset, nil
+}
+
+func (s *PresetStore) parseJSONFields(preset *dbservice.DBPreset, technicalTermsJSON, defaultConfigJSON []byte) error {
+	// technical_terms 파싱
+	if len(technicalTermsJSON) > 0 {
+		if err := json.Unmarshal(technicalTermsJSON, &preset.TechnicalTerms); err != nil {
+			return fmt.Errorf("unmarshal technical terms: %w", err)
+		}
+	} else {
+		preset.TechnicalTerms = make(map[string]interface{})
+	}
+
+	// default_config 파싱
+	if len(defaultConfigJSON) > 0 {
+		if err := json.Unmarshal(defaultConfigJSON, &preset.DefaultConfig); err != nil {
+			return fmt.Errorf("unmarshal default config: %w", err)
+		}
+	} else {
+		preset.DefaultConfig = make(map[string]interface{})
+	}
+
+	return nil
 }
