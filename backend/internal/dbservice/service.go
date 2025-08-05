@@ -31,21 +31,99 @@ type service struct {
 	logger       *log.Logger
 }
 
-func (s *service) Instance(ctx context.Context, userID, instanceID string) (*dbservice.DBInstance, error) {
-	instance, err := s.dbiStore.Find(ctx, instanceID)
-
-	if instance == nil || err != nil {
-		return nil, errors.NewResourceNotFoundError("instance", instanceID)
-	}
-
-	return instance, nil
-}
-
 func (s *service) ListInstances(ctx context.Context, userID string, filters dbservice.ListInstancesRequest) ([]*dbservice.DBInstance, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+func (s *service) mapInfraStatusToInstanceStatus(status *k8s.MongoDBStatus) dbservice.InstanceStatus {
+	switch status.Phase {
+	case "Running":
+		if status.Ready {
+			return dbservice.StatusRunning
+		}
+		return dbservice.StatusProvisioning
+	case "Failed":
+		return dbservice.StatusError
+	case "Pending":
+		return dbservice.StatusProvisioning
+	default:
+		return dbservice.StatusProvisioning
+	}
+}
+
+func (s *service) GetInstanceWithSync(ctx context.Context, userID, id string) (*dbservice.DBInstance, error) {
+	// DB에서 조회
+	instance, err := s.dbiStore.Find(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 권한 확인
+	if instance.UserID != userID {
+		return nil, errors.NewResourceNotFoundError("instance", id)
+	}
+
+	s.logger.Printf("Instance from DB - Status: %s, K8sNamespace: %s, K8sResourceName: %s",
+		instance.Status, instance.K8sNamespace, instance.K8sResourceName)
+
+	// Provisioning 상태면 K8s에서 실제 상태 확인
+	if instance.Status == dbservice.StatusProvisioning && instance.Type == dbservice.MongoDB {
+		status, err := s.k8sClient.GetMongoDBStatus(ctx, instance.K8sNamespace, instance.K8sResourceName)
+		if err != nil {
+			s.logger.Printf("Failed to get MongoDB status: %v", err)
+		} else {
+			s.logger.Printf("K8s status - Phase: %s, Ready: %v", status.Phase, status.Ready)
+
+			// 상태 업데이트
+			newStatus := s.mapMongoDBStatus(status)
+			s.logger.Printf("Mapped status: %s", newStatus)
+
+			if newStatus != instance.Status {
+				if err := s.dbiStore.UpdateStatus(ctx, instance.ID, newStatus, status.Message); err != nil {
+					s.logger.Printf("Failed to update status in DB: %v", err)
+				} else {
+					instance.Status = newStatus
+					instance.StatusReason = status.Message
+				}
+			}
+
+			// 연결 정보 업데이트
+			if status.Ready && instance.Endpoint == "" {
+				instance.Endpoint = status.Endpoint
+				instance.Port = int(status.Port)
+				_ = s.dbiStore.Update(ctx, instance)
+			}
+		}
+	}
+
+	return instance, nil
+}
+func (s *service) ListPresets(ctx context.Context) ([]*dbservice.DBPreset, error) {
+	presets, err := s.presetStore.ListByType(ctx, dbservice.MongoDB)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return presets, nil
+}
+
+func (s *service) mapMongoDBStatus(status *k8s.MongoDBStatus) dbservice.InstanceStatus {
+	switch status.Phase {
+	case "running":
+		if status.Ready {
+			return dbservice.StatusRunning
+		}
+		return dbservice.StatusProvisioning
+	case "failed", "error":
+		return dbservice.StatusError
+	case "pending", "provisioning":
+		return dbservice.StatusProvisioning
+	default:
+		s.logger.Printf("Unknown phase: %s", status.Phase) // 디버깅용
+		return dbservice.StatusProvisioning
+	}
+}
 func (s *service) UpdateInstance(ctx context.Context, userID, instanceID string, req *dbservice.UpdateInstanceRequest) (*dbservice.DBInstance, error) {
 	//TODO implement me
 	panic("implement me")
@@ -87,11 +165,6 @@ func (s *service) RestoreFromBackup(ctx context.Context, userID, instanceID stri
 }
 
 func (s *service) InstanceMetrics(ctx context.Context, instanceID string) (*dbservice.InstanceMetrics, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *service) ListPresets(ctx context.Context) (*dbservice.ListPresetsResponse, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -406,6 +479,14 @@ func (s *service) createDBInstanceCRD(ctx context.Context, instance *dbservice.D
 		Create(ctx, dbInstanceCRD, metav1.CreateOptions{})
 
 	if err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			// 이미 존재하는 경우 업데이트 시도
+			s.logger.Printf("DBInstance CRD already exists, attempting update: %s/%s",
+				instance.K8sNamespace, instance.Name)
+
+			return s.k8sClient.UpdateDBInstance(ctx, instance.K8sNamespace,
+				instance.Name, dbInstanceCRD)
+		}
 		return errors.Wrapf(err, "failed to create DBInstance CRD")
 	}
 

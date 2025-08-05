@@ -7,7 +7,6 @@ import (
 type Service interface {
 	// CRUD
 	CreateInstance(ctx context.Context, userID string, userLemon int, req *CreateInstanceRequest) (*CreateInstanceResponse, error)
-	Instance(ctx context.Context, userID, instanceID string) (*DBInstance, error)
 	ListInstances(ctx context.Context, userID string, filters ListInstancesRequest) ([]*DBInstance, error)
 	UpdateInstance(ctx context.Context, userID, instanceID string, req *UpdateInstanceRequest) (*DBInstance, error)
 	DeleteInstance(ctx context.Context, userID, instanceID string) error
@@ -17,6 +16,10 @@ type Service interface {
 	StartInstance(ctx context.Context, userID, instanceID string) error
 	StopInstance(ctx context.Context, userID, instanceID string) error
 	RestartInstance(ctx context.Context, userID, instanceID string) error
+
+	// Status Sync
+
+	GetInstanceWithSync(ctx context.Context, userID, instanceID string) (*DBInstance, error)
 
 	// Backup
 
@@ -30,6 +33,6 @@ type Service interface {
 
 	// Presets & Cost
 
-	ListPresets(ctx context.Context) (*ListPresetsResponse, error)
+	ListPresets(ctx context.Context) ([]*DBPreset, error)
 	EstimateCost(ctx context.Context, req *EstimateCostRequest) (*EstimateCostResponse, error)
 }

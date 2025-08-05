@@ -47,10 +47,11 @@ func (s *DBInstanceStore) Create(ctx context.Context, instance *dbservice.DBInst
                 cpu, memory, disk,
                 creation_cost, hourly_cost,
                 status, config,
-                backup_enabled, backup_schedule, backup_retention_days
+                backup_enabled, backup_schedule, backup_retention_days,
+                k8s_namespace, k8s_resource_name
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17
+                $11, $12, $13, $14, $15, $16, $17, $18, $19
             ) RETURNING id, created_at, updated_at
         `
 
@@ -77,13 +78,15 @@ func (s *DBInstanceStore) Create(ctx context.Context, instance *dbservice.DBInst
 			instance.BackupConfig.Enabled,
 			toNullString(instance.BackupConfig.Schedule),
 			toNullInt32(instance.BackupConfig.RetentionDays),
+			instance.K8sNamespace,
+			instance.K8sResourceName,
 		).Scan(&instance.ID, &instance.CreatedAt, &instance.UpdatedAt)
 
 		if err != nil {
 			if isUniqueViolation(err, "unique_user_instance_name") {
 				return errors.NewInstanceNameConflictError(instance.Name)
 			}
-			return fmt.Errorf("insert instance: %w", err)
+			return errors.Wrap(err)
 		}
 
 		return nil

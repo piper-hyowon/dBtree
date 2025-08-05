@@ -2,7 +2,9 @@ package rest
 
 import (
 	coredbservice "github.com/piper-hyowon/dBtree/internal/core/dbservice"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
+	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
 	"github.com/piper-hyowon/dBtree/internal/platform/validation"
 	"log"
 	"net/http"
@@ -49,4 +51,42 @@ func (h *Handler) CreateInstance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rest.SendJSONResponse(w, http.StatusAccepted, resp)
+}
+
+func (h *Handler) GetInstanceWithSync(w http.ResponseWriter, r *http.Request) {
+	user, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	id := router.Param(r, "id")
+	if id == "" {
+		rest.HandleError(w, errors.NewMissingParameterError("id"), h.logger)
+		return
+	}
+
+	instance, err := h.dbService.GetInstanceWithSync(r.Context(), user.ID, id)
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	response := instance.ToResponse()
+
+	rest.SendSuccessResponse(w, http.StatusOK, response)
+}
+
+func (h *Handler) ListPresets(w http.ResponseWriter, r *http.Request) {
+	presets, err := h.dbService.ListPresets(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+	}
+
+	responses := make([]coredbservice.PresetResponse, len(presets))
+	for i, preset := range presets {
+		responses[i] = preset.ToResponse()
+	}
+
+	rest.SendSuccessResponse(w, http.StatusOK, responses)
 }

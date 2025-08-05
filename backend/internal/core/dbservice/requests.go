@@ -79,37 +79,6 @@ type InstanceResponse struct {
 	PausedAt          *time.Time             `json:"pausedAt,omitempty"`
 }
 
-func (d *DBInstance) ToResponse() *InstanceResponse {
-	return &InstanceResponse{
-		ID:                d.ExternalID,
-		Name:              d.Name,
-		Type:              d.Type,
-		Size:              d.Size,
-		Mode:              d.Mode,
-		Status:            d.Status,
-		StatusReason:      d.StatusReason,
-		Resources:         d.Resources,
-		Cost:              d.Cost.ToResponse(),
-		Endpoint:          d.Endpoint,
-		Port:              d.Port,
-		BackupEnabled:     d.BackupConfig.Enabled,
-		Config:            d.Config,
-		CreatedAt:         d.CreatedAt,
-		UpdatedAt:         d.UpdatedAt,
-		CreatedFromPreset: d.CreatedFromPreset,
-		PausedAt:          d.PausedAt,
-	}
-}
-
-func (c LemonCost) ToResponse() CostResponse {
-	return CostResponse{
-		CreationCost:  c.CreationCost,
-		HourlyLemons:  c.HourlyLemons,
-		DailyLemons:   c.HourlyLemons * 24,
-		MonthlyLemons: c.HourlyLemons * 24 * 30,
-	}
-}
-
 type CostResponse struct {
 	CreationCost  int `json:"creationCost"`
 	HourlyLemons  int `json:"hourlyLemons"`
@@ -118,18 +87,20 @@ type CostResponse struct {
 }
 
 type PresetResponse struct {
-	ID          string       `json:"id"`
-	Name        string       `json:"name"`
-	Icon        string       `json:"icon"`
-	Description string       `json:"description"`
-	UseCases    []string     `json:"useCases"`
-	Resources   ResourceSpec `json:"resources"`
-	Cost        CostResponse `json:"cost"`
-}
-
-type ListPresetsResponse struct {
-	Redis   []PresetResponse `json:"redis"`
-	MongoDB []PresetResponse `json:"mongodb"`
+	ID                  string                 `json:"id"`
+	Type                DBType                 `json:"type"`
+	Size                DBSize                 `json:"size"`
+	Mode                DBMode                 `json:"mode"`
+	Name                string                 `json:"name"`
+	Icon                string                 `json:"icon"`
+	Description         string                 `json:"description"`
+	FriendlyDescription string                 `json:"friendlyDescription"`
+	TechnicalTerms      map[string]interface{} `json:"technicalTerms,omitempty"`
+	UseCases            []string               `json:"useCases"`
+	Resources           ResourceSpec           `json:"resources"`
+	Cost                CostResponse           `json:"cost"`
+	DefaultConfig       map[string]interface{} `json:"defaultConfig,omitempty"`
+	SortOrder           int                    `json:"sortOrder"`
 }
 
 // 예상 비용

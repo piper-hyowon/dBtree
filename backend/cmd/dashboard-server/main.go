@@ -114,7 +114,9 @@ func main() {
 
 	r := router.New(logger)
 
-	r.POST("/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
+	r.POST("/db/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
+	r.GET("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.GetInstanceWithSync))
+	r.GET("/db/presets", dbsHandler.ListPresets)
 
 	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")

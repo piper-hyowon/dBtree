@@ -82,6 +82,15 @@ type LemonCost struct {
 	HourlyLemons int
 }
 
+func (c *LemonCost) ToResponse() CostResponse {
+	return CostResponse{
+		CreationCost:  c.CreationCost,
+		HourlyLemons:  c.HourlyLemons,
+		DailyLemons:   c.HourlyLemons * 24,
+		MonthlyLemons: c.HourlyLemons * 24 * 30,
+	}
+}
+
 type BackupConfig struct {
 	Enabled       bool   `json:"enabled"`
 	Schedule      string `json:"schedule,omitempty"` // cron format
@@ -125,6 +134,28 @@ type DBInstance struct {
 	LastBilledAt *time.Time
 	PausedAt     *time.Time
 	DeletedAt    *time.Time
+}
+
+func (d *DBInstance) ToResponse() *InstanceResponse {
+	return &InstanceResponse{
+		ID:                d.ExternalID,
+		Name:              d.Name,
+		Type:              d.Type,
+		Size:              d.Size,
+		Mode:              d.Mode,
+		Status:            d.Status,
+		StatusReason:      d.StatusReason,
+		Resources:         d.Resources,
+		Cost:              d.Cost.ToResponse(),
+		Endpoint:          d.Endpoint,
+		Port:              d.Port,
+		BackupEnabled:     d.BackupConfig.Enabled,
+		Config:            d.Config,
+		CreatedAt:         d.CreatedAt,
+		UpdatedAt:         d.UpdatedAt,
+		CreatedFromPreset: d.CreatedFromPreset,
+		PausedAt:          d.PausedAt,
+	}
 }
 
 func (d *DBInstance) CanTransitionTo(target InstanceStatus) bool {
@@ -188,6 +219,25 @@ type DBPreset struct {
 	DefaultConfig       map[string]interface{}
 	SortOrder           int
 	IsActive            bool
+}
+
+func (p *DBPreset) ToResponse() PresetResponse {
+	return PresetResponse{
+		ID:                  p.ID,
+		Type:                p.Type,
+		Size:                p.Size,
+		Mode:                p.Mode,
+		Name:                p.Name,
+		Icon:                p.Icon,
+		Description:         p.Description,
+		FriendlyDescription: p.FriendlyDescription,
+		TechnicalTerms:      p.TechnicalTerms,
+		UseCases:            p.UseCases,
+		Resources:           p.Resources,
+		Cost:                p.Cost.ToResponse(),
+		DefaultConfig:       p.DefaultConfig,
+		SortOrder:           p.SortOrder,
+	}
 }
 
 // BackupRecord (백업 요청 메타데이터만, 실제 백업은 K8s)
