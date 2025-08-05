@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS db_instances
     -- 비용
     creation_cost         INTEGER CHECK (creation_cost >= 0)  NOT NULL,
     hourly_cost           INTEGER CHECK (hourly_cost >= 0)    NOT NULL,
-    minimum_lemons        INTEGER CHECK (minimum_lemons >= 0) NOT NULL DEFAULT 24, -- 최소 24시간
 
     -- 상태
     status                db_status                           NOT NULL DEFAULT 'provisioning',

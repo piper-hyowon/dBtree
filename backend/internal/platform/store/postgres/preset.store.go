@@ -118,9 +118,6 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 	preset.UseCases = []string(useCasesArr)
 	preset.IsActive = true
 
-	// Cost MinimumLemons 계산 (24시간 기준)
-	preset.Cost.MinimumLemons = preset.Cost.HourlyLemons * 24
-
 	return &preset, nil
 }
 

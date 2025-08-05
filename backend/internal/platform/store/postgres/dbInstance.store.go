@@ -16,7 +16,7 @@ const (
         id, external_id, user_id, name, type, size, mode,
         created_from_preset,
         cpu, memory, disk,
-        creation_cost, hourly_cost, minimum_lemons,
+        creation_cost, hourly_cost,
         status, status_reason,
         k8s_namespace, k8s_resource_name,
         endpoint, port,
@@ -45,12 +45,12 @@ func (s *DBInstanceStore) Create(ctx context.Context, instance *dbservice.DBInst
                 external_id, user_id, name, type, size, mode,
                 created_from_preset,
                 cpu, memory, disk,
-                creation_cost, hourly_cost, minimum_lemons,
+                creation_cost, hourly_cost,
                 status, config,
                 backup_enabled, backup_schedule, backup_retention_days
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18
+                $11, $12, $13, $14, $15, $16, $17
             ) RETURNING id, created_at, updated_at
         `
 
@@ -72,7 +72,6 @@ func (s *DBInstanceStore) Create(ctx context.Context, instance *dbservice.DBInst
 			instance.Resources.Disk,
 			instance.Cost.CreationCost,
 			instance.Cost.HourlyLemons,
-			instance.Cost.MinimumLemons,
 			instance.Status,
 			configJSON,
 			instance.BackupConfig.Enabled,

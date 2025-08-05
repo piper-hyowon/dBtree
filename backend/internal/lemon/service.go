@@ -216,8 +216,8 @@ func (s *service) ValidateInstanceCreation(ctx context.Context, userID string, c
 	}
 
 	// 최소 필요 레몬 체크
-	if balance < cost.MinimumLemons {
-		return errors.NewInsufficientLemonsError(cost.MinimumLemons, cost.MinimumLemons-balance)
+	if balance < cost.CreationCost+cost.HourlyLemons {
+		return errors.NewInsufficientLemonsError(cost.CreationCost+cost.HourlyLemons, cost.CreationCost+cost.HourlyLemons-balance)
 	}
 
 	return nil

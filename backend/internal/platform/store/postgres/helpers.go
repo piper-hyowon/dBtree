@@ -81,7 +81,6 @@ func scanInstance(scanner interface{ Scan(...interface{}) error }) (*dbservice.D
 		&instance.Resources.Disk,
 		&instance.Cost.CreationCost,
 		&instance.Cost.HourlyLemons,
-		&instance.Cost.MinimumLemons,
 		&instance.Status,
 		&statusReason,
 		&k8sNamespace,

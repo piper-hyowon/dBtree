@@ -19,7 +19,6 @@ CREATE TABLE IF NOT EXISTS db_presets
     disk                 INTEGER CHECK (disk > 0)            NOT NULL,
     creation_cost        INTEGER CHECK (creation_cost >= 0)  NOT NULL,
     hourly_cost          INTEGER CHECK (hourly_cost >= 0)    NOT NULL,
-    minimum_lemons       INTEGER CHECK (minimum_lemons >= 0) NOT NULL DEFAULT 24,
 
     -- 기본 설정
     default_config       JSONB                               NOT NULL,

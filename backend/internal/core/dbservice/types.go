@@ -78,9 +78,8 @@ func (r ResourceSpec) CalculateSize() DBSize {
 }
 
 type LemonCost struct {
-	CreationCost  int
-	HourlyLemons  int
-	MinimumLemons int
+	CreationCost int
+	HourlyLemons int
 }
 
 type BackupConfig struct {
@@ -170,10 +169,6 @@ func (d *DBInstance) CalculateHourlyCost() int {
 		return 0
 	}
 	return d.Cost.HourlyLemons
-}
-
-func (d *DBInstance) ShouldPause(userBalance int) bool {
-	return d.Status == StatusRunning && userBalance < d.Cost.MinimumLemons
 }
 
 // 프리셋
@@ -266,8 +261,7 @@ func CalculateCustomCost(dbType DBType, resources ResourceSpec) LemonCost {
 	}
 
 	return LemonCost{
-		CreationCost:  base * 10,
-		HourlyLemons:  base,
-		MinimumLemons: base * 24,
+		CreationCost: base * 10,
+		HourlyLemons: base,
 	}
 }
