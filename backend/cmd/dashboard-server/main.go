@@ -244,6 +244,10 @@ func validateInstanceName(name string) error {
 		return errors.NewMissingParameterError("name")
 	}
 
+	if len(name) < 3 {
+		return errors.NewInvalidParameterError("name", "3 글자 이상")
+	}
+
 	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, name)
 	if !matched {
 		return errors.NewInvalidParameterError("name",

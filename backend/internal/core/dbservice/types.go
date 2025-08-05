@@ -265,3 +265,16 @@ func CalculateCustomCost(dbType DBType, resources ResourceSpec) LemonCost {
 		HourlyLemons: base,
 	}
 }
+
+func (d *DBInstance) ToCreateResponse(credentials *Credentials) *CreateInstanceResponse {
+	return &CreateInstanceResponse{
+		ID:          d.ExternalID,
+		Name:        d.Name,
+		Type:        d.Type,
+		Status:      string(d.Status),
+		Resources:   d.Resources,
+		Cost:        d.Cost,
+		Credentials: credentials,
+		CreatedAt:   d.CreatedAt,
+	}
+}

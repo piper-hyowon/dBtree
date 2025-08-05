@@ -7,8 +7,8 @@ import (
 
 const (
 	passwordLength = 16
-	// 0, O, l, I 제외
-	passwordChars = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789!@#$%^&*"
+	// 0, O, l, I 제외 (TODO: 특수문자도 임시 제거)
+	passwordChars = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ123456789"
 )
 
 func GenerateSecurePassword() (string, error) {

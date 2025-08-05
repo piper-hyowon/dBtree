@@ -32,8 +32,13 @@ type service struct {
 }
 
 func (s *service) Instance(ctx context.Context, userID, instanceID string) (*dbservice.DBInstance, error) {
-	//TODO implement me
-	panic("implement me")
+	instance, err := s.dbiStore.Find(ctx, instanceID)
+
+	if instance == nil || err != nil {
+		return nil, errors.NewResourceNotFoundError("instance", instanceID)
+	}
+
+	return instance, nil
 }
 
 func (s *service) ListInstances(ctx context.Context, userID string, filters dbservice.ListInstancesRequest) ([]*dbservice.DBInstance, error) {
@@ -318,19 +323,19 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 	// 외부 접속 정보 추가
 	if externalPort > 0 {
 		externalHost := s.publicHost
-
 		credentials.ExternalHost = externalHost
 		credentials.ExternalPort = externalPort
-		credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
-			instance.Type, username, password,
-			externalHost, externalPort, req.Name)
+		if instance.Type == dbservice.MongoDB {
+			credentials.ExternalURI = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
+				username, password, externalHost, externalPort, req.Name, username)
+		} else {
+			credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
+				instance.Type, username, password,
+				externalHost, externalPort, req.Name)
+		}
 	}
 
-	return &dbservice.CreateInstanceResponse{
-		DBInstance:  instance,
-		Credentials: credentials,
-	}, nil
-
+	return instance.ToCreateResponse(credentials), nil
 }
 
 func (s *service) provisionK8sResources(ctx context.Context, instance *dbservice.DBInstance) (map[string][]byte, error) {

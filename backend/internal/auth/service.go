@@ -95,13 +95,10 @@ func (s *service) ResendOTP(ctx context.Context, email string) error {
 
 	// 인증된 세션이고 토큰이 만료된 경우, 상태를 Pending 으로 변경
 	if session.Status == auth.Verified {
-		if session.TokenExpiresAt.Before(now) {
-			// 토큰이 만료되었으므로 세션 상태를 Pending 으로 변경
-			session.Status = auth.Pending
-			session.Token = "" // 토큰 삭제
-		} else {
-			return errors.NewSessionAlreadyVerifiedError()
-		}
+		// 토큰 유효 여부와 관계없이 재인증을 위한 OTP 발송 허용
+		session.Status = auth.Pending
+		session.Token = ""      // 기존 토큰 무효화
+		session.ResendCount = 0 // 재발송 횟수 초기화
 	}
 
 	// 재전송 횟수 제한

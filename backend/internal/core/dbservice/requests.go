@@ -20,7 +20,13 @@ type CreateInstanceRequest struct {
 }
 
 type CreateInstanceResponse struct {
-	*DBInstance
+	ID          string       `json:"id"` // ExternalID
+	Name        string       `json:"name"`
+	Type        DBType       `json:"type"`
+	Status      string       `json:"status"`
+	Resources   ResourceSpec `json:"resources"`
+	Cost        LemonCost    `json:"cost"`
+	CreatedAt   time.Time    `json:"createdAt"`
 	Credentials *Credentials `json:"credentials,omitempty"` // 생성시에만 포함
 }
 

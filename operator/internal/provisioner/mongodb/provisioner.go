@@ -407,10 +407,10 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 										},
 									},
 								},
-								InitialDelaySeconds: 60,
+								InitialDelaySeconds: 30,
 								PeriodSeconds:       10,
-								TimeoutSeconds:      10,
-								FailureThreshold:    5,
+								TimeoutSeconds:      5,
+								FailureThreshold:    6,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -423,10 +423,10 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 										},
 									},
 								},
-								InitialDelaySeconds: 30,
-								PeriodSeconds:       5,
-								TimeoutSeconds:      10,
-								FailureThreshold:    5,
+								InitialDelaySeconds: 30, // 처음 30초는 체크 안 함
+								PeriodSeconds:       10, // 10초마다 체크
+								TimeoutSeconds:      5,  // 타임아웃
+								FailureThreshold:    6,  // 실패 허용
 							},
 						},
 					},
