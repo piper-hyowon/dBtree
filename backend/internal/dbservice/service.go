@@ -134,8 +134,43 @@ func (s *service) UpdateInstance(ctx context.Context, userID, instanceID string,
 }
 
 func (s *service) DeleteInstance(ctx context.Context, userID, instanceID string) error {
-	//TODO implement me
-	panic("implement me")
+	instance, err := s.dbiStore.Find(ctx, instanceID)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	if instance == nil || instance.UserID != userID {
+		return errors.NewResourceNotFoundError("instance", instanceID)
+	}
+
+	if !instance.CanDelete() {
+		return errors.NewInvalidStatusTransitionError(string(instance.Status), string(dbservice.StatusDeleting))
+	}
+
+	if err := s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusDeleting, "Deletion requested"); err != nil {
+		return errors.Wrap(err)
+	}
+
+	// 포트 해제
+	if s.portStore != nil && instance.ExternalID != "" {
+		if err := s.portStore.ReleasePort(ctx, instance.ExternalID); err != nil {
+			s.logger.Printf("Failed to release port for instance %s: %v", instanceID, err)
+			// 포트 해제 실패는 무시하고 계속 진행 (TODO: reporting)
+		}
+	}
+
+	// K8s DBInstance CRD 삭제 (Operator가 나머지 리소스 정리)
+	if instance.K8sNamespace != "" && instance.K8sResourceName != "" {
+		if err := s.k8sClient.DeleteDBInstance(ctx, instance.K8sNamespace, instance.K8sResourceName); err != nil {
+			s.logger.Printf("Failed to delete K8s resources for instance %s: %v", instanceID, err)
+			// K8s 삭제 실패해도 DB는 삭제 처리
+		}
+	}
+
+	if err := s.dbiStore.Delete(ctx, instanceID); err != nil {
+		return errors.Wrap(err)
+	}
+
+	return nil
 }
 
 func (s *service) StartInstance(ctx context.Context, userID, instanceID string) error {

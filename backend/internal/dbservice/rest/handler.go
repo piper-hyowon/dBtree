@@ -95,7 +95,6 @@ func (h *Handler) GetInstanceWithSync(w http.ResponseWriter, r *http.Request) {
 				h.publicHost, port)
 		}
 	}
-
 	rest.SendSuccessResponse(w, http.StatusOK, response)
 }
 
@@ -131,4 +130,25 @@ func (h *Handler) ListInstances(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rest.SendSuccessResponse(w, http.StatusOK, res)
+}
+
+func (h *Handler) DeleteInstance(w http.ResponseWriter, r *http.Request) {
+	user, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	id := router.Param(r, "id")
+	if id == "" {
+		rest.HandleError(w, errors.NewMissingParameterError("id"), h.logger)
+		return
+
+	}
+	if err := h.dbService.DeleteInstance(r.Context(), user.ID, id); err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	rest.SendSuccessResponse(w, http.StatusNoContent, nil)
 }

@@ -117,6 +117,7 @@ func main() {
 	r.POST("/db/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
 	r.GET("/db/instances", authMiddleware.RequireAuth(dbsHandler.ListInstances))
 	r.GET("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.GetInstanceWithSync))
+	r.DELETE("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.DeleteInstance))
 	r.GET("/db/presets", dbsHandler.ListPresets)
 
 	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
