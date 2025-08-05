@@ -37,6 +37,8 @@ type Client interface {
 	DBInstance(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error)
 
 	CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error
+
+	GetMongoDBStatus(ctx context.Context, namespace, name string) (*MongoDBStatus, error)
 }
 
 type client struct {
