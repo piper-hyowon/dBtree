@@ -9,7 +9,7 @@ type DBInstanceStore interface {
 	Create(ctx context.Context, instance *DBInstance) error
 	Find(ctx context.Context, externalID string) (*DBInstance, error)
 	FindByUserAndName(ctx context.Context, userID string, name string) (*DBInstance, error)
-	List(ctx context.Context, userID string, filters ListInstancesRequest) ([]*DBInstance, error)
+	List(ctx context.Context, userID string) ([]*DBInstance, error)
 	ListRunning(ctx context.Context) ([]*DBInstance, error)
 	ListPausedBefore(ctx context.Context, before time.Time) ([]*DBInstance, error)
 	Update(ctx context.Context, instance *DBInstance) error

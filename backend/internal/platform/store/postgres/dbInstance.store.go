@@ -123,66 +123,13 @@ func (s *DBInstanceStore) FindByUserAndName(ctx context.Context, userID, name st
 	return instance, nil
 }
 
-func (s *DBInstanceStore) List(ctx context.Context, userID string, filters dbservice.ListInstancesRequest) ([]*dbservice.DBInstance, error) {
-	query := `
-        SELECT
-            id, external_id, user_id, name, type, size, mode,
-            cpu, memory, disk,
-            hourly_cost,
-            status, status_reason,
-            endpoint, port,
-            created_at, updated_at
-        FROM db_instances
+func (s *DBInstanceStore) List(ctx context.Context, userID string) ([]*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + ` 
         WHERE user_id = $1 AND deleted_at IS NULL
+        ORDER BY created_at DESC
     `
 
-	// WHERE 절 구성
-	wb := &whereBuilder{
-		conditions: []string{},
-		args:       []interface{}{userID},
-		argIndex:   1,
-	}
-
-	if filters.Status != nil {
-		wb.add("status = $%d", *filters.Status)
-	}
-	if filters.Type != nil {
-		wb.add("type = $%d", *filters.Type)
-	}
-	if filters.NameLike != "" {
-		wb.add("name ILIKE $%d", "%"+filters.NameLike+"%")
-	}
-
-	query += wb.build()
-	query += " ORDER BY created_at DESC"
-
-	// 페이지네이션
-	limit := normalizeLimit(filters.Limit)
-	offset := calculateOffset(filters.Page, limit)
-
-	query, args := addPagination(query, wb.args, limit, offset)
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("list instances: %w", err)
-	}
-	defer rows.Close()
-
-	instances := make([]*dbservice.DBInstance, 0, limit)
-
-	for rows.Next() {
-		instance, err := scanInstanceList(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan instance: %w", err)
-		}
-		instances = append(instances, instance)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate rows: %w", err)
-	}
-
-	return instances, nil
+	return s.queryInstances(ctx, query, userID)
 }
 
 func (s *DBInstanceStore) ListRunning(ctx context.Context) ([]*dbservice.DBInstance, error) {

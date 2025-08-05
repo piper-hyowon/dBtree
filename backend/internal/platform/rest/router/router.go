@@ -66,9 +66,9 @@ func (r *Router) addRoute(method, path string, handler http.HandlerFunc) {
 
 		if strings.HasPrefix(part, ":") {
 			params = append(params, part[1:])
-			pattern += "([^/]+)"
+			pattern += "([a-zA-Z0-9-]+)"
 		} else {
-			pattern += part
+			pattern += regexp.QuoteMeta(part)
 		}
 	}
 	pattern += "$"

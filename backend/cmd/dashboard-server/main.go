@@ -110,11 +110,12 @@ func main() {
 
 	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
 		userStore, k8sClient, portStore, logger)
-	dbsHandler := dbsRest.NewHandler(dbsService, logger)
+	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
 
 	r := router.New(logger)
 
 	r.POST("/db/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
+	r.GET("/db/instances", authMiddleware.RequireAuth(dbsHandler.ListInstances))
 	r.GET("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.GetInstanceWithSync))
 	r.GET("/db/presets", dbsHandler.ListPresets)
 

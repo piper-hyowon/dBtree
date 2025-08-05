@@ -31,9 +31,13 @@ type service struct {
 	logger       *log.Logger
 }
 
-func (s *service) ListInstances(ctx context.Context, userID string, filters dbservice.ListInstancesRequest) ([]*dbservice.DBInstance, error) {
-	//TODO implement me
-	panic("implement me")
+func (s *service) ListInstances(ctx context.Context, userID string) ([]*dbservice.DBInstance, error) {
+	instances, err := s.dbiStore.List(ctx, userID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return instances, nil
 }
 
 func (s *service) mapInfraStatusToInstanceStatus(status *k8s.MongoDBStatus) dbservice.InstanceStatus {

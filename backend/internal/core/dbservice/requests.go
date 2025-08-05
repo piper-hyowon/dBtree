@@ -50,33 +50,27 @@ type UpdateInstanceRequest struct {
 	BackupRetentionDays *int    `json:"backupRetentionDays,omitempty"`
 }
 
-// 목록 조회 필터
-type ListInstancesRequest struct {
-	Status   *InstanceStatus `json:"status,omitempty"`
-	Type     *DBType         `json:"type,omitempty"`
-	NameLike string          `json:"nameLike,omitempty"`
-	Page     int             `json:"page,omitempty"`
-	Limit    int             `json:"limit,omitempty"`
-}
-
 type InstanceResponse struct {
-	ID                string                 `json:"id"`
-	Name              string                 `json:"name"`
-	Type              DBType                 `json:"type"`
-	Size              DBSize                 `json:"size"`
-	Mode              DBMode                 `json:"mode"`
-	Status            InstanceStatus         `json:"status"`
-	StatusReason      string                 `json:"statusReason,omitempty"`
-	Resources         ResourceSpec           `json:"resources"`
-	Cost              CostResponse           `json:"cost"`
-	Endpoint          string                 `json:"endpoint,omitempty"`
-	Port              int                    `json:"port,omitempty"`
-	BackupEnabled     bool                   `json:"backupEnabled"`
-	Config            map[string]interface{} `json:"config"`
-	CreatedAt         time.Time              `json:"createdAt"`
-	UpdatedAt         time.Time              `json:"updatedAt"`
-	CreatedFromPreset *string                `json:"createdFromPreset,omitempty"`
-	PausedAt          *time.Time             `json:"pausedAt,omitempty"`
+	ID                  string                 `json:"id"`
+	Name                string                 `json:"name"`
+	Type                DBType                 `json:"type"`
+	Size                DBSize                 `json:"size"`
+	Mode                DBMode                 `json:"mode"`
+	Status              InstanceStatus         `json:"status"`
+	StatusReason        string                 `json:"statusReason,omitempty"`
+	Resources           ResourceSpec           `json:"resources"`
+	Cost                CostResponse           `json:"cost"`
+	Endpoint            string                 `json:"endpoint,omitempty"`
+	Port                int                    `json:"port,omitempty"`
+	ExternalHost        string                 `json:"externalHost,omitempty"`
+	ExternalPort        int                    `json:"externalPort,omitempty"`
+	ExternalURITemplate string                 `json:"externalUriTemplate,omitempty"`
+	BackupEnabled       bool                   `json:"backupEnabled"`
+	Config              map[string]interface{} `json:"config"`
+	CreatedAt           time.Time              `json:"createdAt"`
+	UpdatedAt           time.Time              `json:"updatedAt"`
+	CreatedFromPreset   *string                `json:"createdFromPreset,omitempty"`
+	PausedAt            *time.Time             `json:"pausedAt,omitempty"`
 }
 
 type CostResponse struct {

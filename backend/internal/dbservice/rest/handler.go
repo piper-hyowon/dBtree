@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	coredbservice "github.com/piper-hyowon/dBtree/internal/core/dbservice"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
@@ -11,14 +12,20 @@ import (
 )
 
 type Handler struct {
-	dbService coredbservice.Service
-	logger    *log.Logger
+	publicHost string
+	dbService  coredbservice.Service
+	portStore  coredbservice.PortStore
+	logger     *log.Logger
 }
 
-func NewHandler(dbService coredbservice.Service, logger *log.Logger) *Handler {
+func NewHandler(
+	publicHost string, dbService coredbservice.Service, portStore coredbservice.PortStore, logger *log.Logger,
+) *Handler {
 	return &Handler{
-		dbService: dbService,
-		logger:    logger,
+		publicHost: publicHost,
+		dbService:  dbService,
+		portStore:  portStore,
+		logger:     logger,
 	}
 }
 
@@ -73,6 +80,21 @@ func (h *Handler) GetInstanceWithSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := instance.ToResponse()
+	if port, err := h.portStore.GetPort(r.Context(), instance.ExternalID); err == nil && port > 0 {
+		response.ExternalHost = h.publicHost
+		response.ExternalPort = port
+
+		// URI 템플릿 직접 생성
+		if instance.Type == coredbservice.MongoDB {
+			response.ExternalURITemplate = fmt.Sprintf(
+				"mongodb://{USERNAME}:{PASSWORD}@%s:%d/%s?authSource=admin",
+				h.publicHost, port, instance.Name)
+		} else if instance.Type == coredbservice.Redis {
+			response.ExternalURITemplate = fmt.Sprintf(
+				"redis://:{PASSWORD}@%s:%d",
+				h.publicHost, port)
+		}
+	}
 
 	rest.SendSuccessResponse(w, http.StatusOK, response)
 }
@@ -89,4 +111,24 @@ func (h *Handler) ListPresets(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rest.SendSuccessResponse(w, http.StatusOK, responses)
+}
+
+func (h *Handler) ListInstances(w http.ResponseWriter, r *http.Request) {
+	user, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	instances, err := h.dbService.ListInstances(r.Context(), user.ID)
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+	res := make([]coredbservice.InstanceResponse, 0, len(instances))
+	for _, v := range instances {
+		res = append(res, *v.ToResponse())
+	}
+
+	rest.SendSuccessResponse(w, http.StatusOK, res)
 }
