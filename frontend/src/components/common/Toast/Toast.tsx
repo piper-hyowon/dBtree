@@ -1,0 +1,64 @@
+import React, {useEffect} from 'react';
+import './Toast.css';
+import {characterImages} from '../../../utils/characterImages';
+
+export type ToastType = 'info' | 'success' | 'warning' | 'error';
+
+interface ToastProps {
+    message: string;
+    type?: ToastType;
+    duration?: number;
+    onClose: () => void;
+}
+
+const toastConfig = {
+    info: {
+        character: characterImages.loading,
+        className: 'toast-info'
+    },
+    success: {
+        character: characterImages.backupComplete,
+        className: 'toast-success'
+    },
+    warning: {
+        character: characterImages.maintenance,
+        className: 'toast-warning'
+    },
+    error: {
+        character: characterImages.error,
+        className: 'toast-error'
+    }
+};
+
+const Toast: React.FC<ToastProps> = ({
+                                         message,
+                                         type = 'info',
+                                         duration = 3000,
+                                         onClose
+                                     }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, duration);
+
+        return () => clearTimeout(timer);
+    }, [duration, onClose]);
+
+    const config = toastConfig[type];
+
+    return (
+        <div className={`toast ${config.className}`}>
+            <img
+                src={config.character}
+                alt={type}
+                className="toast-character"
+            />
+            <span className="toast-message">{message}</span>
+            <button className="toast-close" onClick={onClose}>
+                ×
+            </button>
+        </div>
+    );
+};
+
+export default Toast;
