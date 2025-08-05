@@ -2,7 +2,6 @@ package errors
 
 import (
 	"fmt"
-	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"time"
 )
 
@@ -15,10 +14,10 @@ func NewHarvestCooldownError(nextHarvestTime time.Duration) DomainError {
 	)
 }
 
-func NewLemonStorageFullError() DomainError {
+func NewLemonStorageFullError(maxLemon int) DomainError {
 	return NewError(
 		ErrLemonStorageFull,
-		fmt.Sprintf("레몬 저장소가 가득 찼습니다(최대 보유 가능 레몬 %d 개)", lemon.DefaultHarvestRules.MaxStoredLemons),
+		fmt.Sprintf("레몬 저장소가 가득 찼습니다(최대 보유 가능 레몬 %d 개)", maxLemon),
 		nil,
 		nil,
 	)

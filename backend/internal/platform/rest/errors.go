@@ -28,7 +28,7 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 		errors.ErrLemonAlreadyHarvested, errors.ErrInvalidStatusTransition, errors.ErrInstanceQuotaExceeded:
 		return http.StatusConflict
 
-	case errors.ErrResourceNotFound:
+	case errors.ErrResourceNotFound, errors.ErrEndpointNotFound:
 		return http.StatusNotFound
 
 	case errors.ErrTooManyResends, errors.ErrTooEarlyResend:

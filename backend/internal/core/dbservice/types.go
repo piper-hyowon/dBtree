@@ -63,9 +63,9 @@ const (
 )
 
 type ResourceSpec struct {
-	CPU    int `json:"cpu"`
-	Memory int `json:"memory"` // MB
-	Disk   int `json:"disk"`   // GB
+	CPU    int `json:"cpu" validate:"required,min=1,max=16"`
+	Memory int `json:"memory" validate:"required,min=128,max=65536"` // MB
+	Disk   int `json:"disk" validate:"required,min=1,max=1000"`      // GB
 }
 
 func (r ResourceSpec) CalculateSize() DBSize {

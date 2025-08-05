@@ -108,7 +108,7 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	if newBalance > lemon.DefaultHarvestRules.MaxStoredLemons {
 		harvestAmount = lemon.DefaultHarvestRules.MaxStoredLemons - balanceBefore
 		if harvestAmount <= 0 {
-			return lemon.HarvestResponse{}, errors.NewLemonStorageFullError()
+			return lemon.HarvestResponse{}, errors.NewLemonStorageFullError(lemon.DefaultHarvestRules.MaxStoredLemons)
 		}
 		newBalance = lemon.DefaultHarvestRules.MaxStoredLemons
 	}
@@ -156,7 +156,7 @@ func (s *service) AddLemons(ctx context.Context, userID string, amount int, acti
 
 	// 최대 저장량 초과 체크
 	if newBalance > lemon.DefaultHarvestRules.MaxStoredLemons {
-		return errors.NewLemonStorageFullError()
+		return errors.NewLemonStorageFullError(lemon.DefaultHarvestRules.MaxStoredLemons)
 	}
 
 	// 트랜잭션 생성

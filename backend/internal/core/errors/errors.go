@@ -110,6 +110,9 @@ type DomainError interface {
 	Code() ErrorCode
 	ErrorData() any
 	Stack() string
+	Unwrap() error
+	Is(target error) bool
+	WithData(data interface{}) DomainError
 }
 
 type baseDomainError struct {
@@ -149,6 +152,11 @@ func (e *baseDomainError) Is(target error) bool {
 		return false
 	}
 	return e.code == t.code
+}
+
+func (e *baseDomainError) WithData(data interface{}) DomainError {
+	e.data = data
+	return e
 }
 
 func NewError(code ErrorCode, message string, data any, cause error) DomainError {

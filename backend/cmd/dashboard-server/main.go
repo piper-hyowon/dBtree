@@ -7,9 +7,9 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/auth"
 	authRest "github.com/piper-hyowon/dBtree/internal/auth/rest"
 	coreauth "github.com/piper-hyowon/dBtree/internal/core/auth"
-	dbsDomain "github.com/piper-hyowon/dBtree/internal/core/dbservice"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/dbservice"
+	dbsRest "github.com/piper-hyowon/dBtree/internal/dbservice/rest"
 	"github.com/piper-hyowon/dBtree/internal/email"
 	"github.com/piper-hyowon/dBtree/internal/lemon"
 	lemonRest "github.com/piper-hyowon/dBtree/internal/lemon/rest"
@@ -110,37 +110,11 @@ func main() {
 
 	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
 		userStore, k8sClient, portStore, logger)
+	dbsHandler := dbsRest.NewHandler(dbsService, logger)
 
 	r := router.New(logger)
 
-	// TODO 지워야하ㅑㅁ 테스트
-
-	r.POST("/test", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
-		user, err := rest.GetUserFromContext(r.Context())
-		if err != nil {
-			rest.HandleError(w, err, logger)
-			return
-		}
-
-		var dto dbsDomain.CreateInstanceRequest
-		if !rest.DecodeJSONRequest(w, r, &dto, logger) {
-			return
-		}
-		if err := validateInstanceName(dto.Name); err != nil {
-			rest.HandleError(w, err, logger)
-			return
-		}
-
-		resp, err := dbsService.CreateInstance(context.Background(), user.ID, user.LemonBalance, &dto)
-
-		if err != nil {
-			rest.HandleError(w, err, logger)
-			return
-		}
-
-		rest.SendJSONResponse(w, http.StatusAccepted, resp)
-
-	}))
+	r.POST("/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
 
 	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
 		otpType := r.URL.Query().Get("type")
