@@ -6,6 +6,7 @@ import LoginModal from "../../components/auth/LoginModal";
 import {useAuth} from "../../hooks/useAuth";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
 import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
+import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
 // import LemonTreeApp from "./NewLemonTree";
 // import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
 
@@ -29,7 +30,6 @@ const Home: React.FC = () => {
         await logout();
         window.location.href = "/";
     };
-
 
     return (
         <div className="home-container">
@@ -88,7 +88,13 @@ const Home: React.FC = () => {
                         가끔 등장하는 황금 레몬을 놓치지 마세요!
                     </p>
                 </div>
-
+                <FloatingGuideText
+                    text="레몬을 클릭해서 수확해보세요"
+                    emoji="🍋"
+                    position="top"
+                    variant="default"
+                    dismissible={true}
+                />
                 <div className="lemon-tree-container">
                     <LemonTreeScene/>
                 </div>
