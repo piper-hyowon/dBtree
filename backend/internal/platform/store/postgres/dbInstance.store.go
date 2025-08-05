@@ -419,3 +419,21 @@ func (s *DBInstanceStore) queryInstances(ctx context.Context, query string, args
 
 	return instances, nil
 }
+
+func (s *DBInstanceStore) CountActive(ctx context.Context, userID string) (int, error) {
+	query := `
+        SELECT COUNT(*) 
+        FROM db_instances 
+        WHERE user_id = $1 
+        AND deleted_at IS NULL 
+        AND status NOT IN ('deleting')
+    `
+
+	var count int
+	err := s.db.QueryRowContext(ctx, query, userID).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err)
+	}
+
+	return count, nil
+}

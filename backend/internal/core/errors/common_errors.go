@@ -95,3 +95,12 @@ func NewResourceNotFoundError(resourceName string, data string) DomainError {
 		nil,
 	)
 }
+
+func NewLimitExceededError(resource string, limit int) DomainError {
+	return NewError(
+		ErrLimitExceeded,
+		fmt.Sprintf("최대 %d개의 %s까지 가능합니다", limit, resource),
+		nil,
+		nil,
+	)
+}

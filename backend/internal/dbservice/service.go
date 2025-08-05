@@ -199,6 +199,14 @@ func NewService(
 }
 
 func (s *service) CreateInstance(ctx context.Context, userID string, userLemon int, req *dbservice.CreateInstanceRequest) (*dbservice.CreateInstanceResponse, error) {
+	existingInstances, err := s.dbiStore.CountActive(ctx, userID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	if existingInstances >= dbservice.MaxInstancesPerUser {
+		return nil, errors.NewLimitExceededError("instance", dbservice.MaxInstancesPerUser)
+	}
+
 	existing, err := s.dbiStore.FindByUserAndName(ctx, userID, req.Name)
 	if err != nil {
 		return nil, errors.Wrap(err)

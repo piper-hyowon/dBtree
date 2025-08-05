@@ -56,6 +56,8 @@ const (
 	ErrInvalidInstanceName     ErrorCode = 1702
 	ErrInvalidResourceSpec     ErrorCode = 1703
 	ErrInstanceNotReady        ErrorCode = 1704
+
+	ErrLimitExceeded ErrorCode = 1805
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -91,6 +93,7 @@ var errorStrings = map[ErrorCode]string{
 	ErrInvalidInstanceName:     "invalid_instance_name",
 	ErrInvalidResourceSpec:     "invalid_resource_spec",
 	ErrInstanceNotReady:        "instance_not_ready",
+	ErrLimitExceeded:           "limit_exceeded",
 }
 
 func (c ErrorCode) String() string {

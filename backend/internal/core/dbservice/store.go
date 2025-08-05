@@ -17,6 +17,8 @@ type DBInstanceStore interface {
 	UpdateBillingTime(ctx context.Context, id int64, billedAt time.Time) error
 	Delete(ctx context.Context, externalID string) error
 
+	CountActive(ctx context.Context, userID string) (int, error)
+
 	CreateBackup(ctx context.Context, backup *BackupRecord) error
 	FindBackup(ctx context.Context, backupID string) (*BackupRecord, error)
 	ListBackups(ctx context.Context, instanceID string) ([]*BackupRecord, error)
