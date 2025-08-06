@@ -3,10 +3,10 @@ import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 import LoginModal from "../../components/auth/LoginModal";
-import {useAuth} from "../../hooks/useAuth";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
 import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
+import {useAuth} from "../../contexts/AuthContext";
 // import LemonTreeApp from "./NewLemonTree";
 // import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
 

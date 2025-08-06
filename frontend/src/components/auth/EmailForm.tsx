@@ -1,6 +1,6 @@
 import React, {useState} from "react";
-import {useAuth} from "../../hooks/useAuth";
 import "./EmailForm.css"
+import {useAuth} from "../../contexts/AuthContext";
 
 interface EmailFormProps {
     onOtpRequested: (email: string, isNewUser: boolean) => void;

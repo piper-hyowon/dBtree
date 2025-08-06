@@ -47,7 +47,7 @@ type SendOTPResponse struct {
 type VerifyOTPResponse struct {
 	User      *user.User `json:"user,omitempty"`
 	Token     string     `json:"token,omitempty"`
-	ExpiresIn int64      `json:"expires_in,omitempty"`
+	ExpiresIn int64      `json:"expiresIn,omitempty"`
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
