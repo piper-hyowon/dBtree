@@ -84,12 +84,3 @@ export const estimateCost = async (data: EstimateCostRequest): Promise<EstimateC
         throw error;
     }
 };
-
-export default {
-    getInstances,
-    getInstance,
-    createInstance,
-    deleteInstance,
-    getPresets,
-    estimateCost
-};
