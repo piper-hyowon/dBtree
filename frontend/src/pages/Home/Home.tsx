@@ -3,15 +3,16 @@ import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 import LoginModal from "../../components/auth/LoginModal";
-import {useAuth} from "../../hooks/useAuth";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
 import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
+import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
+import {useAuth} from "../../contexts/AuthContext";
 // import LemonTreeApp from "./NewLemonTree";
 // import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const {isLoggedIn} = useAuth();
+    const {isLoggedIn, logout} = useAuth();
 
     const handleStartNow = () => {
         setShowLoginModal(true);
@@ -25,6 +26,11 @@ const Home: React.FC = () => {
         window.location.href = "/dashboard";
     };
 
+    const handleLogout = async () => {
+        await logout();
+        window.location.href = "/";
+    };
+
     return (
         <div className="home-container">
             <header className="header">
@@ -35,12 +41,20 @@ const Home: React.FC = () => {
                     <ToggleThemeButton/>
 
                     {isLoggedIn ? (
-                        <button
-                            className="login-button"
-                            onClick={handleNavigateToDashboard}
-                        >
-                            대시보드
-                        </button>
+                        <>
+                            <button
+                                className="login-button"
+                                onClick={handleNavigateToDashboard}
+                            >
+                                대시보드
+                            </button>
+                            <button
+                                className="logout-button"
+                                onClick={handleLogout}
+                            >
+                                로그아웃
+                            </button>
+                        </>
                     ) : (
                         <button className="login-button" onClick={handleStartNow}>
                             로그인
@@ -77,6 +91,13 @@ const Home: React.FC = () => {
 
                 <div className="lemon-tree-container">
                     <LemonTreeScene/>
+                    <FloatingGuideText
+                        text="레몬을 클릭해서 수확해보세요"
+                        emoji="🍋"
+                        position="right"
+                        variant="default"
+                        dismissible={true}
+                    />
                 </div>
             </section>
 

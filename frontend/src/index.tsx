@@ -7,16 +7,20 @@ import { ThemeProvider } from "./hooks/useTheme";
 import "./styles/variable.css";
 import "./styles/global.css";
 import "./styles/utils.css";
+import {ToastProvider} from "./hooks/useToast";
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
 );
 root.render(
-  <React.StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </React.StrictMode>
+    <React.StrictMode>
+        <ThemeProvider>
+            <ToastProvider>
+                <App/>
+            </ToastProvider>
+        </ThemeProvider>
+
+    </React.StrictMode>
 );
 
 // If you want to start measuring performance in your app, pass a function

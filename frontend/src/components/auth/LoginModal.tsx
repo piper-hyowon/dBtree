@@ -65,7 +65,9 @@ const LoginModal: React.FC<LoginModalProps> = ({onClose}) => {
                                 style={{
                                     width: '100%',
                                     height: 'auto'
-                                }}/></div>
+                                }}
+                            />
+                        </div>
                         <h2 className="modal-title">
                             {isNewUser ? "Welcome!" : "Welcome back!"}
                         </h2>

@@ -1,0 +1,200 @@
+.floating-guide-text {
+    position: absolute;
+    z-index: 10;
+    pointer-events: none;
+    animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Dismissible 스타일 */
+.floating-text-dismissible {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.floating-text-dismissible .floating-text-content {
+    transition: all 0.3s ease;
+}
+
+.floating-text-dismissible:hover .floating-text-content {
+    transform: scale(1.02);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* Position variants */
+.floating-text-top {
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.floating-text-bottom {
+    bottom: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.floating-text-left {
+    top: 50%;
+    left: 10%;
+    transform: translateY(-50%);
+}
+
+.floating-text-right {
+    top: 50%;
+    right: 10%;
+    transform: translateY(-50%);
+}
+
+/* Content container */
+.floating-text-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 50px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 2px solid;
+    transition: all 0.3s ease;
+}
+
+/* Theme variants */
+.floating-text-default .floating-text-content {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #fbbf24;
+    color: #1f2937;
+}
+
+.floating-text-golden .floating-text-content {
+    background: linear-gradient(135deg, rgba(252, 211, 77, 0.95), rgba(251, 191, 36, 0.95));
+    border-color: #f59e0b;
+    color: #78350f;
+    box-shadow:
+            0 8px 32px rgba(251, 191, 36, 0.3),
+            0 0 80px rgba(251, 191, 36, 0.2);
+}
+
+.floating-text-subtle .floating-text-content {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(251, 191, 36, 0.5);
+    color: #6b7280;
+}
+
+/* Close button */
+.floating-text-close {
+    margin-left: 8px;
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.floating-text-dismissible:hover .floating-text-close {
+    opacity: 1;
+}
+
+/* Fade out animation */
+.floating-guide-text.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.9);
+    }
+}
+.floating-text-emoji {
+    font-size: 24px;
+    animation: emojiRotate 3s ease-in-out infinite;
+}
+
+.floating-text-message {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+    0%, 100% {
+        transform: translateX(-50%) scale(1);
+        opacity: 0.9;
+    }
+    50% {
+        transform: translateX(-50%) scale(1.05);
+        opacity: 1;
+    }
+}
+
+/* Right/Left position pulse animation adjustment */
+.floating-text-left,
+.floating-text-right {
+    animation: pulseGlowSide 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlowSide {
+    0%, 100% {
+        transform: translateY(-50%) scale(1);
+        opacity: 0.9;
+    }
+    50% {
+        transform: translateY(-50%) scale(1.05);
+        opacity: 1;
+    }
+}
+
+@keyframes emojiRotate {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(-10deg);
+    }
+    75% {
+        transform: rotate(10deg);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .floating-text-content {
+        padding: 10px 20px;
+    }
+
+    .floating-text-emoji {
+        font-size: 20px;
+    }
+
+    .floating-text-message {
+        font-size: 14px;
+    }
+
+    .floating-text-left {
+        left: 5%;
+    }
+
+    .floating-text-right {
+        right: 5%;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .floating-text-default .floating-text-content {
+        background: rgba(31, 41, 55, 0.95);
+        border-color: #fbbf24;
+        color: #f9fafb;
+    }
+
+    .floating-text-subtle .floating-text-content {
+        background: rgba(31, 41, 55, 0.8);
+        border-color: rgba(251, 191, 36, 0.3);
+        color: #d1d5db;
+    }
+}

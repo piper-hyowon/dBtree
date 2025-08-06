@@ -1,0 +1,61 @@
+.email-input-group {
+    margin-bottom: 16px;
+}
+
+.email-input-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.email-username-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.email-at {
+    font-weight: bold;
+    color: #666;
+}
+
+.email-domain-select,
+.email-domain-input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.custom-domain-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.back-to-select-btn {
+    background: none;
+    border: none;
+    color: #0066cc;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.back-to-select-btn:hover {
+    text-decoration: underline;
+}
+
+.email-preview {
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+    text-align: right;
+}
+
+.cta-button {
+    width: 100%;
+}
