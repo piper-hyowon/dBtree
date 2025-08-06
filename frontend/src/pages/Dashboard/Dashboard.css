@@ -77,14 +77,6 @@
     gap: 0.75rem;
 }
 
-.credit-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
 .credit-display {
     display: flex;
     align-items: center;
@@ -365,8 +357,8 @@
 }
 
 .db-main-character {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
 }
@@ -395,8 +387,15 @@
     justify-content: space-between;
 }
 
+.db-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
 .db-header-info {
-    margin-bottom: 1rem;
+    flex: 1;
 }
 
 .db-detail-title {
@@ -457,6 +456,199 @@
 .db-actions {
     display: flex;
     gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* System Status Overview - 미니멀 뱃지 스타일 */
+.system-status-overview {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 24px;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+[data-theme="dark"] .status-badge {
+    background: var(--background-secondary);
+    border-color: var(--border-color);
+}
+
+.status-badge:hover {
+    background: var(--bg-light-brown);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .status-badge:hover {
+    background: var(--card-background);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.status-badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-badge-dot.good {
+    background: var(--status-running);
+    animation: pulse-good 2s infinite;
+}
+
+.status-badge-dot.warning {
+    background: var(--status-warning);
+    animation: pulse-warning 2s infinite;
+}
+
+.status-badge-dot.critical {
+    background: var(--status-stopped);
+    animation: pulse-critical 2s infinite;
+}
+
+.status-badge-dot.loading {
+    background: var(--text-secondary);
+    animation: pulse-loading 1.5s infinite;
+}
+
+@keyframes pulse-good {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+    }
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 4px rgba(76, 175, 80, 0);
+    }
+}
+
+@keyframes pulse-warning {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+    }
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 4px rgba(255, 152, 0, 0);
+    }
+}
+
+@keyframes pulse-critical {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        opacity: 0.8;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+    }
+}
+
+@keyframes pulse-loading {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+.status-badge-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.status-badge-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 45px;
+    text-align: right;
+}
+
+.status-badge-value.loading {
+    color: var(--text-secondary);
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* 로딩 애니메이션 */
+.loading-dots {
+    display: inline-block;
+    width: 20px;
+    text-align: left;
+}
+
+.loading-dots::after {
+    content: '...';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+    0%, 20% {
+        content: '';
+        color: transparent;
+    }
+    40% {
+        content: '.';
+        color: var(--text-secondary);
+    }
+    60% {
+        content: '..';
+        color: var(--text-secondary);
+    }
+    80%, 100% {
+        content: '...';
+        color: var(--text-secondary);
+    }
+}
+
+.metrics-detail-btn {
+    background: var(--lemon-yellow);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 24px;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-left: auto;
+}
+
+[data-theme="dark"] .metrics-detail-btn {
+    background: var(--lemon-yellow-dark);
+}
+
+.metrics-detail-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    background: var(--lemon-yellow-dark);
+}
+
+[data-theme="dark"] .metrics-detail-btn:hover {
+    background: var(--lemon-yellow);
+}
+
+.metrics-detail-btn:active {
+    transform: translateY(0);
 }
 
 .action-btn {
@@ -586,8 +778,8 @@
 }
 
 .cost-character {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
     margin-bottom: 0.75rem;
@@ -885,6 +1077,24 @@
         gap: 0.5rem;
     }
 
+    .system-status-overview {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .status-badge {
+        justify-content: space-between;
+        padding: 0.625rem 1rem;
+    }
+
+    .metrics-detail-btn {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+
     .cost-grid {
         grid-template-columns: 1fr 1fr;
     }
@@ -913,7 +1123,15 @@
 
     .db-main-character,
     .cost-character {
-        width: 80px;
-        height: 80px;
+        width: 120px;
+        height: 120px;
+    }
+
+    .status-badge {
+        border-radius: 12px;
+    }
+
+    .status-badge-value {
+        min-width: auto;
     }
 }

@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import './Dashboard.css';
-import { mockDatabases, mockDatabaseDetails, lemonCredits } from '../../data/mockData';
-import { Database, DatabaseDetail } from '../../types/dashboard.types';
+import {mockDatabases, mockDatabaseDetails, lemonCredits} from '../../data/mockData';
+import {Database, DatabaseDetail} from '../../types/dashboard.types';
 import ToggleThemeButton from '../../components/common/ToggleThemeButton/ToggleThemeButton';
 import DeleteModal from '../../components/common/DeleteModal/DeleteModal';
-import { getCharacterByStatus, characterImages } from '../../utils/characterImages';
-import { useToast } from '../../hooks/useToast';
-import { useTheme } from '../../hooks/useTheme';
+import {getCharacterByStatus, characterImages} from '../../utils/characterImages';
+import {useToast} from '../../hooks/useToast';
+import {useTheme} from '../../hooks/useTheme';
 
 const Dashboard: React.FC = () => {
     const [databases, setDatabases] = useState<Database[]>(mockDatabases);
@@ -17,8 +17,8 @@ const Dashboard: React.FC = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
     const sidebarRef = useRef<HTMLDivElement>(null);
-    const { showToast } = useToast();
-    const { theme } = useTheme();
+    const {showToast} = useToast();
+    const {theme} = useTheme();
 
     // Load database details when selection changes
     useEffect(() => {
@@ -145,17 +145,11 @@ const Dashboard: React.FC = () => {
 
                     <div className="header-right">
                         <div className="credit-section">
-                            <span className="credit-label">레몬 크레딧</span>
                             <div className="credit-display">
-                                <img
-                                    src={lemonCredits > 50 ? characterImages.richInCredits : characterImages.lowCredits}
-                                    alt="Credits"
-                                    className="credit-icon"
-                                />
-                                <span className="credit-amount">{lemonCredits}</span>
+                                <span className="credit-amount">🍋 {lemonCredits}</span>
                             </div>
                         </div>
-                        <ToggleThemeButton />
+                        <ToggleThemeButton/>
                     </div>
                 </div>
             </header>
@@ -165,7 +159,7 @@ const Dashboard: React.FC = () => {
                 <aside
                     className="sidebar"
                     ref={sidebarRef}
-                    style={{ width: `${sidebarWidth}px` }}
+                    style={{width: `${sidebarWidth}px`}}
                 >
                     <div className="sidebar-content">
                         <h2 className="sidebar-title">데이터베이스 인스턴스</h2>
@@ -234,11 +228,11 @@ const Dashboard: React.FC = () => {
                                                 <span className="badge badge-type">{selectedDb.type}</span>
                                                 <span className="badge badge-size">{selectedDb.size}</span>
                                                 <span className={`badge badge-status status-${selectedDb.status}`}>
-                          {selectedDb.status === 'running' ? '실행 중' :
-                              selectedDb.status === 'stopped' ? '중지됨' :
-                                  selectedDb.status === 'provisioning' ? '프로비저닝 중' :
-                                      selectedDb.status}
-                        </span>
+                                                    {selectedDb.status === 'running' ? '실행 중' :
+                                                        selectedDb.status === 'stopped' ? '중지됨' :
+                                                            selectedDb.status === 'provisioning' ? '프로비저닝 중' :
+                                                                selectedDb.status}
+                                                </span>
                                             </div>
                                         </div>
 
@@ -251,24 +245,43 @@ const Dashboard: React.FC = () => {
                                     </div>
 
                                     {/* System Status Overview */}
-                                    <div className="ㅈ">
-                                        <div className="status-item">
-                                            <span className="status-label">CPU</span>
-                                            <span className="status-value">준비 중</span>
+                                    <div className="system-status-overview">
+                                        <div className="status-badge">
+                                            <div className="status-badge-dot loading"></div>
+                                            <span className="status-badge-label">CPU</span>
+                                            <span className="status-badge-value loading">
+                                                준비중<span className="loading-dots"></span>
+                                            </span>
                                         </div>
-                                        <div className="status-item">
-                                            <span className="status-label">메모리</span>
-                                            <span className="status-value">준비 중</span>
+
+                                        <div className="status-badge">
+                                            <div className="status-badge-dot loading"></div>
+                                            <span className="status-badge-label">메모리</span>
+                                            <span className="status-badge-value loading">
+                                                준비중<span className="loading-dots"></span>
+                                            </span>
                                         </div>
-                                        <div className="status-item">
-                                            <span className="status-label">디스크</span>
-                                            <span className="status-value">준비 중</span>
+
+                                        <div className="status-badge">
+                                            <div className="status-badge-dot loading"></div>
+                                            <span className="status-badge-label">디스크</span>
+                                            <span className="status-badge-value loading">
+                                                준비중<span className="loading-dots"></span>
+                                            </span>
                                         </div>
-                                        <div className="status-item">
-                                            <span className="status-label">연결</span>
-                                            <span className="status-value">준비 중</span>
+
+                                        <div className="status-badge">
+                                            <div className="status-badge-dot loading"></div>
+                                            <span className="status-badge-label">네트워크</span>
+                                            <span className="status-badge-value loading">
+                                                준비중<span className="loading-dots"></span>
+                                            </span>
                                         </div>
-                                        <button className="metrics-detail-btn" onClick={() => showToast('상세 메트릭 페이지를 준비 중입니다', 'info')}>
+
+                                        <button
+                                            className="metrics-detail-btn"
+                                            onClick={() => showToast('상세 메트릭 페이지를 준비 중입니다', 'info')}
+                                        >
                                             상세 메트릭 →
                                         </button>
                                     </div>
@@ -303,7 +316,8 @@ const Dashboard: React.FC = () => {
                                         </div>
                                         <div className="cost-item">
                                             <span className="cost-label">월간 (30일)</span>
-                                            <span className="cost-value">{selectedDb.cost.monthlyLemons.toLocaleString()} 🍋</span>
+                                            <span
+                                                className="cost-value">{selectedDb.cost.monthlyLemons.toLocaleString()} 🍋</span>
                                         </div>
                                         <div className="cost-item secondary">
                                             <span className="cost-label">프로비저닝</span>
@@ -345,7 +359,8 @@ const Dashboard: React.FC = () => {
                                         <div className="connection-row">
                                             <span className="connection-label">연결 문자열</span>
                                             <div className="connection-value">
-                                                <code className="connection-uri">{selectedDbDetail.externalUriTemplate}</code>
+                                                <code
+                                                    className="connection-uri">{selectedDbDetail.externalUriTemplate}</code>
                                                 <button
                                                     className="copy-btn"
                                                     onClick={() => copyToClipboard(selectedDbDetail.externalUriTemplate)}
@@ -376,11 +391,13 @@ const Dashboard: React.FC = () => {
                                                 <h4 className="detail-group-title">리소스</h4>
                                                 <div className="detail-item">
                                                     <span className="detail-label">CPU</span>
-                                                    <span className="detail-value">{selectedDb.resources.cpu} vCPU</span>
+                                                    <span
+                                                        className="detail-value">{selectedDb.resources.cpu} vCPU</span>
                                                 </div>
                                                 <div className="detail-item">
                                                     <span className="detail-label">메모리</span>
-                                                    <span className="detail-value">{(selectedDb.resources.memory / 1024).toFixed(1)} GB</span>
+                                                    <span
+                                                        className="detail-value">{(selectedDb.resources.memory / 1024).toFixed(1)} GB</span>
                                                 </div>
                                                 <div className="detail-item">
                                                     <span className="detail-label">스토리지</span>
@@ -401,8 +418,8 @@ const Dashboard: React.FC = () => {
                                                 <div className="detail-item">
                                                     <span className="detail-label">백업</span>
                                                     <span className="detail-value">
-                            {selectedDb.backupEnabled ? '활성화' : '비활성화'}
-                          </span>
+                                                        {selectedDb.backupEnabled ? '활성화' : '비활성화'}
+                                                    </span>
                                                 </div>
                                             </div>
 
@@ -410,11 +427,13 @@ const Dashboard: React.FC = () => {
                                                 <h4 className="detail-group-title">기타</h4>
                                                 <div className="detail-item">
                                                     <span className="detail-label">생성일</span>
-                                                    <span className="detail-value">{formatDate(selectedDb.createdAt)}</span>
+                                                    <span
+                                                        className="detail-value">{formatDate(selectedDb.createdAt)}</span>
                                                 </div>
                                                 <div className="detail-item">
                                                     <span className="detail-label">프리셋</span>
-                                                    <span className="detail-value preset">{selectedDb.createdFromPreset}</span>
+                                                    <span
+                                                        className="detail-value preset">{selectedDb.createdFromPreset}</span>
                                                 </div>
                                             </div>
                                         </div>
