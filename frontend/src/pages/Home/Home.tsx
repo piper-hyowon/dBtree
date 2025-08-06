@@ -88,15 +88,16 @@ const Home: React.FC = () => {
                         가끔 등장하는 황금 레몬을 놓치지 마세요!
                     </p>
                 </div>
-                <FloatingGuideText
-                    text="레몬을 클릭해서 수확해보세요"
-                    emoji="🍋"
-                    position="top"
-                    variant="default"
-                    dismissible={true}
-                />
+
                 <div className="lemon-tree-container">
                     <LemonTreeScene/>
+                    <FloatingGuideText
+                        text="레몬을 클릭해서 수확해보세요"
+                        emoji="🍋"
+                        position="right"
+                        variant="default"
+                        dismissible={true}
+                    />
                 </div>
             </section>
 

@@ -14,20 +14,31 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [theme, setTheme] = useState<Theme>("light");
-  const isNight = theme === "dark";
+                                                                           children,
+                                                                       }) => {
+    // localStorage에서 저장된 테마를 가져오거나 기본값으로 'light' 사용
+    const [theme, setThemeState] = useState<Theme>(() => {
+        const savedTheme = localStorage.getItem('theme');
+        return (savedTheme as Theme) || 'light';
+    });
 
-  useEffect(() => {
-    document.body.dataset.theme = theme;
-  }, [theme]);
+    const isNight = theme === "dark";
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme, isNight }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+    // 테마 변경 시 localStorage에도 저장
+    const setTheme = (newTheme: Theme) => {
+        setThemeState(newTheme);
+        localStorage.setItem('theme', newTheme);
+    };
+
+    useEffect(() => {
+        document.body.dataset.theme = theme;
+    }, [theme]);
+
+    return (
+        <ThemeContext.Provider value={{ theme, setTheme, isNight }}>
+            {children}
+        </ThemeContext.Provider>
+    );
 };
 
 export const useTheme = () => {
