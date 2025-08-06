@@ -33,7 +33,7 @@
 
     /* 배경 컬러 */
     --bg-cream: #FFF9E6;
-    --bg-light-brown: #F5E6D3;
+    --bg-light-brown: rgba(245, 230, 211, 0.34);
 
     /* 텍스트 컬러 */
     --text-brown: #8B4513;
@@ -69,7 +69,7 @@
 [data-theme="dark"] {
     --text-primary: #e0e0e0;
     --text-secondary: #b0b0b0;
-    --text-brown: #FFD93D;
+    --text-brown: #c0a019;
     --text-brown-light: #FFA000;
     --background: rgba(18, 18, 18, 0.92);
     --background-alt: #1a1a1a;
@@ -91,7 +91,7 @@
     --lemon-green: #4CAF50;
     --lemon-green-light: #1B5E20;
     --bg-cream: #1A1A1A;
-    --bg-light-brown: #2A2A2A;
+    --bg-light-brown: rgb(80, 79, 79);
 
     /* 상태 컬러 */
     --status-running: #4CAF50;
