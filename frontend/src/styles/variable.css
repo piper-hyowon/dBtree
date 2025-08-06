@@ -30,6 +30,12 @@
     --status-stopped: #EB5757;
     --status-paused: #F2994A;
     --status-warning: #F2C94C;
+    --status-error: #EF4444;
+    --status-maintenance: #9333EA;
+    --status-provisioning: #F59E0B;
+
+    /* 테두리 컬러 */
+    --border-light: #F0F0F0;
 
     /* 배경 컬러 */
     --bg-cream: #FFF9E6;
@@ -64,6 +70,7 @@
     --border: #E0E0E0;
     --border-color: #E0E0E0;
     --tree-background: #f5f5f5;
+    --border-light: #F0F0F0;
 }
 
 [data-theme="dark"] {
