@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react';
 import './Toast.css';
-import {characterImages} from '../../../utils/characterImages';
+import {characterImages, isImageComponent} from '../../../utils/characterImages';
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
@@ -48,11 +48,20 @@ const Toast: React.FC<ToastProps> = ({
 
     return (
         <div className={`toast ${config.className}`}>
-            <img
-                src={config.character}
-                alt={type}
-                className="toast-character"
-            />
+
+            {
+                isImageComponent(config.character) ? (
+                    <div className="character-svg-wrapper">
+                        {React.createElement(config.character)}
+                    </div>
+                ) : (
+                    <img
+                        src={config.character as string}
+                        alt={type}
+                        className="db-main-character"
+                    />
+                )
+            }
             <span className="toast-message">{message}</span>
             <button className="toast-close" onClick={onClose}>
                 ×
@@ -62,3 +71,4 @@ const Toast: React.FC<ToastProps> = ({
 };
 
 export default Toast;
+

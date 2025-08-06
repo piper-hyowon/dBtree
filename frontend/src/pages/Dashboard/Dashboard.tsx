@@ -4,11 +4,12 @@ import {InstanceResponse, DBType, InstanceStatus} from '../../types/database.typ
 import {getInstances, getInstance, deleteInstance} from '../../services/api/database.api';
 import ToggleThemeButton from '../../components/common/ToggleThemeButton/ToggleThemeButton';
 import DeleteModal from '../../components/common/DeleteModal/DeleteModal';
-import {getCharacterByStatus, characterImages} from '../../utils/characterImages';
+import {getCharacterByStatus, characterImages, isImageComponent} from '../../utils/characterImages';
 import {useToast} from '../../hooks/useToast';
 import {useTheme} from '../../hooks/useTheme';
 import {useAuth} from '../../contexts/AuthContext';
 import {useNavigate} from 'react-router-dom';
+import CreateInstanceWizard from "../../components/CreateInstanceWizard/CreateInstanceWizard";
 
 type ViewType = 'empty' | 'detail' | 'create';
 
@@ -383,7 +384,6 @@ const Dashboard: React.FC = () => {
                                 alt="Welcome"
                                 className="empty-character"
                             />
-                            <h2>데이터베이스 인스턴스 관리</h2>
                             <p className="empty-description">
                                 왼쪽 목록에서 인스턴스를 선택하거나<br/>
                                 새로운 인스턴스를 생성해보세요
@@ -394,23 +394,37 @@ const Dashboard: React.FC = () => {
                             </button>
                         </div>
                     ) : currentView === 'create' ? (
-                        <div className="create-instance-view">
-                            <div className="create-header">
-                                <h2>새 인스턴스 생성</h2>
-                                <p>인스턴스 생성 마법사를 준비 중입니다...</p>
-                            </div>
-                            {/* TODO: 인스턴스 생성 마법사 UI */}
-                        </div>
+                        <CreateInstanceWizard
+                            currentInstanceCount={instances.length}
+                            onSuccess={() => {
+                                loadInstances();
+                                setCurrentView('empty');
+                            }}
+                            onCancel={() => setCurrentView('empty')}
+                        />
+
                     ) : currentView === 'detail' && selectedInstance ? (
                         <div className="content-wrapper">
                             {/* Database Header with Status Overview */}
                             <div className="db-detail-header">
                                 <div className="character-section">
-                                    <img
-                                        src={getCharacterByStatus(selectedInstance.status)}
-                                        alt={selectedInstance.status}
-                                        className="db-main-character"
-                                    />
+                                    {
+                                        isImageComponent(getCharacterByStatus(selectedInstance.status)) ? (
+                                            <div className="character-svg-wrapper">
+                                                {React.createElement(getCharacterByStatus(selectedInstance.status), {
+                                                    message: "프로비저닝 중...",
+                                                    subMessage: "DB 준비 중"
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <img
+                                                src={getCharacterByStatus(selectedInstance.status) as string}
+                                                alt={selectedInstance.status}
+                                                className="db-main-character"
+                                            />
+                                        )
+                                    }
+
                                     <div className="character-bubble">
                                         {selectedInstance.status === 'running' ? '정상 작동 중!' :
                                             selectedInstance.status === 'stopped' ? '휴식 중...' :

@@ -1,0 +1,329 @@
+/* Create Instance Wizard */
+.create-instance-wizard {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-cream);
+}
+
+.wizard-header {
+    padding: 1.25rem 2rem;
+    background: white;
+    border-bottom: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .wizard-header {
+    background: var(--card-background);
+    border-bottom-color: var(--border-color);
+}
+
+.wizard-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+}
+
+.wizard-header p {
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.8125rem;
+}
+
+.wizard-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+}
+
+/* Wizard Section */
+.wizard-section {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .wizard-section {
+    background: var(--card-background);
+    border-color: var(--border-color);
+}
+
+.wizard-section h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 1rem 0;
+}
+
+/* Form Group */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+
+}
+
+.form-group .required {
+    color: var(--status-stopped);
+}
+
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: white;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .form-group input[type="text"] {
+    background: var(--background-secondary);
+    border-color: var(--border-color);
+}
+
+.form-group input[type="text"]:focus {
+    outline: none;
+    border-color: var(--lemon-yellow);
+    box-shadow: 0 0 0 3px rgba(255, 217, 61, 0.1);
+}
+
+.form-group input[type="text"].error {
+    border-color: var(--status-stopped);
+}
+
+.error-message {
+    color: var(--status-stopped);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.help-text {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+/* Config Tabs */
+.config-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: var(--bg-light-brown);
+    padding: 0.25rem;
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .config-tabs {
+    background: var(--background-secondary);
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.625rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-button.active {
+    background: white;
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .tab-button.active {
+    background: var(--card-background);
+}
+
+/* Preset Grid */
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+/* Custom Config */
+.custom-config {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Type Selector */
+.type-selector {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.type-button {
+    color: var(--text-secondary);
+    flex: 1;
+    padding: 0.75rem;
+    background: white;
+    border: 2px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .type-button {
+    background: var(--background-secondary);
+    border-color: var(--border-color);
+}
+
+.type-button:hover:not(.disabled) {
+    border-color: var(--lemon-yellow-light);
+}
+
+.type-button.active {
+    border-color: var(--lemon-yellow);
+    background: var(--lemon-yellow-light);
+}
+
+.type-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Mode Selector */
+.mode-selector {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.mode-button {
+    color: var(--text-secondary);
+    flex: 1;
+    padding: 0.625rem;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .mode-button {
+    background: var(--background-secondary);
+    border-color: var(--border-color);
+}
+
+.mode-button:hover {
+    border-color: var(--lemon-yellow-light);
+}
+
+.mode-button.active {
+    border-color: var(--lemon-yellow);
+    background: var(--lemon-yellow-light);
+    font-weight: 500;
+}
+
+/* Wizard Actions */
+.wizard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: white;
+    border-top: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] .wizard-actions {
+    background: var(--card-background);
+    border-top-color: var(--border-color);
+}
+
+.btn-cancel {
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .btn-cancel {
+    background: var(--background-secondary);
+    border-color: var(--border-color);
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: var(--bg-light-brown);
+}
+
+.btn-cancel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-create {
+    padding: 0.75rem 2rem;
+    background: var(--lemon-yellow);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-create:hover:not(:disabled) {
+    background: var(--lemon-yellow-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.btn-create:disabled {
+    background: var(--border-light);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    text-shadow: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wizard-content {
+        padding: 1rem;
+    }
+
+    .preset-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .type-selector {
+        flex-direction: column;
+    }
+
+    .mode-selector {
+        flex-direction: column;
+    }
+}

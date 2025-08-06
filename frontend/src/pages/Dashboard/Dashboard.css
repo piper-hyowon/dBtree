@@ -357,13 +357,13 @@
     justify-content: center;
     height: 100%;
     text-align: center;
-    gap: 1.5rem;
-    padding: 2rem;
+    gap: 1rem;
+    padding: 1.5rem;
 }
 
 .empty-character {
-    width: 180px;
-    height: 180px;
+    width: 400px;
+    height: 400px;
     object-fit: contain;
     filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.1));
     animation: float 3s ease-in-out infinite;
@@ -394,8 +394,8 @@
 }
 
 .empty-create-btn {
-    background: linear-gradient(135deg, var(--lemon-yellow) 0%, var(--lemon-green) 100%);
-    color: white;
+    background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-light-brown) 100%);
+    color: var(--text-primary);
     border: none;
     padding: 1rem 2rem;
     border-radius: 12px;
@@ -419,26 +419,6 @@
     font-size: 1.25rem;
 }
 
-/* Create Instance View */
-.create-instance-view {
-    padding: 2rem;
-}
-
-.create-header {
-    margin-bottom: 2rem;
-}
-
-.create-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
-}
-
-.create-header p {
-    color: var(--text-secondary);
-    margin: 0;
-}
 
 /* Database Header with Character */
 .db-detail-header {
@@ -450,6 +430,7 @@
     overflow: hidden;
     display: flex;
     gap: 0;
+    min-height: 220px; /* 통일된 높이 */
 }
 
 [data-theme="dark"] .db-detail-header {
@@ -458,7 +439,9 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.character-section {
+/* 캐릭터 섹션 - 통일된 크기 */
+.character-section,
+.cost-character-section {
     background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 100%);
     padding: 2rem;
     display: flex;
@@ -466,18 +449,46 @@
     align-items: center;
     justify-content: center;
     position: relative;
-    min-width: 180px;
+    /* 동일한 너비와 높이 설정 */
+    min-width: 200px;
+    width: 200px;
+    min-height: 220px;
+    height: 220px;
 }
 
-[data-theme="dark"] .character-section {
+[data-theme="dark"] .character-section,
+[data-theme="dark"] .cost-character-section {
     background: var(--lemon-yellow-light);
 }
 
-.db-main-character {
-    width: 150px;
-    height: 150px;
+/* 캐릭터 이미지 크기 통일 */
+.db-main-character,
+.cost-character {
+    width: 120px;
+    height: 120px;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+}
+
+/* Cost 섹션의 캐릭터 아래 마진 */
+.cost-character {
+    margin-bottom: 0.75rem;
+}
+
+/* 캐릭터 SVG 래퍼 크기 통일 */
+.character-svg-wrapper {
+    width: 120px;
+    height: 120px;
+}
+
+.character-svg-wrapper svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Provisioning 상태일 때 애니메이션 */
+.header-character .character-svg-wrapper {
+    animation: gentle-bounce 2s ease-in-out infinite;
 }
 
 .character-bubble {
@@ -494,6 +505,17 @@
 
 [data-theme="dark"] .character-bubble {
     background: var(--card-background);
+}
+
+.character-message {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-brown);
+    text-align: center;
+}
+
+[data-theme="dark"] .character-message {
+    color: var(--lemon-yellow);
 }
 
 .db-info-section {
@@ -816,43 +838,11 @@
     padding: 1.25rem;
 }
 
-/* Cost Section with Character */
+/* Cost Section with Character - 통일된 높이 */
 .cost-section {
     display: flex;
     overflow: hidden;
-}
-
-.cost-character-section {
-    background: linear-gradient(135deg, #FFF8DC 0%, #FFEAA7 100%);
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 180px;
-}
-
-[data-theme="dark"] .cost-character-section {
-    background: var(--lemon-yellow-light);
-}
-
-.cost-character {
-    width: 150px;
-    height: 150px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
-    margin-bottom: 0.75rem;
-}
-
-.character-message {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-brown);
-    text-align: center;
-}
-
-[data-theme="dark"] .character-message {
-    color: var(--lemon-yellow);
+    min-height: 220px; /* DB Header와 동일한 높이 */
 }
 
 .cost-details {
@@ -1092,11 +1082,15 @@
     .db-detail-header,
     .cost-section {
         flex-direction: column;
+        min-height: auto;
     }
 
     .character-section,
     .cost-character-section {
+        width: 100%;
         min-width: auto;
+        height: auto;
+        min-height: 180px;
         padding: 1.5rem;
     }
 
@@ -1155,7 +1149,21 @@
     }
 
     .db-main-character,
-    .cost-character,
+    .cost-character {
+        width: 100px;
+        height: 100px;
+    }
+
+    .character-svg-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+
+    .character-section,
+    .cost-character-section {
+        min-height: 150px;
+    }
+
     .empty-character {
         width: 120px;
         height: 120px;

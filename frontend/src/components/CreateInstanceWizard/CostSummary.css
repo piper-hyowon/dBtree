@@ -1,0 +1,312 @@
+.cost-summary-section {
+    background: linear-gradient(135deg, var(--lemon-yellow-light) 0%, rgba(255, 217, 61, 0.05) 100%);
+    border: 2px solid var(--lemon-yellow);
+}
+
+[data-theme="dark"] .cost-summary-section {
+    background: linear-gradient(135deg, rgba(255, 217, 61, 0.1) 0%, transparent 100%);
+}
+
+.cost-breakdown {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+[data-theme="dark"] .cost-breakdown {
+    background: var(--card-background);
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.cost-item .cost-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.cost-item .cost-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.cost-item.total {
+    padding-top: 0.75rem;
+}
+
+.cost-item.total .cost-label strong {
+    color: var(--text-primary);
+}
+
+.cost-item.total .cost-value strong {
+    font-size: 1.125rem;
+    color: var(--lemon-yellow-dark);
+}
+
+.cost-help {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: normal;
+    color: var(--text-secondary);
+    margin-top: 0.125rem;
+}
+
+.cost-separator {
+    height: 1px;
+    background: var(--border-light);
+    margin: 0.5rem 0;
+}
+
+.cost-estimates {
+    margin-bottom: 1rem;
+}
+
+.cost-estimates h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+}
+
+.estimate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.estimate-item {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 6px;
+    text-align: center;
+}
+
+[data-theme="dark"] .estimate-item {
+    background: var(--card-background);
+}
+
+.estimate-period {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.estimate-value {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Balance Check with Character */
+.balance-check-with-character {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid transparent;
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .balance-check-with-character {
+    background: var(--card-background);
+}
+
+.balance-check-with-character.sufficient {
+    border-color: var(--status-running);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, transparent 50%);
+}
+
+.balance-check-with-character.insufficient {
+    border-color: var(--status-stopped);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, transparent 50%);
+}
+
+.balance-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.balance-character {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+    position: relative;
+}
+
+.character-image {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.character-message {
+    margin-top: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .character-message {
+    background: var(--background-secondary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 말풍선 꼬리 */
+.character-message::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 2px;
+    box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .character-message::before {
+    background: var(--background-secondary);
+}
+
+/* 부자 캐릭터일 때 특별 효과 */
+.balance-check-with-character.sufficient .character-image {
+    animation: float 3s ease-in-out infinite, sparkle 2s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1)) brightness(1);
+    }
+    50% {
+        filter: drop-shadow(0 4px 20px rgba(255, 217, 61, 0.4)) brightness(1.1);
+    }
+}
+
+/* 기존 balance-check 스타일 제거하고 새로운 스타일로 대체 */
+.balance-check {
+    display: none; /* 기존 스타일 비활성화 */
+}
+
+.balance-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.balance-icon {
+    font-size: 1.25rem;
+}
+
+.balance-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.balance-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--bg-light-brown);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+}
+
+[data-theme="dark"] .balance-details {
+    background: var(--background-secondary);
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8125rem;
+}
+
+.balance-item span:first-child {
+    color: var(--text-secondary);
+}
+
+.balance-value {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.balance-estimate {
+    padding: 0.625rem;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--status-running);
+    text-align: center;
+}
+
+.balance-warning {
+    padding: 0.625rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--status-stopped);
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .estimate-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .balance-check-with-character {
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .balance-character {
+        width: 100%;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-light);
+        margin-top: 1rem;
+    }
+
+    .character-image {
+        width: 120px;
+        height: 120px;
+    }
+
+    .character-message {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
