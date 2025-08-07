@@ -4,21 +4,26 @@ export interface User {
     id: string;
     email: string;
     lemonBalance: number;
-    lastHarvest: string | null;
-    createdAt: string;
-    updatedAt: string;
+    totalEarnedLemons: number;
+    totalSpentLemons: number;
+    lastHarvestAt: string | null;
+    joinedAt: string;
 }
 
 export interface SendOTPResponse {
-    success?: boolean;
-    message?: string;
     isNewUser: boolean;
 }
 
 export interface VerifyOTPResponse {
-    success?: boolean;
-    message?: string;
-    user?: User;
+    profile: {
+        id: string;
+        email: string;
+        lemonBalance: number;
+        totalEarnedLemons: number;
+        totalSpentLemons: number;
+        lastHarvestAt: string | null;
+        joinedAt: string;
+    }
     token?: string;
     expiresIn?: number;
 }
@@ -56,8 +61,8 @@ export const verifyOTP = async (email: string, otp: string): Promise<VerifyOTPRe
             localStorage.setItem('token', response.data.token);
         }
 
-        if (response.data.user) {
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+        if (response.data.profile) {
+            localStorage.setItem('user', JSON.stringify(response.data.profile));
         }
 
         if (response.data.expiresIn) {
@@ -78,7 +83,7 @@ export const verifyOTP = async (email: string, otp: string): Promise<VerifyOTPRe
  */
 export const logout = async (): Promise<LogoutResponse> => {
     try {
-        const response = await apiClient.post<LogoutResponse>('/auth/logout');
+        const response = await apiClient.post<LogoutResponse>('/logout');
         return response.data;
     } catch (error) {
         handleApiError(error);

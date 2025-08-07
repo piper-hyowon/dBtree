@@ -1,0 +1,190 @@
+/* Mini Leaderboard */
+.mini-leaderboard-container {
+    margin-top: 2.5rem;
+    width: 100%;
+}
+
+.mini-leaderboard {
+    background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 247, 237, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 217, 61, 0.2);
+    box-shadow: 0 4px 20px rgba(255, 217, 61, 0.1);
+    display: flex;
+    gap: 2rem;
+    justify-content: space-between;
+}
+
+[data-theme="dark"] .mini-leaderboard {
+    background: linear-gradient(135deg,
+    rgba(30, 30, 30, 0.95) 0%,
+    rgba(40, 40, 35, 0.95) 100%);
+    border-color: rgba(255, 217, 61, 0.15);
+}
+
+.leaderboard-section {
+    flex: 1;
+}
+
+.leaderboard-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.leaderboard-title .icon {
+    font-size: 1.25rem;
+}
+
+.rank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.rank-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    background: white;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+[data-theme="dark"] .rank-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.rank-item:hover {
+    transform: translateX(4px);
+    border-color: var(--lemon-green-light);
+}
+
+.rank-item.rank-1 {
+    background: linear-gradient(135deg,
+    rgba(255, 215, 0, 0.1) 0%,
+    rgba(255, 255, 255, 0.9) 100%);
+}
+
+.rank-item.rank-2 {
+    background: linear-gradient(135deg,
+    rgba(192, 192, 192, 0.1) 0%,
+    rgba(255, 255, 255, 0.9) 100%);
+}
+
+.rank-item.rank-3 {
+    background: linear-gradient(135deg,
+    rgba(205, 127, 50, 0.1) 0%,
+    rgba(255, 255, 255, 0.9) 100%);
+}
+
+.rank-badge {
+    font-size: 1.125rem;
+    min-width: 1.5rem;
+}
+
+.user-name {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+}
+
+.score {
+    font-weight: 700;
+    color: var(--lemon-green-dark);
+    font-size: 0.9375rem;
+}
+
+.leaderboard-divider {
+    width: 1px;
+    background: linear-gradient(180deg,
+    transparent 0%,
+    var(--neutral-300) 50%,
+    transparent 100%);
+}
+
+[data-theme="dark"] .leaderboard-divider {
+    background: linear-gradient(180deg,
+    transparent 0%,
+    var(--border) 50%,
+    transparent 100%);
+}
+
+/* 로딩 및 빈 상태 스타일 */
+.rank-item.loading {
+    opacity: 0.6;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.no-data {
+    text-align: center;
+    padding: 1rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .mini-leaderboard {
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 1.25rem;
+    }
+
+    .leaderboard-divider {
+        width: 100%;
+        height: 1px;
+    }
+
+    .rank-item {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .rank-badge {
+        font-size: 1rem;
+    }
+
+    .user-name,
+    .score {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .mini-leaderboard-container {
+        margin-top: 2rem;
+    }
+
+    .mini-leaderboard {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    .leaderboard-title {
+        font-size: 0.9375rem;
+    }
+
+    .rank-item {
+        padding: 0.4rem 0.6rem;
+        gap: 0.5rem;
+    }
+}

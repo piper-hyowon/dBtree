@@ -152,8 +152,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
         try {
             const response: VerifyOTPResponse = await verifyOTP(tempEmail, otp);
 
-            if (response.user) {
-                setUser(response.user);
+            if (response.profile) {
+                setUser(response.profile);
                 tempEmail = null;
             }
 

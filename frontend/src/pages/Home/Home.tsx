@@ -1,18 +1,18 @@
 import React, {useState} from "react";
 import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
+import accountIcon from "../../assets/images/character/account-icon.png";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 import LoginModal from "../../components/auth/LoginModal";
 import GlobalStats from "../../components/GlobalStats/GlobalStats";
 import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
 import {useAuth} from "../../contexts/AuthContext";
-// import LemonTreeApp from "./NewLemonTree";
-// import NewNewLemonTree from "../../components/NewNewLemonTree/NewNewLemonTree";
+import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const {isLoggedIn, logout} = useAuth();
+    const {isLoggedIn, logout, user} = useAuth();
 
     const handleStartNow = () => {
         setShowLoginModal(true);
@@ -24,6 +24,10 @@ const Home: React.FC = () => {
 
     const handleNavigateToDashboard = () => {
         window.location.href = "/dashboard";
+    };
+
+    const handleNavigateToMyPage = () => {
+        window.location.href = "/profile";
     };
 
     const handleLogout = async () => {
@@ -38,28 +42,46 @@ const Home: React.FC = () => {
                     <img src={dbtreeLogo} alt="dBtree Logo" className="logo"/>
                 </div>
                 <nav className="nav">
-                    <ToggleThemeButton/>
-
                     {isLoggedIn ? (
                         <>
-                            <button
-                                className="login-button"
-                                onClick={handleNavigateToDashboard}
-                            >
-                                대시보드
-                            </button>
-                            <button
-                                className="logout-button"
-                                onClick={handleLogout}
-                            >
-                                로그아웃
-                            </button>
+                            <div className="user-info">
+                                <button
+                                    className="user-email"
+                                    onClick={handleNavigateToMyPage}
+                                    title="내 프로필로 이동"
+                                >
+                                    <img src={accountIcon} alt="account icon"/>
+                                    <span className="user-email-text">{user?.email}</span>
+                                </button>
+                                <div className="lemon-balance" title="보유 레몬">
+                                    <span className="lemon-emoji">🍋</span>
+                                    <span>{user?.lemonBalance || 0}</span>
+                                </div>
+                            </div>
+
+                            <div className="nav-actions">
+                                <button
+                                    className="nav-button dashboard-button"
+                                    onClick={handleNavigateToDashboard}
+                                    title="대시보드로 이동"
+                                >
+                                    대시보드
+                                </button>
+                                <button
+                                    className="nav-button logout-button"
+                                    onClick={handleLogout}
+                                    title="로그아웃"
+                                >
+                                    로그아웃
+                                </button>
+                            </div>
                         </>
                     ) : (
-                        <button className="login-button" onClick={handleStartNow}>
+                        <button className="nav-button login-button" onClick={handleStartNow}>
                             로그인
                         </button>
                     )}
+                    <ToggleThemeButton/>
                 </nav>
             </header>
 
@@ -74,12 +96,17 @@ const Home: React.FC = () => {
                     <p className="hero-subtitle">
                         쉽고 효율적인 크레딧 기반 DBaaS, 레몬을 먼저 수확한 사람이 임자!
                     </p>
+
+                    {/* GlobalStats 컴포넌트 - 내부에서 API 호출 */}
                     <div className="global-stats">
                         <GlobalStats/>
                     </div>
-                    {!isLoggedIn && (<button className="cta-button" onClick={handleStartNow}>
-                        무료로 시작하기
-                    </button>)}
+
+                    {!isLoggedIn && (
+                        <button className="cta-button" onClick={handleStartNow}>
+                            무료로 시작하기
+                        </button>
+                    )}
 
                     <p className="limited-offer">
                         매일 새로운 레몬이 자라납니다. 선착순 수확!
@@ -87,6 +114,7 @@ const Home: React.FC = () => {
                     <p className="golden-lemon-alert">
                         가끔 등장하는 황금 레몬을 놓치지 마세요!
                     </p>
+                    <MiniLeaderboard/>
                 </div>
 
                 <div className="lemon-tree-container">
@@ -98,34 +126,6 @@ const Home: React.FC = () => {
                         variant="default"
                         dismissible={true}
                     />
-                </div>
-            </section>
-
-            <section className="features-section">
-                <div className="features-grid">
-                    <div className="feature-card">
-                        <div className="feature-icon">🍋</div>
-                        <h3>공유 레몬 나무</h3>
-                        <p>
-                            모든 사용자를 위한 레몬 나무에서 레몬을 수확하세요. 빠른 사람이
-                            임자!
-                        </p>
-                    </div>
-
-                    <div className="feature-card">
-                        <div className="feature-icon">⏰</div>
-                        <h3>일일 레몬</h3>
-                        <p>정해진 시간에 레몬이 다시 자랍니다.</p>
-                    </div>
-
-                    <div className="feature-card">
-                        <div className="feature-icon">🔄</div>
-                        <h3>레몬으로 DB 생성</h3>
-                        <p>
-                            수확한 레몬으로 데이터베이스 인스턴스를 무료로 생성하고
-                            사용해보세요.
-                        </p>
-                    </div>
                 </div>
             </section>
 

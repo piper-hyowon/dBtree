@@ -4,8 +4,3 @@ export interface ApiResponse<T> {
     error?: string;
 }
 
-export interface GlobalStatsResponse {
-    totalHarvested: number;
-    totalDbInstances: number;
-    activeUsers: number;
-}

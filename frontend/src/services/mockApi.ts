@@ -1,6 +1,5 @@
 import {
     ApiResponse,
-    GlobalStatsResponse,
 } from "../types/api.types";
 
 interface BaseQuizQuestion {
@@ -178,13 +177,6 @@ const DB_QUIZ_QUESTIONS: QuizQuestion[] = [
 
 
 export const mockApi = {
-    globalStats: async (): Promise<ApiResponse<GlobalStatsResponse>> => {
-        return {
-            success: true,
-            data: {totalHarvested: 23, totalDbInstances: 6, activeUsers: 2},
-        };
-    },
-
     availableLemons: async (): Promise<ApiResponse<{ lemons: number[] }>> => {
         return {
             success: true,
