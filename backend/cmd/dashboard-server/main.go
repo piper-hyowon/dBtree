@@ -17,7 +17,8 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
 	"github.com/piper-hyowon/dBtree/internal/quiz"
 	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
-	"regexp"
+	"github.com/piper-hyowon/dBtree/internal/stats"
+	statsRest "github.com/piper-hyowon/dBtree/internal/stats/rest"
 	"strconv"
 
 	"github.com/piper-hyowon/dBtree/internal/platform/config"
@@ -83,8 +84,12 @@ func main() {
 	presetStore := dbservice.NewPresetStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 	portStore := dbservice.NewPortStore(appConfig.UseLocalMemoryStore, pgClient.DB())
 
+	lemonService := lemon.NewService(lemonStore, quizStore, logger)
+
+	// TODO: authService 에 lemonService 의존성 검토..
 	authService := auth.NewService(
 		sessionStore,
+		lemonService,
 		emailService,
 		userStore,
 		logger,
@@ -102,7 +107,6 @@ func main() {
 
 	userHandler := userRest.NewHandler(userService, lemonStore, logger)
 
-	lemonService := lemon.NewService(lemonStore, quizStore, logger)
 	lemonHandler := lemonRest.NewHandler(lemonService, logger)
 
 	quizService := quiz.NewService(quizStore, lemonStore, logger)
@@ -111,6 +115,9 @@ func main() {
 	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
 		userStore, k8sClient, portStore, logger)
 	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
+
+	statsService := stats.NewService(lemonStore, userStore, dbiStore, quizStore, logger)
+	statsHandler := statsRest.NewHandler(statsService, logger)
 
 	r := router.New(logger)
 
@@ -170,6 +177,9 @@ func main() {
 	}))
 	r.POST("/quiz/answer", authMiddleware.RequireAuth(quizHandler.SubmitAnswer))
 
+	r.GET("/stats/global", statsHandler.GetGlobalStats)
+	r.GET("/leaderboard/mini", statsHandler.GetMiniLeaderboard)
+
 	server := rest.NewServer(appConfig, r, logger)
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
@@ -214,27 +224,4 @@ func cleanupSessions(sessionStore coreauth.SessionStore, intervalHours int, logg
 			logger.Printf("세션 정리 오류: %v", err)
 		}
 	}
-}
-
-// TODO: 적절한 위치로 옮기기 잠시 여기에..
-func validateInstanceName(name string) error {
-	if name == "" {
-		return errors.NewMissingParameterError("name")
-	}
-
-	if len(name) < 3 {
-		return errors.NewInvalidParameterError("name", "3 글자 이상")
-	}
-
-	matched, _ := regexp.MatchString(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`, name)
-	if !matched {
-		return errors.NewInvalidParameterError("name",
-			"인스턴스 이름은 소문자, 숫자, 하이픈(-)만 사용 가능하며, 시작과 끝은 영문자와 숫자만 가능")
-	}
-
-	if len(name) > 63 {
-		return errors.NewInvalidParameterError("name", "인스턴스 이름은 63자 이하여야 합니다")
-	}
-
-	return nil
 }

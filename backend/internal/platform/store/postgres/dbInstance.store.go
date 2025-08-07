@@ -32,6 +32,14 @@ type DBInstanceStore struct {
 	db *sql.DB
 }
 
+func (s *DBInstanceStore) TotalCreated(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM db_instances`,
+	).Scan(&count)
+	return count, err
+}
+
 var _ dbservice.DBInstanceStore = (*DBInstanceStore)(nil)
 
 func NewDBInstanceStore(db *sql.DB) dbservice.DBInstanceStore {

@@ -45,9 +45,9 @@ type SendOTPResponse struct {
 }
 
 type VerifyOTPResponse struct {
-	User      *user.User `json:"user,omitempty"`
-	Token     string     `json:"token,omitempty"`
-	ExpiresIn int64      `json:"expiresIn,omitempty"`
+	Profile   user.ProfileResponse `json:"profile"`
+	Token     string               `json:"token,omitempty"`
+	ExpiresIn int64                `json:"expiresIn,omitempty"`
 }
 
 func (h *Handler) SendOTP(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +109,7 @@ func (h *Handler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 	expiresIn := int64(auth.TokenExpirationHours * 3600)
 
 	rest.SendSuccessResponse(w, http.StatusOK, VerifyOTPResponse{
-		User:      u,
+		Profile:   u.ToProfileResponse(),
 		Token:     token,
 		ExpiresIn: expiresIn,
 	})

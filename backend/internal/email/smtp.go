@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/email"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
+	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"math/rand"
 	"net/smtp"
 	"strings"
@@ -199,13 +200,21 @@ func (s *service) SendWelcome(ctx context.Context, to string) error {
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #4a86e8; color: white; padding: 10px; text-align: center;">
+            <div style="background-color: #4a86e8; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
                 <h1 style="margin: 0; padding: 0;">dBtree에 오신 것을 환영합니다</h1>
             </div>
-            <div style="padding: 20px; text-align: center;">
+            <div style="padding: 30px; background-color: #f9f9f9; border-radius: 0 0 8px 8px;">
                 <p>안녕하세요, dBtree입니다.</p>
                 <img src="cid:%s" alt="Welcome" style="max-width: 100%%; height: auto; display: block; margin: 20px auto;">
                 <p>회원가입을 축하합니다! 이제 dBtree의 모든 기능을 사용하실 수 있습니다.</p>
+                
+                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                    <h3 style="margin: 0 0 10px 0; color: #856404;">웰컴 보너스 지급!</h3>
+                    <p style="margin: 0; font-size: 18px; color: #856404;">
+                        <strong>%s 레몬 크레딧</strong>이 계정에 적립되었습니다.
+                    </p>
+                </div>
+                
                 <p>dBtree를 선택해 주셔서 감사합니다.</p>
             </div>
             <div style="font-size: 12px; color: #666; text-align: center; margin-top: 20px;">
@@ -217,7 +226,9 @@ func (s *service) SendWelcome(ctx context.Context, to string) error {
     </html>
     `
 
-	htmlBody := fmt.Sprintf(htmlTemplate, welcomeImageCID)
+	// lemon.WelcomeBonusAmount를 문자열로 변환해서 사용
+	htmlBody := fmt.Sprintf(htmlTemplate, welcomeImageCID, fmt.Sprintf("%d", lemon.WelcomeBonusAmount))
+
 	images := make(map[string][]byte)
 	imgData, err := GetImage(welcomeImageCID)
 	if err == nil {

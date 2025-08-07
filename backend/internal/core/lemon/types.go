@@ -10,7 +10,7 @@ type Lemon struct {
 }
 
 const (
-	WelcomeBonusAmount = 50
+	WelcomeBonusAmount = 15
 )
 
 // ActionType 레몬 잔액에 영향을 주는 모든 활동

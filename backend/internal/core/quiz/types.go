@@ -132,3 +132,9 @@ type Attempt struct {
 	Status        Status        `json:"status"`
 	HarvestStatus HarvestStatus `json:"harvestStatus"`
 }
+
+type Master struct {
+	UserID       string
+	Email        string
+	CorrectCount int
+}

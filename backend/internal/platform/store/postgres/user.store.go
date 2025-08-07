@@ -15,6 +15,67 @@ type UserStore struct {
 	db *sql.DB
 }
 
+func (s *UserStore) TotalUserCount(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM users WHERE is_deleted = false`,
+	).Scan(&count)
+	return count, err
+}
+
+func (s *UserStore) TopLemonHolders(ctx context.Context, limit int) ([]*user.User, error) {
+	query := `
+        SELECT 
+            id, 
+            email, 
+            lemon_balance, 
+            last_harvest_at, 
+            created_at, 
+            updated_at
+        FROM users 
+        WHERE is_deleted = false 
+        ORDER BY lemon_balance DESC 
+        LIMIT $1
+    `
+
+	rows, err := s.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	defer rows.Close()
+
+	var users []*user.User
+	for rows.Next() {
+		user := &user.User{}
+		var lastHarvest sql.NullTime
+
+		err := rows.Scan(
+			&user.ID,
+			&user.Email,
+			&user.LemonBalance,
+			&lastHarvest,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		// NULL 처리
+		if lastHarvest.Valid {
+			user.LastHarvestAt = &lastHarvest.Time
+		}
+
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return users, nil
+}
+
 var _ user.Store = (*UserStore)(nil)
 
 func NewUserStore(db *sql.DB) user.Store {
@@ -88,13 +149,13 @@ func (s *UserStore) FindById(ctx context.Context, id string) (*user.User, error)
 	return &u, nil
 }
 
-func (s *UserStore) CreateIfNotExists(ctx context.Context, email string) error {
+func (s *UserStore) CreateIfNotExists(ctx context.Context, email string) (bool, error) {
 	exists, err := s.emailExists(ctx, email)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if exists {
-		return nil
+		return false, nil
 	}
 
 	id := uuid.New().String()
@@ -106,7 +167,11 @@ func (s *UserStore) CreateIfNotExists(ctx context.Context, email string) error {
 	`
 
 	_, err = s.db.ExecContext(ctx, query, id, email, now, now)
-	return err
+	if err != nil {
+		return false, errors.Wrap(err)
+	}
+
+	return true, nil
 }
 
 func (s *UserStore) emailExists(ctx context.Context, email string) (bool, error) {

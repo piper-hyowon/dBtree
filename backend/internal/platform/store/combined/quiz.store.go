@@ -17,6 +17,41 @@ type QuizStore struct {
 	rdb   *sql.DB
 }
 
+func (q QuizStore) TodayQuizMasters(ctx context.Context, limit int) ([]quiz.Master, error) {
+	query := `
+        SELECT 
+            qa.user_id,
+            u.email,
+            COUNT(*) as correct_count
+        FROM user_quiz_attempts qa
+        JOIN users u ON qa.user_id = u.id
+        WHERE DATE(qa.created_at) = CURRENT_DATE
+          AND qa.is_correct = true
+          AND qa.status = 'done'
+          AND u.is_deleted = false
+        GROUP BY qa.user_id, u.email
+        ORDER BY correct_count DESC
+        LIMIT $1
+    `
+
+	rows, err := q.rdb.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var masters []quiz.Master
+	for rows.Next() {
+		var m quiz.Master
+		if err := rows.Scan(&m.UserID, &m.Email, &m.CorrectCount); err != nil {
+			return nil, err
+		}
+		masters = append(masters, m)
+	}
+
+	return masters, rows.Err()
+}
+
 var _ quiz.Store = (*QuizStore)(nil)
 
 func NewQuizStore(cache *redis.Client, rdb *sql.DB) quiz.Store {

@@ -35,4 +35,9 @@ type Store interface {
 	UpdateAttemptStatus(ctx context.Context, attemptID int, status Status, isCorrect *bool, selectedOption *int, submitTime time.Time) error
 	UpdateAttemptHarvestStatus(ctx context.Context, attemptID int, harvestStatus HarvestStatus, clickTime time.Time) error
 	DeleteAttempt(ctx context.Context, attemptID int) error
+
+	/* ---------- 통계 관련 ---------- */
+
+	// TodayQuizMasters 오늘 가장 많이 맞춘 사람들(상위 limit 명)
+	TodayQuizMasters(ctx context.Context, limit int) ([]Master, error)
 }

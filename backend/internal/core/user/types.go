@@ -16,6 +16,7 @@ type User struct {
 
 func (u *User) ToProfileResponse() ProfileResponse {
 	return ProfileResponse{
+		ID:                u.ID,
 		Email:             u.Email,
 		LemonBalance:      u.LemonBalance,
 		TotalEarnedLemons: u.TotalEarnedLemons,

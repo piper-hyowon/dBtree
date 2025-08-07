@@ -3,6 +3,7 @@ package user
 import "time"
 
 type ProfileResponse struct {
+	ID                string     `json:"id"`
 	Email             string     `json:"email"`
 	LemonBalance      int        `json:"lemonBalance"`
 	TotalEarnedLemons int64      `json:"totalEarnedLemons"`

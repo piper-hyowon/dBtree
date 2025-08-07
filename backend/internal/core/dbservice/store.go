@@ -23,6 +23,8 @@ type DBInstanceStore interface {
 	FindBackup(ctx context.Context, backupID string) (*BackupRecord, error)
 	ListBackups(ctx context.Context, instanceID string) ([]*BackupRecord, error)
 	UpdateBackupStatus(ctx context.Context, backupID string, status BackupStatus, errorMsg string) error
+
+	TotalCreated(ctx context.Context) (int, error)
 }
 
 type PresetStore interface {
