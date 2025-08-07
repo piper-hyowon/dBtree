@@ -3,10 +3,24 @@ package user
 import "time"
 
 type User struct {
-	ID           string     `json:"id"`
-	Email        string     `json:"email"`
-	LemonBalance int        `json:"lemonBalance"`
-	LastHarvest  *time.Time `json:"lastHarvest"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
+	ID                string
+	Email             string
+	IsDeleted         bool
+	LemonBalance      int
+	TotalEarnedLemons int64
+	TotalSpentLemons  int64
+	LastHarvestAt     *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+func (u *User) ToProfileResponse() ProfileResponse {
+	return ProfileResponse{
+		Email:             u.Email,
+		LemonBalance:      u.LemonBalance,
+		TotalEarnedLemons: u.TotalEarnedLemons,
+		TotalSpentLemons:  u.TotalSpentLemons,
+		LastHarvestAt:     u.LastHarvestAt,
+		JoinedAt:          u.CreatedAt,
+	}
 }

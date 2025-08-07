@@ -24,7 +24,8 @@ func NewUserStore(db *sql.DB) user.Store {
 }
 
 func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
-	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at 
+	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at,
+       total_earned_lemons, total_spent_lemons
               FROM users 
               WHERE email = $1 AND is_deleted = FALSE`
 
@@ -37,6 +38,8 @@ func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, 
 		&lastHarvest,
 		&u.CreatedAt,
 		&u.UpdatedAt,
+		&u.TotalEarnedLemons,
+		&u.TotalSpentLemons,
 	)
 
 	if err != nil {
@@ -47,9 +50,9 @@ func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, 
 	}
 
 	if lastHarvest.Valid {
-		u.LastHarvest = &lastHarvest.Time
+		u.LastHarvestAt = &lastHarvest.Time
 	} else {
-		u.LastHarvest = nil
+		u.LastHarvestAt = nil
 	}
 
 	return &u, nil
@@ -77,9 +80,9 @@ func (s *UserStore) FindById(ctx context.Context, id string) (*user.User, error)
 	}
 
 	if lastHarvest.Valid {
-		u.LastHarvest = &lastHarvest.Time
+		u.LastHarvestAt = &lastHarvest.Time
 	} else {
-		u.LastHarvest = nil
+		u.LastHarvestAt = nil
 	}
 
 	return &u, nil

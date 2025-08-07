@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	"github.com/piper-hyowon/dBtree/internal/core/lemon"
 	"github.com/piper-hyowon/dBtree/internal/core/user"
 	"github.com/piper-hyowon/dBtree/internal/platform/rest"
@@ -46,16 +45,5 @@ func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := h.lemonStore.UserTotalHarvestedCount(r.Context(), u.ID)
-	if err != nil {
-		rest.HandleError(w, errors.Wrap(err), h.logger)
-	}
-
-	rest.SendSuccessResponse(w, http.StatusOK, user.ProfileResponse{
-		Email:          u.Email,
-		LemonBalance:   u.LemonBalance,
-		LastHarvest:    u.LastHarvest,
-		TotalHarvested: t,
-		JoinedAt:       u.CreatedAt,
-	})
+	rest.SendSuccessResponse(w, http.StatusOK, u.ToProfileResponse())
 }
