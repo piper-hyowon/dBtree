@@ -27,7 +27,7 @@ const Home: React.FC = () => {
     };
 
     const handleNavigateToMyPage = () => {
-        window.location.href = "/profile";
+        window.location.href = "/account";
     };
 
     const handleLogout = async () => {

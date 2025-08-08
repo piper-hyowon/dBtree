@@ -308,7 +308,7 @@ const Dashboard: React.FC = () => {
                     <div className="user-info">
                         <button
                             className="user-email"
-                            onClick={() => window.location.href = "/profile"}
+                            onClick={() => window.location.href = "/account"}
                             title="내 프로필로 이동"
                         >
                             <img src={accountIcon} alt="account icon"/>
