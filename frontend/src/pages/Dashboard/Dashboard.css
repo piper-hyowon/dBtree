@@ -65,38 +65,6 @@
     margin: 0;
 }
 
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.credit-section {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.credit-display {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--bg-light-brown);
-    padding: 0.375rem 0.875rem;
-    border-radius: 20px;
-    border: 1px solid var(--border-light);
-}
-
-[data-theme="dark"] .credit-display {
-    background: var(--background-secondary);
-    border-color: var(--border-color);
-}
-
-.credit-amount {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
 
 /* Main Layout */
 .dashboard-body {
@@ -1176,4 +1144,142 @@
     .status-badge-value {
         min-width: auto;
     }
+}
+
+
+/*TODO: Home.css 에도 겹침*/
+/* User Info Section  */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--neutral-200);
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .user-info {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(111, 207, 151, 0.08) 50%,
+    transparent 100%);
+    transition: left 0.6s ease;
+}
+
+.user-info:hover::before {
+    left: 100%;
+}
+
+/* User Email */
+.user-email {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    padding: 0.5rem 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.user-email::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+    rgba(111, 207, 151, 0.1) 0%,
+    rgba(255, 217, 61, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 12px;
+}
+
+.user-email:hover::before {
+    opacity: 1;
+}
+
+.user-email:hover {
+    transform: translateY(-1px);
+    color: var(--lemon-green-dark);
+}
+
+/* Account Icon - 더 크고 깔끔하게 */
+.user-email img {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--neutral-300);
+    transition: all 0.3s ease;
+    background: white;
+    object-fit: cover;
+}
+
+[data-theme="dark"] .user-email img {
+    border-color: var(--border);
+    background: var(--card);
+}
+
+.user-email:hover img {
+    border-color: var(--lemon-green);
+    transform: scale(1.05);
+}
+
+/* Email Text */
+.user-email-text {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* Lemon Balance */
+.lemon-balance {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #D97706;
+    background: rgba(255, 217, 61, 0.1);
+    padding: 0.5rem 0.875rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 217, 61, 0.2);
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .lemon-balance {
+    color: #FCD34D;
+    background: rgba(255, 217, 61, 0.1);
+    border-color: rgba(255, 217, 61, 0.3);
+}
+
+.lemon-balance:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 217, 61, 0.15);
+    border-color: rgba(255, 217, 61, 0.35);
+}
+
+.lemon-emoji {
+    font-size: 1.125rem;
 }

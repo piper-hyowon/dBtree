@@ -12,7 +12,7 @@ type MiniLeaderboard struct {
 }
 
 type UserRank struct {
-	MaskedEmail string `json:"email"`
+	MaskedEmail string `json:"maskedEmail"`
 	Score       int    `json:"score"`
 	Rank        int    `json:"rank"`
 }

@@ -10,6 +10,7 @@ import {useTheme} from '../../hooks/useTheme';
 import {useAuth} from '../../contexts/AuthContext';
 import {useNavigate} from 'react-router-dom';
 import CreateInstanceWizard from "../../components/CreateInstanceWizard/CreateInstanceWizard";
+import accountIcon from "../../assets/images/character/account-icon.png";
 
 type ViewType = 'empty' | 'detail' | 'create';
 
@@ -304,12 +305,18 @@ const Dashboard: React.FC = () => {
                         <h1 className="dashboard-title">대시보드</h1>
                     </div>
 
-                    <div className="header-right">
-                        <div className="credit-section">
-                            <span className="credit-amount">👋 {user?.email}</span>
-                            <div className="credit-display">
-                                <span className="credit-amount">🍋 {user?.lemonBalance || 0}</span>
-                            </div>
+                    <div className="user-info">
+                        <button
+                            className="user-email"
+                            onClick={() => window.location.href = "/profile"}
+                            title="내 프로필로 이동"
+                        >
+                            <img src={accountIcon} alt="account icon"/>
+                            <span className="user-email-text">{user?.email}</span>
+                        </button>
+                        <div className="lemon-balance" title="보유 레몬">
+                            <span className="lemon-emoji">🍋</span>
+                            <span>{user?.lemonBalance || 0}</span>
                         </div>
                         <ToggleThemeButton/>
                     </div>
