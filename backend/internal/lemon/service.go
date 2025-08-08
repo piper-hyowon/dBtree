@@ -228,10 +228,6 @@ func (s *service) ProcessInstanceFee(ctx context.Context, userID string, instanc
 
 }
 
-func (s *service) Transactions(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
-	return s.store.TransactionListByUserID(ctx, userID, limit, offset)
-}
-
 func (s *service) GiveWelcomeLemon(ctx context.Context, userID string) error {
 	return s.AddLemons(ctx, userID, lemon.WelcomeBonusAmount, lemon.ActionWelcomeBonus, "회원가입 보너스")
 }
@@ -265,4 +261,15 @@ func (s *service) CanHarvest(ctx context.Context, userID string) (lemon.HarvestA
 		CanHarvest: true,
 		WaitTime:   0,
 	}, nil
+}
+
+func (s *service) DailyHarvestStats(ctx context.Context, userID string, days int) ([]*lemon.DailyHarvest, error) {
+	if days <= 0 {
+		days = 7 // 기본값
+	}
+	if days > 365 {
+		days = 365 // 최대 1년
+	}
+
+	return s.store.DailyHarvestStats(ctx, userID, days)
 }

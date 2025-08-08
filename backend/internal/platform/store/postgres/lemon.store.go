@@ -146,94 +146,6 @@ func (s *LemonStore) TransactionByID(ctx context.Context, id string) (*lemon.Tra
 	return &tx, nil
 }
 
-func (s *LemonStore) TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*lemon.Transaction, error) {
-	query := `
-		SELECT 
-			id, user_id, db_instance_id, action_type, status, 
-			amount, balance, created_at, note
-		FROM user_lemon_transactions
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
-	`
-
-	rows, err := s.db.QueryContext(ctx, query, userID, limit, offset)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-	defer rows.Close()
-
-	var transactions []*lemon.Transaction
-	for rows.Next() {
-		var tx lemon.Transaction
-		err := rows.Scan(
-			&tx.ID,
-			&tx.UserID,
-			&tx.InstanceID,
-			&tx.ActionType,
-			&tx.Status,
-			&tx.Amount,
-			&tx.Balance,
-			&tx.CreatedAt,
-			&tx.Note,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-		transactions = append(transactions, &tx)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	return transactions, nil
-}
-
-func (s *LemonStore) TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*lemon.Transaction, error) {
-	query := `
-        SELECT 
-            id, user_id, db_instance_id, action_type, status, 
-            amount, balance, created_at, note
-        FROM user_lemon_transactions
-        WHERE db_instance_id = $1
-        ORDER BY created_at DESC
-        LIMIT $2 OFFSET $3
-    `
-
-	rows, err := s.db.QueryContext(ctx, query, instanceID, limit, offset)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-	defer rows.Close()
-
-	var transactions []*lemon.Transaction
-	for rows.Next() {
-		var tx lemon.Transaction
-		err := rows.Scan(
-			&tx.ID,
-			&tx.UserID,
-			&tx.InstanceID,
-			&tx.ActionType,
-			&tx.Status,
-			&tx.Amount,
-			&tx.Balance,
-			&tx.CreatedAt,
-			&tx.Note,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-		transactions = append(transactions, &tx)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	return transactions, nil
-}
-
 func (s *LemonStore) UserBalance(ctx context.Context, userID string) (int, error) {
 	query := `SELECT lemon_balance FROM users WHERE id = $1`
 
@@ -449,4 +361,142 @@ func (s *LemonStore) NextRegrowthTime(ctx context.Context) (*time.Time, error) {
 	}
 
 	return &nextTime.Time, nil
+}
+
+func (s *LemonStore) DailyHarvestStats(ctx context.Context, userID string, days int) ([]*lemon.DailyHarvest, error) {
+	query := `
+		SELECT 
+			DATE(created_at) as harvest_date,
+			COALESCE(SUM(amount), 0) as total_amount
+		FROM user_lemon_transactions 
+		WHERE user_id = $1 
+			AND action_type = 'harvest' 
+			AND status = 'successful'
+			AND created_at >= CURRENT_DATE - INTERVAL '%d days'
+		GROUP BY DATE(created_at)
+		ORDER BY harvest_date DESC
+	`
+
+	rows, err := s.db.QueryContext(ctx, fmt.Sprintf(query, days), userID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	defer rows.Close()
+
+	var dailyHarvests []*lemon.DailyHarvest
+	for rows.Next() {
+		var harvestDate time.Time
+		var amount int
+
+		err := rows.Scan(&harvestDate, &amount)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		dailyHarvests = append(dailyHarvests, &lemon.DailyHarvest{
+			Date:   harvestDate,
+			Amount: amount,
+		})
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return dailyHarvests, nil
+}
+
+func (s *LemonStore) UserTransactionCount(ctx context.Context, userID string, instanceName *string) (int, error) {
+	var query string
+	var args []interface{}
+
+	if instanceName != nil {
+		query = `
+			SELECT COUNT(*) 
+			FROM user_lemon_transactions t
+			LEFT JOIN db_instances i ON t.db_instance_id = i.id
+			WHERE t.user_id = $1::uuid AND i.name = $2
+		`
+		args = []interface{}{userID, *instanceName}
+	} else {
+		query = `SELECT COUNT(*) FROM user_lemon_transactions WHERE user_id = $1::uuid`
+		args = []interface{}{userID}
+	}
+
+	var count int
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, errors.Wrap(err)
+	}
+
+	return count, nil
+}
+
+func (s *LemonStore) UserTransactionsWithInstance(ctx context.Context, userID string, instanceName *string, limit, offset int) ([]*lemon.TransactionWithInstance, error) {
+	baseQuery := `
+		SELECT 
+			t.id, i.name as instance_name,
+			t.action_type, t.status, t.amount, t.balance, t.created_at, t.note
+		FROM user_lemon_transactions t
+		LEFT JOIN db_instances i ON t.db_instance_id = i.id
+		WHERE t.user_id = $1
+	`
+
+	var args []interface{}
+	args = append(args, userID)
+
+	wb := &whereBuilder{argIndex: 1}
+	if instanceName != nil {
+		wb.add("i.name = $%d", *instanceName)
+	}
+
+	query := baseQuery + wb.build() + " ORDER BY t.created_at DESC"
+	args = append(args, wb.args...)
+
+	query, args = addPagination(query, args, limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	defer rows.Close()
+
+	var transactions []*lemon.TransactionWithInstance
+	for rows.Next() {
+		var tx lemon.TransactionWithInstance
+		var instanceName sql.NullString
+		var note sql.NullString
+
+		err := rows.Scan(
+			&tx.ID,
+			&instanceName,
+			&tx.ActionType,
+			&tx.Status,
+			&tx.Amount,
+			&tx.Balance,
+			&tx.CreatedAt,
+			&note,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		if instanceName.Valid {
+			tx.InstanceName = &instanceName.String
+		}
+
+		if note.Valid {
+			tx.Note = note.String
+		} else {
+			tx.Note = ""
+		}
+
+		transactions = append(transactions, &tx)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return transactions, nil
 }

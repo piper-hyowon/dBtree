@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS user_lemon_transactions
     status         transaction_status       NOT NULL,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     note           TEXT,
-    db_instance_id VARCHAR(36)
+    db_instance_id BIGSERIAL
 );
 
 -- 인덱스

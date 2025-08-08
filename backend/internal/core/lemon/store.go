@@ -10,8 +10,6 @@ type Store interface {
 	CreateTransaction(ctx context.Context, tx *Transaction) error
 	TransactionByID(ctx context.Context, id string) (*Transaction, error)
 	ByPositionID(ctx context.Context, positionID int) (*Lemon, error)
-	TransactionListByUserID(ctx context.Context, userID string, limit, offset int) ([]*Transaction, error)
-	TransactionListByInstanceID(ctx context.Context, instanceID string, limit, offset int) ([]*Transaction, error)
 
 	UserBalance(ctx context.Context, userID string) (int, error)
 	UserLastHarvestTime(ctx context.Context, userID string) (*time.Time, error)
@@ -22,4 +20,9 @@ type Store interface {
 	HarvestWithTransaction(ctx context.Context, positionID int, userID string, amount int, now time.Time) (string, error)
 	RegrowLemons(ctx context.Context, now time.Time) ([]int, error) // 수확후 일정시간이 지난 재생성된 레몬 수 반환
 	NextRegrowthTime(ctx context.Context) (*time.Time, error)
+
+	DailyHarvestStats(ctx context.Context, userID string, days int) ([]*DailyHarvest, error)
+
+	UserTransactionCount(ctx context.Context, userID string, instanceName *string) (int, error)
+	UserTransactionsWithInstance(ctx context.Context, userID string, instanceName *string, limit, offset int) ([]*TransactionWithInstance, error)
 }

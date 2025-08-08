@@ -25,6 +25,8 @@ type DBInstanceStore interface {
 	UpdateBackupStatus(ctx context.Context, backupID string, status BackupStatus, errorMsg string) error
 
 	TotalCreated(ctx context.Context) (int, error)
+
+	InstanceNames(ctx context.Context, userID string) ([]*UserInstanceSummary, error)
 }
 
 type PresetStore interface {

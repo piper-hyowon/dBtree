@@ -16,3 +16,13 @@ type UserRank struct {
 	Score       int    `json:"score"`
 	Rank        int    `json:"rank"`
 }
+
+func (r *DailyHarvestRequest) SetDefaults() {
+	if r.Days <= 0 {
+		r.Days = 7 // 기본 7일
+	}
+}
+
+func (r *TransactionsRequest) SetDefaults() {
+	r.PaginationParams.SetDefaults(31) // 기본 31개 (한달)
+}

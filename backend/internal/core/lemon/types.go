@@ -35,7 +35,7 @@ const (
 type Transaction struct {
 	ID         string
 	UserID     string
-	InstanceID string
+	InstanceID int
 	ActionType ActionType
 	Status     Status
 	Amount     int
@@ -44,7 +44,6 @@ type Transaction struct {
 	UpdatedAt  time.Time
 	Note       string
 }
-
 type HarvestRules struct {
 	BaseAmount      int
 	CooldownPeriod  time.Duration
@@ -77,4 +76,20 @@ type RegrowthRules struct {
 var DefaultRegrowthRules = RegrowthRules{
 	RegrowthPeriod: 1 * time.Hour, // 1시간마다 재생성
 	MaxPositions:   10,
+}
+
+type DailyHarvest struct {
+	Date   time.Time `json:"date"`
+	Amount int       `json:"amount"`
+}
+
+type TransactionWithInstance struct {
+	ID           string     `json:"id"`
+	InstanceName *string    `json:"instanceName"`
+	ActionType   ActionType `json:"actionType"`
+	Status       Status     `json:"status"`
+	Amount       int        `json:"amount"`
+	Balance      int        `json:"balance"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	Note         string     `json:"note"`
 }

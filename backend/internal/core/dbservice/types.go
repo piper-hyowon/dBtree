@@ -328,3 +328,8 @@ func (d *DBInstance) ToCreateResponse(credentials *Credentials) *CreateInstanceR
 		CreatedAt:   d.CreatedAt,
 	}
 }
+
+type UserInstanceSummary struct {
+	ID   string `json:"id"` // external_id
+	Name string `json:"name"`
+}

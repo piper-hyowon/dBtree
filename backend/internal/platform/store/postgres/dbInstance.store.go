@@ -392,3 +392,30 @@ func (s *DBInstanceStore) CountActive(ctx context.Context, userID string) (int, 
 
 	return count, nil
 }
+
+func (s *DBInstanceStore) InstanceNames(ctx context.Context, userID string) ([]*dbservice.UserInstanceSummary, error) {
+	query := `
+		SELECT external_id, name 
+		FROM db_instances 
+		WHERE user_id = $1::uuid AND deleted_at IS NULL
+		ORDER BY name
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+	defer rows.Close()
+
+	var instances []*dbservice.UserInstanceSummary
+	for rows.Next() {
+		var instance dbservice.UserInstanceSummary
+		err := rows.Scan(&instance.ID, &instance.Name)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+		instances = append(instances, &instance)
+	}
+
+	return instances, nil
+}

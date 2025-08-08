@@ -179,6 +179,9 @@ func main() {
 
 	r.GET("/stats/global", statsHandler.GetGlobalStats)
 	r.GET("/leaderboard/mini", statsHandler.GetMiniLeaderboard)
+	r.GET("/stats/daily-harvest", authMiddleware.RequireAuth(statsHandler.GetUserDailyHarvest))
+	r.GET("/stats/transactions", authMiddleware.RequireAuth(statsHandler.GetUserTransactions))
+	r.GET("/stats/summary/instances", authMiddleware.RequireAuth(statsHandler.GetUserInstances))
 
 	server := rest.NewServer(appConfig, r, logger)
 

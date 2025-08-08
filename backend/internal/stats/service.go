@@ -2,14 +2,15 @@ package stats
 
 import (
 	"context"
-	"github.com/piper-hyowon/dBtree/internal/core/stats"
-	"log"
-	"sync"
-
+	"github.com/piper-hyowon/dBtree/internal/common"
 	coredbservice "github.com/piper-hyowon/dBtree/internal/core/dbservice"
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
 	corelemon "github.com/piper-hyowon/dBtree/internal/core/lemon"
 	corequiz "github.com/piper-hyowon/dBtree/internal/core/quiz"
+	"github.com/piper-hyowon/dBtree/internal/core/stats"
 	coreuser "github.com/piper-hyowon/dBtree/internal/core/user"
+	"log"
+	"sync"
 )
 
 type service struct {
@@ -62,24 +63,24 @@ func (s *service) GetGlobalStats(ctx context.Context) (*stats.GlobalStats, error
 		ch <- result{totalUsers: count, err: err}
 	}()
 
-	var stats stats.GlobalStats
+	var sts stats.GlobalStats
 	for i := 0; i < 3; i++ {
 		r := <-ch
 		if r.err != nil {
 			return nil, r.err
 		}
 		if r.totalLemons > 0 {
-			stats.TotalHarvestedLemons = r.totalLemons
+			sts.TotalHarvestedLemons = r.totalLemons
 		}
 		if r.totalInstances > 0 {
-			stats.TotalCreatedInstances = r.totalInstances
+			sts.TotalCreatedInstances = r.totalInstances
 		}
 		if r.totalUsers > 0 {
-			stats.TotalUsers = r.totalUsers
+			sts.TotalUsers = r.totalUsers
 		}
 	}
 
-	return &stats, nil
+	return &sts, nil
 }
 
 func (s *service) GetMiniLeaderboard(ctx context.Context) (*stats.MiniLeaderboard, error) {
@@ -143,4 +144,45 @@ func (s *service) GetMiniLeaderboard(ctx context.Context) (*stats.MiniLeaderboar
 		LemonRichUsers: lemonRich,
 		QuizMasters:    quizMasters,
 	}, nil
+}
+
+func (s *service) GetUserDailyHarvest(ctx context.Context, userID string, req *stats.DailyHarvestRequest) ([]*corelemon.DailyHarvest, error) {
+	req.SetDefaults()
+
+	dailyHarvests, err := s.lemonStore.DailyHarvestStats(ctx, userID, req.Days)
+	if err != nil {
+		return nil, err
+	}
+
+	return dailyHarvests, nil
+}
+
+func (s *service) GetUserTransactions(ctx context.Context, userID string, req *stats.TransactionsRequest) (*stats.TransactionsResponse, error) {
+	req.SetDefaults()
+
+	totalCount, err := s.lemonStore.UserTransactionCount(ctx, userID, req.InstanceName)
+	if err != nil {
+		return nil, err
+	}
+
+	transactions, err := s.lemonStore.UserTransactionsWithInstance(ctx, userID, req.InstanceName, req.Limit, req.GetOffset())
+	if err != nil {
+		return nil, err
+	}
+
+	pagination := common.NewPaginationInfo(req.Page, req.Limit, totalCount)
+
+	return &stats.TransactionsResponse{
+		Data:       transactions,
+		Pagination: pagination,
+	}, nil
+}
+
+func (s *service) GetUserInstances(ctx context.Context, userID string) ([]*coredbservice.UserInstanceSummary, error) {
+	dbs, err := s.dbStore.InstanceNames(ctx, userID)
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	return dbs, nil
 }
