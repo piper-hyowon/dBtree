@@ -21,7 +21,7 @@ const MiniLeaderboard: React.FC = () => {
         const fetchLeaderboard = async () => {
             try {
                 setIsLoading(true);
-                const data = await api.homeStats.getLeaderboardMini();
+                const data = await api.home.getLeaderboardMini();
                 setLeaderboard(data);
             } catch (error) {
                 console.error('Failed to fetch leaderboard:', error);

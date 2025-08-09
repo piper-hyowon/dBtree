@@ -16,6 +16,8 @@
     display: block;
     width: 100% !important;
     height: 100% !important;
+    position: relative;
+    z-index: 1;
 }
 
 .loading-overlay {

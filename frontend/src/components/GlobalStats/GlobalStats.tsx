@@ -14,7 +14,7 @@ const GlobalStats: React.FC = () => {
         const fetchGlobalStats = async () => {
             try {
                 setIsLoading(true);
-                const response = await api.homeStats.getGlobalStats();
+                const response = await api.home.getGlobalStats();
                 setGlobalStats(response);
             } catch (error) {
                 console.error("전역 통계 로드 실패:", error);
