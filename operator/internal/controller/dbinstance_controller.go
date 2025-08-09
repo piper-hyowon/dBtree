@@ -373,7 +373,40 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 
 		namespace := instance.GetUserNamespace()
 
-		// Delete PVC
+		// 1. Label selector로 모든 관련 Service 찾아서 삭제
+		labelSelector := client.MatchingLabels{
+			"dbtree.cloud/instance-id": instance.Spec.ExternalID,
+		}
+
+		// Services 삭제 (ClusterIP, NodePort)
+		serviceList := &corev1.ServiceList{}
+		if err := r.List(ctx, serviceList, client.InNamespace(namespace), labelSelector); err != nil {
+			log.Error(err, "Failed to list services")
+		} else {
+			for _, svc := range serviceList.Items {
+				if err := r.Delete(ctx, &svc); err != nil && !apierrors.IsNotFound(err) {
+					log.Error(err, "Failed to delete service", "name", svc.Name)
+				} else {
+					log.Info("Deleted service", "name", svc.Name)
+				}
+			}
+		}
+
+		// 2. Instance name 기반으로도 Service 찾기 (백엔드가 label 없이 생성한 경우)
+		externalServiceName := instance.Name + "-external"
+		externalSvc := &corev1.Service{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      externalServiceName,
+			Namespace: namespace,
+		}, externalSvc); err == nil {
+			if err := r.Delete(ctx, externalSvc); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete external service")
+			} else {
+				log.Info("Deleted external service", "name", externalServiceName)
+			}
+		}
+
+		// 3. PVC 삭제
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(namespace),
@@ -390,7 +423,7 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			}
 		}
 
-		// Delete NetworkPolicy
+		// 4. NetworkPolicy 삭제
 		netpol := &networkingv1.NetworkPolicy{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Name:      instance.GetNetworkPolicyName(),
@@ -401,7 +434,7 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			}
 		}
 
-		// Delete backup CronJob if exists
+		// 5. Backup CronJob 삭제
 		cronJob := &batchv1.CronJob{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Name:      instance.GetBackupCronJobName(),
@@ -412,7 +445,7 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			}
 		}
 
-		// Get provisioner and call Delete
+		// 6. Provisioner를 통한 추가 정리
 		prov := r.getProvisioner(instance.Spec.Type)
 		if prov != nil {
 			if err := prov.Delete(ctx, instance); err != nil {
@@ -420,7 +453,7 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			}
 		}
 
-		// Remove finalizer
+		// Finalizer 제거
 		controllerutil.RemoveFinalizer(instance, dbInstanceFinalizer)
 		if err := r.Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
