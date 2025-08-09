@@ -96,26 +96,6 @@ export const logout = async (): Promise<LogoutResponse> => {
 };
 
 /**
- * 현재 로그인한 사용자 정보 가져오기
- */
-export const getCurrentUser = (): User | null => {
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-
-    if (!token || !userStr) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(userStr) as User;
-    } catch (e) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        return null;
-    }
-};
-
-/**
  * 인증 여부 확인
  */
 export const isAuthenticated = (): boolean => {
@@ -143,6 +123,5 @@ export default {
     sendOTP,
     verifyOTP,
     logout,
-    getCurrentUser,
     isAuthenticated
 };

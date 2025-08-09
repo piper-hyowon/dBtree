@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import "./Home.css";
 import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
 import accountIcon from "../../assets/images/character/account-icon.png";
@@ -9,10 +9,31 @@ import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
 import {useAuth} from "../../contexts/AuthContext";
 import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
+import {User} from "../../services/api/auth.api";
+import api from "../../services/api";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const {isLoggedIn, logout, user} = useAuth();
+    const {isLoggedIn, logout} = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const userResponse = await api.user.getUserProfile()
+
+            setUser(userResponse);
+        } catch (error) {
+            console.error('Failed to load account data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
 
     const handleStartNow = () => {
         setShowLoginModal(true);

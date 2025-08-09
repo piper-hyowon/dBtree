@@ -49,7 +49,7 @@ const AccountPage: React.FC = () => {
         try {
             setLoading(true);
             const [userResponse, harvestResponse, instancesResponse] = await Promise.all([
-                api.auth.getCurrentUser(),
+                api.user.getUserProfile(),
                 api.account.getDailyHarvest({days: 7}),
                 api.account.getInstanceNames()
             ]);
@@ -167,12 +167,12 @@ const AccountPage: React.FC = () => {
         areaPath: string
     } => {
         const actualData = data.filter(item => item.amount !== null) as DailyHarvest[];
-        if (actualData.length === 0) return {linePath: '', areaPath: ''};
+        if (actualData?.length === 0) return {linePath: '', areaPath: ''};
 
         const maxAmount = Math.max(...actualData.map(item => item.amount), 1);
         const width = 100; // 백분율
         const height = 100; // 백분율
-        const stepX = width / (data.length - 1);
+        const stepX = width / (data?.length - 1);
 
         let path = '';
         let areaPath = '';
@@ -250,10 +250,11 @@ const AccountPage: React.FC = () => {
                     <div className="user-info-section">
                         <div className="user-basic-info">
                             <h2 className="user-name">{user?.email}</h2>
-                            <div className="user-badges">
-                                <span className="badge badge-member">프리미엄 멤버</span>
-                                <span className="badge badge-active">활성 사용자</span>
-                            </div>
+                            {user?.lastHarvestAt ? `마지막 수확 ${user?.lastHarvestAt}` : ''}
+                            {/*<div className="user-badges">*/}
+                            {/*    <span className="badge badge-member">프리미엄 멤버</span>*/}
+                            {/*    <span className="badge badge-active">활성 사용자</span>*/}
+                            {/*</div>*/}
                         </div>
 
                         <div className="user-stats-grid">
@@ -366,7 +367,7 @@ const AccountPage: React.FC = () => {
                                     </div>
 
                                     {/* 데이터 포인트들 */}
-                                    {fullWeekData.map((item, index) => (
+                                    {(fullWeekData ?? []).map((item, index) => (
                                         <div key={`${item.date}-${index}`} className="harvest-point">
                                             <div className="chart-dot"></div>
                                             <div className={`harvest-amount ${item.amount === null ? 'no-data' : ''}`}>
@@ -406,7 +407,7 @@ const AccountPage: React.FC = () => {
                         {activeTab === 'by-instance' && (
                             <div className="instance-filter">
                                 <label htmlFor="instance-select" className="instance-label">
-                                    🗄️ 인스턴스 선택:
+                                    인스턴스 선택:
                                 </label>
                                 <select
                                     id="instance-select"
@@ -415,20 +416,20 @@ const AccountPage: React.FC = () => {
                                     className="instance-select"
                                 >
                                     <option value="">전체 인스턴스</option>
-                                    {instances.map((instance) => (
+                                    {(instances ?? []).map((instance) => (
                                         <option key={instance.id} value={instance.name}>
                                             {instance.name}
                                         </option>
                                     ))}
                                 </select>
                                 <div className="instance-count">
-                                    {instances.length > 0 ? `${instances.length}개 인스턴스 보유` : '인스턴스 없음'}
+                                    {instances?.length > 0 ? `${instances?.length}개 인스턴스 보유` : '인스턴스 없음'}
                                 </div>
                             </div>
                         )}
 
                         {/* 트랜잭션 테이블 */}
-                        {transactions.length === 0 ? (
+                        {transactions?.length === 0 ? (
                             <div className="no-transactions">
                                 📋 거래 내역이 없습니다
                             </div>
@@ -438,13 +439,12 @@ const AccountPage: React.FC = () => {
                                 <tr>
                                     <th>인스턴스</th>
                                     <th>거래 유형</th>
-                                    <th>설명</th>
                                     <th>금액</th>
                                     <th>날짜</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {transactions.map((transaction) => (
+                                {(transactions ?? []).map((transaction) => (
                                     <tr key={transaction.id}>
                                         <td className="transaction-instance-cell">
                                             {transaction.instanceName || '-'}
@@ -452,7 +452,6 @@ const AccountPage: React.FC = () => {
                                         <td className="transaction-type-cell">
                                             {getActionTypeLabel(transaction.actionType)}
                                         </td>
-                                        <td>{transaction.note}</td>
                                         <td className="transaction-amount-cell">
                                                 <span
                                                     className={`amount ${transaction.amount > 0 ? 'positive' : 'negative'}`}>
@@ -460,7 +459,7 @@ const AccountPage: React.FC = () => {
                                                 </span>
                                         </td>
                                         <td className="transaction-date-cell">
-                                            {new Date(transaction.createdAt).toLocaleDateString('ko-KR')}
+                                            {new Date(transaction.createdAt).toLocaleString('ko-KR')}
                                         </td>
                                     </tr>
                                 ))}

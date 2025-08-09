@@ -4,8 +4,8 @@ import api from "../../services/api";
 
 const GlobalStats: React.FC = () => {
     const [globalStats, setGlobalStats] = useState({
-        totalHarvested: 0,
-        totalDbInstances: 0,
+        totalHarvestedLemons: 0,
+        totalCreatedInstances: 0,
         totalUsers: 0,
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -53,13 +53,13 @@ const GlobalStats: React.FC = () => {
         <>
             <div className="stat-item">
         <span className="stat-number">
-          {globalStats.totalHarvested ?? 0}
+          {globalStats.totalHarvestedLemons ?? 0}
         </span>
                 <span className="stat-label">수확된 레몬</span>
             </div>
             <div className="stat-item">
         <span className="stat-number">
-          {globalStats.totalDbInstances ?? 0}
+          {globalStats.totalCreatedInstances ?? 0}
         </span>
                 <span className="stat-label">생성된 DB</span>
             </div>

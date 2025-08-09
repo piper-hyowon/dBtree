@@ -271,7 +271,6 @@
 }
 
 .character-header-section {
-    /*background: rgba(255, 255, 255, 0.1);*/
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 24px;
@@ -283,11 +282,10 @@
     display: flex;
     gap: 0;
     height: 100%;
-    /*min-height: 320px;*/
     position: relative;
     animation: slideInScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    /*align-items: stretch;*/
 }
+
 @keyframes slideInScale {
     from { opacity: 0; transform: scale(0.9) translateY(20px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
@@ -316,11 +314,6 @@
     width: 220px;
     align-self: stretch;
     height: auto;
-}
-
-@keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 0.1; }
-    50% { transform: scale(1.1); opacity: 0.2; }
 }
 
 [data-theme="dark"] .character-section {
@@ -354,12 +347,6 @@
     }
 }
 
-@keyframes bubblePop {
-    0% { opacity: 0; transform: scale(0.8) translateY(10px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-
 /* User Info Section */
 .user-info-section {
     flex: 1;
@@ -377,6 +364,7 @@
     animation: slideInLeft 0.8s ease-out 0.2s both;
     min-height: 120px;
 }
+
 .user-name {
     font-size: 1.75rem;
     font-weight: 700;
@@ -888,6 +876,14 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.instance-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 1rem;
+    display: inline-block;
+}
+
 .instance-select {
     padding: 1rem 1.25rem;
     border: 2px solid rgba(255, 255, 255, 0.2);
@@ -909,7 +905,13 @@
     transform: translateY(-1px);
 }
 
-/* Enhanced Transaction Table */
+.instance-count {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Enhanced Transaction Table - 테이블 수정 핵심 부분 */
 .transactions-table {
     width: 100%;
     border-collapse: separate;
@@ -917,6 +919,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     overflow: hidden;
+    table-layout: fixed; /* 테이블 레이아웃 고정 */
 }
 
 .transactions-table thead {
@@ -933,6 +936,27 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transactions-table th:nth-child(1),
+.transactions-table td:nth-child(1) {
+    width: 30%; /* 인스턴스 */
+}
+
+.transactions-table th:nth-child(2),
+.transactions-table td:nth-child(2) {
+    width: 30%; /* 거래 유형 */
+}
+
+.transactions-table th:nth-child(3),
+.transactions-table td:nth-child(3) {
+    width: 20%; /* 금액 */
+    text-align: right;
+}
+
+.transactions-table th:nth-child(4),
+.transactions-table td:nth-child(4) {
+    width: 20%; /* 날짜 */
 }
 
 .transactions-table tbody tr {
@@ -978,6 +1002,7 @@
 .transaction-date-cell {
     color: var(--text-secondary);
     font-size: 0.8125rem;
+    white-space: nowrap;
 }
 
 .no-transactions {
@@ -1076,10 +1101,13 @@
         font-size: 1.5rem;
     }
 
-    .transactions-table {
-        display: block;
+    /* 모바일에서 테이블 스크롤 가능하게 */
+    .section-content {
         overflow-x: auto;
-        white-space: nowrap;
+    }
+
+    .transactions-table {
+        min-width: 700px; /* 최소 너비 설정 */
     }
 
     .section-header {
