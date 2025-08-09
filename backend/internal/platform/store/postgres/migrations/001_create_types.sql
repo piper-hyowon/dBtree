@@ -64,7 +64,7 @@ $$;
 DO
 $$
     BEGIN
-        CREATE TYPE harvest_status AS ENUM ('none', 'in_progress', 'success', 'failure', 'timeout');
+        CREATE TYPE harvest_status AS ENUM ('none', 'in_progress', 'success', 'failure', 'harvest_timeout');
     EXCEPTION
         WHEN duplicate_object THEN null;
     END

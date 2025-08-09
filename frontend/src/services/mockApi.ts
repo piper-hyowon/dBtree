@@ -175,17 +175,7 @@ const DB_QUIZ_QUESTIONS: QuizQuestion[] = [
     },
 ];
 
-
 export const mockApi = {
-    availableLemons: async (): Promise<ApiResponse<{ lemons: number[] }>> => {
-        return {
-            success: true,
-            data: {
-                lemons: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            },
-        };
-    },
-
     // TODO:
     harvestLemon: async (id: number): Promise<ApiResponse<boolean>> => {
         return {

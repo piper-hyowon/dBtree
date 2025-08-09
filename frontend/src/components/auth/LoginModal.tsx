@@ -4,6 +4,7 @@ import EmailForm from "./EmailForm";
 import OtpForm from "./OtpForm";
 import CharacterNewUser from "../../assets/images/character/new-user.svg";
 import CharaterReturningUser from "../../assets/images/character/returning-user.svg";
+import "./LoginModal.css";
 
 interface LoginModalProps {
     onClose: () => void;

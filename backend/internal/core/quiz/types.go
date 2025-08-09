@@ -56,14 +56,14 @@ type Status string
 type HarvestStatus string
 
 const (
-	StatusStarted           Status        = "started"     // 퀴즈 시작 / 정답 미제출
-	StatusDone              Status        = "done"        // 제출 완료(정답 여부는 is_correct로 구분)
-	StatusTimeout           Status        = "timeout"     // 제한 시간 초과
-	HarvestStatusNone       HarvestStatus = "none"        // 아직 수확 단계 아님(Default)
-	HarvestStatusInProgress HarvestStatus = "in_progress" // 원이 나타나서 클릭 대기 중
-	HarvestStatusSuccess    HarvestStatus = "success"     // 레몬 수확 성공
-	HarvestStatusTimeout    HarvestStatus = "timeout"     // 원 클릭 시간 초과
-	HarvestStatusFailure    HarvestStatus = "failure"     // 수확 실패 (다른 사용자가 먼저 수확)
+	StatusStarted           Status        = "started"         // 퀴즈 시작 / 정답 미제출
+	StatusDone              Status        = "done"            // 제출 완료(정답 여부는 is_correct로 구분)
+	StatusTimeout           Status        = "timeout"         // 제한 시간 초과
+	HarvestStatusNone       HarvestStatus = "none"            // 아직 수확 단계 아님(Default)
+	HarvestStatusInProgress HarvestStatus = "in_progress"     // 원이 나타나서 클릭 대기 중
+	HarvestStatusSuccess    HarvestStatus = "success"         // 레몬 수확 성공
+	HarvestStatusTimeout    HarvestStatus = "harvest_timeout" // 원 클릭 시간 초과
+	HarvestStatusFailure    HarvestStatus = "failure"         // 수확 실패 (다른 사용자가 먼저 수확)
 )
 
 type Quiz struct {

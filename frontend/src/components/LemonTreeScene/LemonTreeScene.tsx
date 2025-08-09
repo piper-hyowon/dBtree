@@ -82,7 +82,7 @@ const LemonTreeSceneContent = () => {
                     color: "#666",
                     padding: "6px 14px",
                     borderRadius: "15px",
-                    zIndex: 1001,
+                    zIndex: 500,
                     fontSize: "13px",
                     fontWeight: "normal",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
