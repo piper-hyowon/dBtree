@@ -35,7 +35,7 @@ const (
 type Transaction struct {
 	ID         string
 	UserID     string
-	InstanceID int
+	InstanceID *int64
 	ActionType ActionType
 	Status     Status
 	Amount     int

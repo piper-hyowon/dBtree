@@ -14,14 +14,14 @@ type Service interface {
 
 	/* --------레몬 잔액 변경-------- */
 
-	ValidateInstanceCreation(ctx context.Context, userID string, cost dbservice.LemonCost) error                       // 잔액 체크
-	ProcessInstanceFee(ctx context.Context, userID string, instanceID string, amount int, actionType ActionType) error // 인스턴스 비용 처리
+	ValidateInstanceCreation(ctx context.Context, userID string, cost dbservice.LemonCost) error                                                  // 잔액 체크
+	ProcessInstanceFee(ctx context.Context, userID string, externalInstanceID string, amount int, actionType ActionType, instanceID *int64) error // 인스턴스 비용 처리
 	GiveWelcomeLemon(ctx context.Context, userId string) error
 
 	/* --------레몬 잔액 직접 변경-------- */
 
-	AddLemons(ctx context.Context, userID string, amount int, actionType ActionType, note string) error
-	DeductLemons(ctx context.Context, userID string, amount int, actionType ActionType, note string) error
+	AddLemons(ctx context.Context, userID string, amount int, actionType ActionType, note string, instanceID *int64) error
+	DeductLemons(ctx context.Context, userID string, amount int, actionType ActionType, note string, instanceID *int64) error
 
 	/* --------유저 데이터 조회-------- */
 

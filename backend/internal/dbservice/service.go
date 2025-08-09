@@ -346,60 +346,46 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 		return nil, errors.NewInsufficientLemonsError(instance.Cost.CreationCost+1, instance.Cost.CreationCost-userLemon)
 	}
 
+	// 1. 먼저 DB에 인스턴스 저장 (ID 생성됨)
+	if err := s.dbiStore.Create(ctx, instance); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
 	// 환불 보장을 위한 defer
 	lemonDeducted := false
 	defer func() {
 		if err != nil && lemonDeducted {
 			refundErr := s.lemonService.AddLemons(ctx, userID, instance.Cost.CreationCost,
-				lemon.ActionInstanceCreateRefund, fmt.Sprintf("실패: %v", err))
+				lemon.ActionInstanceCreateRefund, fmt.Sprintf("실패: %v", err), &instance.ID)
 			if refundErr != nil {
-				// 환불 실패는 심각한 문제 - 반드시 기록
-				s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, amount: %d, error: %v",
-					userID, instance.Cost.CreationCost, refundErr)
-
-				// 환불 실패 기록 테이블에 저장 (수동 처리를 위해)
-				//s.recordRefundFailure(userID, instance.Cost.CreationCost, refundErr)
+				s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, instanceID: %d, amount: %d, error: %v",
+					userID, instance.ID, instance.Cost.CreationCost, refundErr)
+				// TODO: 환불 실패 기록 테이블에 저장
 			}
 		}
 	}()
 
-	// 레몬 차감 (생성 비용)
-	if err := s.lemonService.DeductLemons(ctx, userID, instance.Cost.CreationCost, lemon.ActionInstanceCreate, ""); err != nil {
+	// 2. 레몬 차감(트랜잭션 기록할때 instance.ID 함께!)
+	if err := s.lemonService.DeductLemons(ctx, userID, instance.Cost.CreationCost,
+		lemon.ActionInstanceCreate, fmt.Sprintf("인스턴스 %s 생성", instance.Name), &instance.ID); err != nil {
+		// 레몬 차감 실패시 인스턴스 삭제
+		_ = s.dbiStore.Delete(ctx, instance.ExternalID)
 		return nil, errors.Wrap(err)
 	}
+	lemonDeducted = true
 
-	// K8s 네임스페이스 및 리소스 생성
+	// 3. K8s 리소스 생성
 	secretData, err := s.provisionK8sResources(ctx, instance)
 	if err != nil {
-		// 실패 시 레몬 환불
-		if refundErr := s.lemonService.AddLemons(ctx, userID, instance.Cost.CreationCost,
-			lemon.ActionInstanceCreateRefund, fmt.Sprint(err)); refundErr != nil {
-			s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, amount: %d, error: %v",
-				userID, instance.Cost.CreationCost, refundErr)
-			// 알림 시스템에 전송하거나 별도 테이블에 기록
-		}
-
+		// 인스턴스 상태를 Error로 변경
+		_ = s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusError, "K8s provisioning failed")
+		// defer에서 환불 처리됨
 		return nil, errors.Wrapf(err, "failed to provision k8s resources")
 	}
 	username, password := string(secretData["username"]), string(secretData["password"])
 
-	// DB에 인스턴스 저장
-	if err := s.dbiStore.Create(ctx, instance); err != nil {
-		// K8s 리소스 정리
-		_ = s.cleanupK8sResources(ctx, instance)
-		// 레몬 환불
-		if refundErr := s.lemonService.AddLemons(ctx, userID, instance.Cost.CreationCost,
-			lemon.ActionInstanceCreateRefund, fmt.Sprint(err)); refundErr != nil {
-			s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, amount: %d, error: %v",
-				userID, instance.Cost.CreationCost, refundErr)
-			// 알림 시스템에 전송하거나 별도 테이블에 기록
-		}
-		return nil, errors.Wrap(err)
-	}
-
-	// 외부 접속 설정 (에러가 나도 인스턴스는 이미 생성됨)
+	// 4. 외부 접속 설정 (에러가 나도 인스턴스는 이미 생성됨)
 	var externalPort int
-
 	if s.portStore != nil {
 		port, err := s.portStore.AllocatePort(ctx, instance.ExternalID)
 		if err != nil {
@@ -435,6 +421,7 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 		}
 	}
 
+	// 5. Credentials 생성
 	credentials := &dbservice.Credentials{
 		Username: username,
 		Password: password,

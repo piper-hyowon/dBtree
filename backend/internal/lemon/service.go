@@ -145,7 +145,7 @@ func (s *service) HarvestLemon(ctx context.Context, userID string, positionID in
 	}, nil
 }
 
-func (s *service) AddLemons(ctx context.Context, userID string, amount int, actionType lemon.ActionType, note string) error {
+func (s *service) AddLemons(ctx context.Context, userID string, amount int, actionType lemon.ActionType, note string, instanceID *int64) error {
 	// 사용자 잔액 조회
 	balance, err := s.store.UserBalance(ctx, userID)
 	if err != nil {
@@ -163,6 +163,7 @@ func (s *service) AddLemons(ctx context.Context, userID string, amount int, acti
 	tx := &lemon.Transaction{
 		ID:         uuid.New().String(),
 		UserID:     userID,
+		InstanceID: instanceID,
 		ActionType: actionType, // 적절한 액션 타입 설정 필요
 		Status:     lemon.StatusSuccessful,
 		Amount:     amount,
@@ -176,7 +177,7 @@ func (s *service) AddLemons(ctx context.Context, userID string, amount int, acti
 	return s.store.CreateTransaction(ctx, tx)
 }
 
-func (s *service) DeductLemons(ctx context.Context, userID string, amount int, actionType lemon.ActionType, note string) error {
+func (s *service) DeductLemons(ctx context.Context, userID string, amount int, actionType lemon.ActionType, note string, instanceID *int64) error {
 	// 사용자 잔액 조회
 	balance, err := s.store.UserBalance(ctx, userID)
 	if err != nil {
@@ -195,6 +196,7 @@ func (s *service) DeductLemons(ctx context.Context, userID string, amount int, a
 	tx := &lemon.Transaction{
 		ID:         uuid.New().String(),
 		UserID:     userID,
+		InstanceID: instanceID,
 		ActionType: actionType, // 적절한 액션 타입 설정 필요
 		Status:     lemon.StatusSuccessful,
 		Amount:     -amount, // 음수로 저장
@@ -223,13 +225,13 @@ func (s *service) ValidateInstanceCreation(ctx context.Context, userID string, c
 	return nil
 }
 
-func (s *service) ProcessInstanceFee(ctx context.Context, userID string, instanceID string, amount int, actionType lemon.ActionType) error {
-	return s.DeductLemons(ctx, userID, amount, actionType, fmt.Sprintf("인스턴스 %s 유지 비용", instanceID))
+func (s *service) ProcessInstanceFee(ctx context.Context, userID string, externalInstanceID string, amount int, actionType lemon.ActionType, instanceID *int64) error {
+	return s.DeductLemons(ctx, userID, amount, actionType, fmt.Sprintf("인스턴스 %s 유지 비용", externalInstanceID), instanceID)
 
 }
 
 func (s *service) GiveWelcomeLemon(ctx context.Context, userID string) error {
-	return s.AddLemons(ctx, userID, lemon.WelcomeBonusAmount, lemon.ActionWelcomeBonus, "회원가입 보너스")
+	return s.AddLemons(ctx, userID, lemon.WelcomeBonusAmount, lemon.ActionWelcomeBonus, "회원가입 보너스", nil)
 }
 
 func (s *service) CanHarvest(ctx context.Context, userID string) (lemon.HarvestAvailability, error) {
