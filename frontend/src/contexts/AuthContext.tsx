@@ -35,8 +35,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 let tempEmail: string | null = null;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [user, setUser] = useState<User | null>(() => {
+        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+
+        if (token && userStr) {
+            try {
+                return JSON.parse(userStr);
+            } catch {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                return null;
+            }
+        }
+        return null;
+    });
+    const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     const loadUser = () => {

@@ -331,7 +331,7 @@ const AccountPage: React.FC = () => {
                         className="section-header"
                         onClick={() => toggleSection('harvest')}
                     >
-                        <h3 className="section-title">📈 최근 7일 수확량</h3>
+                        <h3 className="section-title">최근 7일 수확량</h3>
                         <button className="collapse-btn">
                             {collapsedSections.has('harvest') ? '▶' : '▼'}
                         </button>
@@ -431,7 +431,7 @@ const AccountPage: React.FC = () => {
                         {/* 트랜잭션 테이블 */}
                         {transactions?.length === 0 ? (
                             <div className="no-transactions">
-                                📋 거래 내역이 없습니다
+                                거래 내역이 없습니다
                             </div>
                         ) : (
                             <table className="transactions-table">

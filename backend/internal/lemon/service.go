@@ -244,8 +244,8 @@ func (s *service) CanHarvest(ctx context.Context, userID string) (lemon.HarvestA
 
 	if lastHarvestTime == nil {
 		return lemon.HarvestAvailability{
-			CanHarvest: true,
-			WaitTime:   0,
+			CanHarvest:  true,
+			WaitSeconds: 0,
 		}, nil
 	}
 
@@ -254,14 +254,14 @@ func (s *service) CanHarvest(ctx context.Context, userID string) (lemon.HarvestA
 	if now.Before(cooldownEndTime) {
 		waitTime := cooldownEndTime.Sub(now)
 		return lemon.HarvestAvailability{
-			CanHarvest: false,
-			WaitTime:   waitTime,
+			CanHarvest:  false,
+			WaitSeconds: int64(waitTime.Seconds()),
 		}, nil
 	}
 
 	return lemon.HarvestAvailability{
-		CanHarvest: true,
-		WaitTime:   0,
+		CanHarvest:  true,
+		WaitSeconds: 0,
 	}, nil
 }
 

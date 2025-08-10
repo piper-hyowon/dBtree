@@ -37,7 +37,7 @@ func (h *Handler) StartQuiz(w http.ResponseWriter, r *http.Request, positionID i
 		return
 	}
 	if !availability.CanHarvest {
-		rest.HandleError(w, errors.NewHarvestCooldownError(availability.WaitTime), h.logger)
+		rest.HandleError(w, errors.NewHarvestCooldownError(availability.WaitSeconds), h.logger)
 		return
 	}
 

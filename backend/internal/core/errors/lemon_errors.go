@@ -2,14 +2,26 @@ package errors
 
 import (
 	"fmt"
-	"time"
 )
 
-func NewHarvestCooldownError(nextHarvestTime time.Duration) DomainError {
+func NewHarvestCooldownError(waitSeconds int64) DomainError {
+	minutes := waitSeconds / 60
+	seconds := waitSeconds % 60
+
+	var message string
+	if minutes > 0 {
+		message = fmt.Sprintf("아직 레몬 수확 불가(%d분 %d초 후에 가능)", minutes, seconds)
+	} else {
+		message = fmt.Sprintf("아직 레몬 수확 불가(%d초 후에 가능)", seconds)
+	}
+
 	return NewError(
 		ErrHarvestCooldown,
-		fmt.Sprintf("아직 레몬 수확 불가(%f 분 후에 가능)", nextHarvestTime.Minutes()),
-		map[string]int{"nextHarvestTime": int(nextHarvestTime.Minutes())},
+		message,
+		map[string]interface{}{
+			"waitSeconds": waitSeconds,
+			"waitMinutes": minutes,
+		},
 		nil,
 	)
 }

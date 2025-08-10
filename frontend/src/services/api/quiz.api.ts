@@ -34,6 +34,21 @@ export interface SubmitAnswerResponse {
     attemptID: number;
 }
 
+export interface HarvestAvailability {
+    canHarvest: boolean;
+    waitSeconds: number;
+}
+
+export const canHarvest = async (): Promise<HarvestAvailability> => {
+    try {
+        const response = await apiClient.get<HarvestAvailability>('/lemon/harvestable');
+        return response.data;
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+}
+
 export const harvestLemon = async (positionId: number, attemptId: number): Promise<HarvestResponse> => {
     try {
         const response = await apiClient.post<HarvestResponse>('/lemon/harvest', {
@@ -72,4 +87,5 @@ export default {
     harvestLemon,
     getQuizQuestions,
     submitQuizAnswer,
+    canHarvest,
 };

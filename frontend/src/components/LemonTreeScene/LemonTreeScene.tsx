@@ -7,8 +7,7 @@ import {
 import Basket from "./Basket";
 import Tree from "./Tree";
 import Lemons from "./Lemons";
-import {useCallback, useState} from "react";
-import {mockApi} from "../../services/mockApi";
+import {useState} from "react";
 
 const LemonTreeSceneContent = () => {
     const {containerRef, scene} = useLemonTreeScene();
@@ -18,39 +17,6 @@ const LemonTreeSceneContent = () => {
     const [showInstructions, setShowinstructions] = useState<boolean>(false);
     const [availableLemonCount, setAvailableLemonCount] = useState<number>(0);
     const [nextGrowthTime, setNextGrowthTime] = useState<string | null>(null);
-
-    const addLemonToBasket = useCallback(
-        async (id: number): Promise<boolean> => {
-            try {
-                const success = (await mockApi.harvestLemon(id)).data;
-                if (success) {
-                    // 레몬 모델 제거
-                    const lemonModel = scene.getObjectByName(`lemon-${id}`);
-                    if (lemonModel) {
-                        scene.remove(lemonModel);
-                    }
-                    setLemons((prev) => prev.filter((lemon) => lemon.id !== id));
-
-                    // 레몬 개수 업데이트
-                    setAvailableLemonCount((prev) => Math.max(0, prev - 1));
-
-                    alert(
-                        `축하합니다! 레몬(ID: ${id})이 성공적으로 바구니에 담겼습니다!`
-                    );
-
-                    return success;
-                } else {
-                    alert("레몬을 바구니에 담는데 실패했습니다. 다시 시도해주세요.");
-                    return false;
-                }
-            } catch (err) {
-                console.error("바구니에 레몬 담기 오류:", err);
-                alert("네트워크 오류가 발생했습니다.");
-                return false;
-            }
-        },
-        [scene]
-    );
 
     return (
         <div className="lemon-tree-container">
@@ -65,7 +31,6 @@ const LemonTreeSceneContent = () => {
                     setLemons={setLemons}
                     lemonsLoaded={lemonsLoaded}
                     setLemonsLoaded={setLemonsLoaded}
-                    addLemonToBasket={addLemonToBasket}
                     setAvailableLemonCount={setAvailableLemonCount}
                     setNextGrowthTime={setNextGrowthTime}
                 />

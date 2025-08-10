@@ -64,8 +64,8 @@ var DefaultHarvestRules = HarvestRules{
 }
 
 type HarvestAvailability struct {
-	CanHarvest bool          `json:"canHarvest"` // 수확 가능 여부
-	WaitTime   time.Duration `json:"waitTime"`   // 기다려야 하는 시간
+	CanHarvest  bool  `json:"canHarvest"` // 수확 가능 여부
+	WaitSeconds int64 `json:"waitSeconds"`
 }
 
 type RegrowthRules struct {
