@@ -1,16 +1,17 @@
-package lemon
+package scheduler
 
 import (
 	"context"
-	"github.com/piper-hyowon/dBtree/internal/core/errors"
-	"github.com/piper-hyowon/dBtree/internal/core/lemon"
-	"github.com/piper-hyowon/dBtree/internal/core/quiz"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/piper-hyowon/dBtree/internal/core/errors"
+	"github.com/piper-hyowon/dBtree/internal/core/lemon"
+	"github.com/piper-hyowon/dBtree/internal/core/quiz"
 )
 
-type schedulerService struct {
+type LemonScheduler struct {
 	lemonStore    lemon.Store
 	quizStore     quiz.Store
 	logger        *log.Logger
@@ -21,12 +22,14 @@ type schedulerService struct {
 	checkInterval time.Duration
 }
 
-func NewScheduler(lemonStore lemon.Store, quizStore quiz.Store, logger *log.Logger, checkInterval time.Duration) lemon.Scheduler {
+var _ ManualRunScheduler = (*LemonScheduler)(nil)
+
+func NewLemonScheduler(lemonStore lemon.Store, quizStore quiz.Store, logger *log.Logger, checkInterval time.Duration) *LemonScheduler {
 	if checkInterval <= 0 {
 		checkInterval = 1 * time.Minute
 	}
 
-	return &schedulerService{
+	return &LemonScheduler{
 		lemonStore:    lemonStore,
 		quizStore:     quizStore,
 		logger:        logger,
@@ -36,7 +39,7 @@ func NewScheduler(lemonStore lemon.Store, quizStore quiz.Store, logger *log.Logg
 	}
 }
 
-func (s *schedulerService) Start() error {
+func (s *LemonScheduler) Start() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -54,7 +57,7 @@ func (s *schedulerService) Start() error {
 	return nil
 }
 
-func (s *schedulerService) Stop() error {
+func (s *LemonScheduler) Stop() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -70,19 +73,20 @@ func (s *schedulerService) Stop() error {
 	return nil
 }
 
-func (s *schedulerService) IsRunning() bool {
+func (s *LemonScheduler) IsRunning() bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.isRunning
 }
 
 // RunNow 레몬 재생성 메서드 즉시 실행
-func (s *schedulerService) RunNow(ctx context.Context) ([]int, error) {
+func (s *LemonScheduler) RunNow(ctx context.Context) error {
 	now := time.Now()
-	return s.lemonStore.RegrowLemons(ctx, now)
+	_, err := s.lemonStore.RegrowLemons(ctx, now)
+	return err
 }
 
-func (s *schedulerService) run() {
+func (s *LemonScheduler) run() {
 	s.regrowLemons()
 
 	for {
@@ -95,7 +99,7 @@ func (s *schedulerService) run() {
 	}
 }
 
-func (s *schedulerService) regrowLemons() {
+func (s *LemonScheduler) regrowLemons() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -130,7 +134,7 @@ func (s *schedulerService) regrowLemons() {
 	}
 }
 
-func (s *schedulerService) InitializeLemons(ctx context.Context) error {
+func (s *LemonScheduler) InitializeLemons(ctx context.Context) error {
 	// 1. 사용 가능한 레몬 위치 가져오기
 	availablePositions, err := s.lemonStore.AvailablePositions(ctx)
 	if err != nil {

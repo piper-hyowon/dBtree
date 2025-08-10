@@ -17,6 +17,7 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
 	"github.com/piper-hyowon/dBtree/internal/quiz"
 	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
+	"github.com/piper-hyowon/dBtree/internal/scheduler"
 	"github.com/piper-hyowon/dBtree/internal/stats"
 	statsRest "github.com/piper-hyowon/dBtree/internal/stats/rest"
 	"strconv"
@@ -187,7 +188,7 @@ func main() {
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
 
-	lemonScheduler := lemon.NewScheduler(lemonStore, quizStore, logger, 1*time.Minute)
+	lemonScheduler := scheduler.NewLemonScheduler(lemonStore, quizStore, logger, 1*time.Minute)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	if err := lemonScheduler.InitializeLemons(ctx); err != nil {
