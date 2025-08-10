@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/utils/crypto"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"log"
@@ -71,38 +72,70 @@ func (s *service) GetInstanceWithSync(ctx context.Context, userID, id string) (*
 	s.logger.Printf("Instance from DB - Status: %s, K8sNamespace: %s, K8sResourceName: %s",
 		instance.Status, instance.K8sNamespace, instance.K8sResourceName)
 
-	// Provisioning 상태면 K8s에서 실제 상태 확인
-	if instance.Status == dbservice.StatusProvisioning && instance.Type == dbservice.MongoDB {
-		status, err := s.k8sClient.GetMongoDBStatus(ctx, instance.K8sNamespace, instance.K8sResourceName)
+	// K8s와 상태 동기화 (MongoDB만 지원하므로 타입 체크)
+	if instance.K8sNamespace != "" && instance.K8sResourceName != "" && instance.Type == dbservice.MongoDB {
+		// DBInstance CRD 가져오기
+		crd, err := s.k8sClient.DBInstance(ctx, instance.K8sNamespace, instance.K8sResourceName)
 		if err != nil {
-			s.logger.Printf("Failed to get MongoDB status: %v", err)
-		} else {
-			s.logger.Printf("K8s status - Phase: %s, Ready: %v", status.Phase, status.Ready)
+			s.logger.Printf("Failed to get DBInstance CRD: %v", err)
+		} else if crd != nil {
+			// CRD의 status.state 확인
+			status, found, err := unstructured.NestedString(crd.Object, "status", "state")
+			if err == nil && found && status != "" {
+				k8sStatus := dbservice.InstanceStatus(status)
+				s.logger.Printf("K8s CRD status: %s", k8sStatus)
 
-			// 상태 업데이트
-			newStatus := s.mapMongoDBStatus(status)
-			s.logger.Printf("Mapped status: %s", newStatus)
+				// 상태가 다르면 DB 업데이트
+				if k8sStatus != instance.Status {
+					s.logger.Printf("Status mismatch - DB: %s, K8s: %s. Updating DB...",
+						instance.Status, k8sStatus)
 
-			if newStatus != instance.Status {
-				if err := s.dbiStore.UpdateStatus(ctx, instance.ID, newStatus, status.Message); err != nil {
-					s.logger.Printf("Failed to update status in DB: %v", err)
-				} else {
-					instance.Status = newStatus
-					instance.StatusReason = status.Message
+					reason, _, _ := unstructured.NestedString(crd.Object, "status", "statusReason")
+
+					if err := s.dbiStore.UpdateStatus(ctx, instance.ID, k8sStatus, reason); err != nil {
+						s.logger.Printf("Failed to update status in DB: %v", err)
+					} else {
+						instance.Status = k8sStatus
+						instance.StatusReason = reason
+					}
 				}
 			}
+		}
 
-			// 연결 정보 업데이트
-			if status.Ready && instance.Endpoint == "" {
-				instance.Endpoint = status.Endpoint
-				instance.Port = int(status.Port)
-				_ = s.dbiStore.Update(ctx, instance)
+		// MongoDB 상태 확인 (provisioning 등)
+		if instance.Status == dbservice.StatusProvisioning {
+			status, err := s.k8sClient.GetMongoDBStatus(ctx, instance.K8sNamespace, instance.K8sResourceName)
+			if err != nil {
+				s.logger.Printf("Failed to get MongoDB status: %v", err)
+			} else {
+				s.logger.Printf("K8s status - Phase: %s, Ready: %v", status.Phase, status.Ready)
+
+				// 상태 업데이트
+				newStatus := s.mapMongoDBStatus(status)
+				s.logger.Printf("Mapped status: %s", newStatus)
+
+				if newStatus != instance.Status {
+					if err := s.dbiStore.UpdateStatus(ctx, instance.ID, newStatus, status.Message); err != nil {
+						s.logger.Printf("Failed to update status in DB: %v", err)
+					} else {
+						instance.Status = newStatus
+						instance.StatusReason = status.Message
+					}
+				}
+
+				// 연결 정보 업데이트
+				if status.Ready && instance.Endpoint == "" {
+					instance.Endpoint = status.Endpoint
+					instance.Port = int(status.Port)
+					_ = s.dbiStore.Update(ctx, instance)
+				}
 			}
 		}
 	}
 
 	return instance, nil
 }
+
 func (s *service) ListPresets(ctx context.Context) ([]*dbservice.DBPreset, error) {
 	presets, err := s.presetStore.ListByType(ctx, dbservice.MongoDB)
 	if err != nil {
@@ -174,18 +207,125 @@ func (s *service) DeleteInstance(ctx context.Context, userID, instanceID string)
 }
 
 func (s *service) StartInstance(ctx context.Context, userID, instanceID string) error {
-	//TODO implement me
-	panic("implement me")
+	// 1. 인스턴스 조회 및 권한 확인
+	instance, err := s.dbiStore.Find(ctx, instanceID)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	if instance == nil || instance.UserID != userID {
+		return errors.NewResourceNotFoundError("instance", instanceID)
+	}
+
+	// 2. 시작 가능한 상태인지 확인
+	if !instance.CanStart() {
+		return errors.NewInvalidStatusTransitionError(string(instance.Status), string(dbservice.StatusRunning))
+	}
+
+	// 3. 레몬 잔액 확인 (시작시 바로 과금)
+	usr, err := s.userStore.FindById(ctx, userID)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	balance := usr.LemonBalance
+
+	hourlyCost := instance.Cost.HourlyLemons
+	if balance < hourlyCost {
+		return errors.NewInsufficientLemonsError(hourlyCost, hourlyCost-balance)
+	}
+
+	// 4. 상태 변경 (DB)
+	if err := s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusRunning, "Started by user"); err != nil {
+		return errors.Wrap(err)
+	}
+
+	// 5. K8s CRD 상태 변경
+	if instance.K8sNamespace != "" && instance.K8sResourceName != "" {
+		if err := s.k8sClient.PatchDBInstanceStatus(
+			ctx,
+			instance.K8sNamespace,
+			instance.K8sResourceName,
+			string(dbservice.StatusRunning),
+			"Started by user request",
+		); err != nil {
+			s.logger.Printf("K8s 상태 업데이트 실패: %v", err)
+			// 롤백
+			_ = s.dbiStore.UpdateStatus(ctx, instance.ID, instance.Status, "K8s update failed")
+			return errors.Wrap(err)
+		}
+	}
+
+	// 6. 즉시 과금
+	if err := s.lemonService.ProcessInstanceFee(
+		ctx,
+		userID,
+		instance.ExternalID,
+		hourlyCost,
+		lemon.ActionInstanceMaintain,
+		&instance.ID,
+	); err != nil {
+		s.logger.Printf("시작 과금 실패: %v", err)
+		// 과금 실패시 다시 중지? 아니면 그냥 로그만?
+	}
+
+	// 7. 과금 시간 업데이트
+	_ = s.dbiStore.UpdateBillingTime(ctx, instance.ID, time.Now())
+
+	s.logger.Printf("인스턴스 %s 시작됨", instanceID)
+	return nil
 }
 
 func (s *service) StopInstance(ctx context.Context, userID, instanceID string) error {
-	//TODO implement me
-	panic("implement me")
+	// 1. 인스턴스 조회 및 권한 확인
+	instance, err := s.dbiStore.Find(ctx, instanceID)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	if instance == nil || instance.UserID != userID {
+		return errors.NewResourceNotFoundError("instance", instanceID)
+	}
+
+	// 2. 중지 가능한 상태인지 확인
+	if !instance.CanStop() {
+		return errors.NewInvalidStatusTransitionError(string(instance.Status), string(dbservice.StatusStopped))
+	}
+
+	// 3. 상태 변경 (DB)
+	if err := s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusStopped, "Stopped by user"); err != nil {
+		return errors.Wrap(err)
+	}
+
+	// 4. K8s CRD 상태 변경
+	if instance.K8sNamespace != "" && instance.K8sResourceName != "" {
+		if err := s.k8sClient.PatchDBInstanceStatus(
+			ctx,
+			instance.K8sNamespace,
+			instance.K8sResourceName,
+			string(dbservice.StatusStopped),
+			"Stopped by user request",
+		); err != nil {
+			s.logger.Printf("K8s 상태 업데이트 실패: %v", err)
+			// 롤백
+			_ = s.dbiStore.UpdateStatus(ctx, instance.ID, instance.Status, "K8s update failed")
+			return errors.Wrap(err)
+		}
+	}
+
+	s.logger.Printf("인스턴스 %s 중지됨", instanceID)
+	return nil
 }
 
 func (s *service) RestartInstance(ctx context.Context, userID, instanceID string) error {
-	//TODO implement me
-	panic("implement me")
+	if err := s.StopInstance(ctx, userID, instanceID); err != nil {
+		return errors.Wrap(err)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	if err := s.StartInstance(ctx, userID, instanceID); err != nil {
+		return errors.Wrap(err)
+	}
+
+	return nil
 }
 
 func (s *service) CreateBackup(ctx context.Context, userID, instanceID string, name string) (*dbservice.BackupRecord, error) {
@@ -417,6 +557,13 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 				_ = s.portStore.ReleasePort(ctx, instance.ExternalID)
 			} else {
 				externalPort = port
+				instance.ExternalPort = port
+				instance.Endpoint = fmt.Sprintf("%s.%s.svc.cluster.local", instance.Name, instance.K8sNamespace)
+
+				// DB 업데이트
+				if err := s.dbiStore.Update(ctx, instance); err != nil {
+					s.logger.Printf("Failed to update port info in DB: %v", err)
+				}
 			}
 		}
 	}
@@ -464,6 +611,11 @@ func (s *service) provisionK8sResources(ctx context.Context, instance *dbservice
 	// DBInstance CRD 생성
 	if err := s.createDBInstanceCRD(ctx, instance); err != nil {
 		return nil, err
+	}
+
+	if err := s.dbiStore.Update(ctx, instance); err != nil {
+		s.logger.Printf("Failed to update K8s info in DB: %v", err)
+		// 실패해도 계속 진행 (이미 K8s 리소스는 생성됨)
 	}
 
 	return secretData, nil

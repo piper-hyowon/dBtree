@@ -159,16 +159,32 @@ func (s *DBInstanceStore) ListPausedBefore(ctx context.Context, before time.Time
 }
 
 func (s *DBInstanceStore) Update(ctx context.Context, instance *dbservice.DBInstance) error {
+	// 0을 NULL로 변환
+	var port, externalPort interface{}
+
+	if instance.Port > 0 {
+		port = instance.Port
+	} else {
+		port = nil // NULL로 저장
+	}
+
+	if instance.ExternalPort > 0 {
+		externalPort = instance.ExternalPort
+	} else {
+		externalPort = nil // NULL로 저장
+	}
+
 	query := `
         UPDATE db_instances SET
             k8s_namespace = $2,
             k8s_resource_name = $3,
             endpoint = $4,
             port = $5,
-            status = $6,
-            status_reason = $7,
-            last_billed_at = $8,
-            paused_at = $9,
+            external_port = $6, 
+            status = $7,       
+            status_reason = $8,  
+            last_billed_at = $9,  
+            paused_at = $10,      
             updated_at = NOW()
         WHERE id = $1 AND deleted_at IS NULL
     `
@@ -178,7 +194,8 @@ func (s *DBInstanceStore) Update(ctx context.Context, instance *dbservice.DBInst
 		instance.K8sNamespace,
 		instance.K8sResourceName,
 		instance.Endpoint,
-		instance.Port,
+		port,
+		externalPort,
 		instance.Status,
 		instance.StatusReason,
 		instance.LastBilledAt,
@@ -193,15 +210,31 @@ func (s *DBInstanceStore) Update(ctx context.Context, instance *dbservice.DBInst
 }
 
 func (s *DBInstanceStore) UpdateStatus(ctx context.Context, id int64, status dbservice.InstanceStatus, reason string) error {
-	query := `
-        UPDATE db_instances SET
-            status = $2,
-            status_reason = $3,
-            updated_at = NOW()
-        WHERE id = $1 AND deleted_at IS NULL
-    `
+	var query string
+	var args []interface{}
 
-	result, err := s.db.ExecContext(ctx, query, id, status, reason)
+	if status == dbservice.StatusDeleting {
+		query = `
+            UPDATE db_instances SET
+                status = $2,
+                status_reason = $3,
+                deleted_at = NOW(),
+                updated_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+        `
+		args = []interface{}{id, status, reason}
+	} else {
+		query = `
+            UPDATE db_instances SET
+                status = $2,
+                status_reason = $3,
+                updated_at = NOW()
+            WHERE id = $1 AND deleted_at IS NULL
+        `
+		args = []interface{}{id, status, reason}
+	}
+
+	result, err := s.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update status: %w", err)
 	}
@@ -418,4 +451,9 @@ func (s *DBInstanceStore) InstanceNames(ctx context.Context, userID string) ([]*
 	}
 
 	return instances, nil
+}
+
+func (s *DBInstanceStore) ListByStatus(ctx context.Context, status dbservice.InstanceStatus) ([]*dbservice.DBInstance, error) {
+	query := selectInstancesQuery + " WHERE status = $1 AND deleted_at IS NULL ORDER BY created_at DESC"
+	return s.queryInstances(ctx, query, status)
 }

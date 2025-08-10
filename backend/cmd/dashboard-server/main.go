@@ -126,6 +126,7 @@ func main() {
 	r.GET("/db/instances", authMiddleware.RequireAuth(dbsHandler.ListInstances))
 	r.GET("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.GetInstanceWithSync))
 	r.DELETE("/db/instances/:id", authMiddleware.RequireAuth(dbsHandler.DeleteInstance))
+	r.POST("/db/instances/:id/:status", authMiddleware.RequireAuth(dbsHandler.UpdateInstanceStatus))
 	r.GET("/db/presets", dbsHandler.ListPresets)
 
 	r.POST("/verify-otp", func(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +197,17 @@ func main() {
 	}
 	cancel()
 
+	billingScheduler := scheduler.NewBillingScheduler(
+		dbiStore,
+		lemonStore,
+		lemonService,
+		k8sClient,
+		logger,
+		1*time.Minute, // 1시간마다 실행 TODO: 테스트하느라 1분
+	)
+
 	lemonScheduler.Start()
+	billingScheduler.Start()
 
 	// 종료 시그널
 	stopChan := make(chan os.Signal, 1)
@@ -212,6 +223,7 @@ func main() {
 	<-stopChan
 	logger.Println("종료 신호 수신")
 	lemonScheduler.Stop()
+	billingScheduler.Stop()
 
 	if err := server.GracefulShutdown(5 * time.Second); err != nil {
 		logger.Fatalf("서버 종료 중 오류: %v", err)

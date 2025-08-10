@@ -11,6 +11,7 @@ type DBInstanceStore interface {
 	FindByUserAndName(ctx context.Context, userID string, name string) (*DBInstance, error)
 	List(ctx context.Context, userID string) ([]*DBInstance, error)
 	ListRunning(ctx context.Context) ([]*DBInstance, error)
+	ListByStatus(ctx context.Context, status InstanceStatus) ([]*DBInstance, error)
 	ListPausedBefore(ctx context.Context, before time.Time) ([]*DBInstance, error)
 	Update(ctx context.Context, instance *DBInstance) error
 	UpdateStatus(ctx context.Context, id int64, status InstanceStatus, reason string) error

@@ -2,11 +2,13 @@ package k8s
 
 import (
 	"context"
+	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"log"
 	"path/filepath"
@@ -35,6 +37,8 @@ type Client interface {
 	UpdateDBInstance(ctx context.Context, namespace, name string, instance *unstructured.Unstructured) error
 	DeleteDBInstance(ctx context.Context, namespace, name string) error
 	DBInstance(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error)
+
+	PatchDBInstanceStatus(ctx context.Context, namespace, name string, state string, reason string) error
 
 	CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error
 
@@ -282,4 +286,19 @@ func (c *client) CreateNodePortService(ctx context.Context, namespace, name stri
 
 	_, err := c.clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	return err
+}
+
+func (c *client) PatchDBInstanceStatus(ctx context.Context, namespace, name string, state string, reason string) error {
+	// lastUpdated 필드 제거 - CRD에 정의되지 않은 필드
+	patch := []byte(fmt.Sprintf(`{"status":{"state":"%s","statusReason":"%s"}}`, state, reason))
+
+	_, err := c.dynamic.Resource(dbInstanceGVR).Namespace(namespace).
+		Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{}, "status")
+
+	if err != nil {
+		return errors.Wrapf(err, "failed to patch DBInstance status")
+	}
+
+	c.logger.Printf("Patched DBInstance status: %s/%s to %s", namespace, name, state)
+	return nil
 }

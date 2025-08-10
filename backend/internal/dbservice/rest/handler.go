@@ -152,3 +152,44 @@ func (h *Handler) DeleteInstance(w http.ResponseWriter, r *http.Request) {
 
 	rest.SendSuccessResponse(w, http.StatusNoContent, nil)
 }
+
+func (h *Handler) UpdateInstanceStatus(w http.ResponseWriter, r *http.Request) {
+	user, err := rest.GetUserFromContext(r.Context())
+	if err != nil {
+		rest.HandleError(w, err, h.logger)
+		return
+	}
+
+	id := router.Param(r, "id")
+	if id == "" {
+		rest.HandleError(w, errors.NewMissingParameterError("id"), h.logger)
+		return
+	}
+
+	newStatus := router.Param(r, "status")
+	if newStatus == "" {
+		rest.HandleError(w, errors.NewEndpointNotFoundError(r.RequestURI), h.logger)
+		return
+	}
+
+	switch newStatus {
+	case "stop":
+		if err := h.dbService.StopInstance(r.Context(), user.ID, id); err != nil {
+			rest.HandleError(w, err, h.logger)
+			return
+		}
+	case "start":
+		if err := h.dbService.StartInstance(r.Context(), user.ID, id); err != nil {
+			rest.HandleError(w, err, h.logger)
+			return
+		}
+
+	case "restart":
+		if err := h.dbService.RestartInstance(r.Context(), user.ID, id); err != nil {
+			rest.HandleError(w, err, h.logger)
+			return
+		}
+	}
+
+	rest.SendSuccessResponse(w, http.StatusNoContent, nil)
+}

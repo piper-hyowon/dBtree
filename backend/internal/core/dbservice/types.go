@@ -52,14 +52,15 @@ type InstanceStatus string
 const (
 	StatusProvisioning InstanceStatus = "provisioning"
 	StatusRunning      InstanceStatus = "running"
-	StatusStopped      InstanceStatus = "stopped"
-	StatusPaused       InstanceStatus = "paused"
-	StatusError        InstanceStatus = "error"
-	StatusDeleting     InstanceStatus = "deleting"
-	StatusMaintenance  InstanceStatus = "maintenance"
-	StatusBackingUp    InstanceStatus = "backing_up"
-	StatusRestoring    InstanceStatus = "restoring"
-	StatusUpgrading    InstanceStatus = "upgrading"
+	StatusStopped      InstanceStatus = "stopped" // 유저가 수동 중지
+	// StatusPaused 시스템에 의해 일시정지(레몬 부족), 다음 과금때도 없으면 자동 삭제 대상, 사용자가 레몬을 충전하면 자동으로 재시작 가능
+	StatusPaused      InstanceStatus = "paused"
+	StatusError       InstanceStatus = "error"
+	StatusDeleting    InstanceStatus = "deleting"
+	StatusMaintenance InstanceStatus = "maintenance"
+	StatusBackingUp   InstanceStatus = "backing_up"
+	StatusRestoring   InstanceStatus = "restoring"
+	StatusUpgrading   InstanceStatus = "upgrading"
 )
 
 type ResourceSpec struct {
@@ -123,8 +124,9 @@ type DBInstance struct {
 	K8sSecretRef    string // Secret 리소스 참조
 
 	// Connection Info
-	Endpoint string
-	Port     int
+	Endpoint     string
+	Port         int // 내부 포트 (27017, 6379 등)
+	ExternalPort int // NodePort (30000-32767)
 
 	Config       map[string]interface{}
 	BackupConfig BackupConfig
@@ -149,6 +151,7 @@ func (d *DBInstance) ToResponse() *InstanceResponse {
 		Cost:              d.Cost.ToResponse(),
 		Endpoint:          d.Endpoint,
 		Port:              d.Port,
+		ExternalPort:      d.ExternalPort,
 		BackupEnabled:     d.BackupConfig.Enabled,
 		Config:            d.Config,
 		CreatedAt:         d.CreatedAt,
@@ -193,13 +196,6 @@ func (d *DBInstance) CanStop() bool {
 
 func (d *DBInstance) CanDelete() bool {
 	return d.Status != StatusDeleting
-}
-
-func (d *DBInstance) CalculateHourlyCost() int {
-	if d.Status != StatusRunning {
-		return 0
-	}
-	return d.Cost.HourlyLemons
 }
 
 // 프리셋
