@@ -6,6 +6,7 @@ import {
     verifyOTP,
     VerifyOTPResponse
 } from '../services/api/auth.api';
+import api from '../services/api';
 
 interface AuthContextType {
     isLoggedIn: boolean;
@@ -27,7 +28,7 @@ interface AuthContextType {
     resendOtp: () => Promise<{ success: boolean, isNewUser?: boolean, message?: string, retryAfter?: number }>;
     logout: () => Promise<void>;
     clearError: () => void;
-    refreshUser: () => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,48 +51,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
         }
         return null;
     });
-    const [loading, setLoading] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
-    const loadUser = () => {
+    const refreshUser = async (): Promise<void> => {
         const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
 
-        if (token && userStr) {
-            try {
-                const userData = JSON.parse(userStr);
-                setUser(userData);
-            } catch (err) {
-                setUser(null);
+        if (!token) {
+            setUser(null);
+            return;
+        }
+
+        try {
+            // API에서 최신 사용자 정보 가져오기
+            const userResponse = await api.user.getUserProfile();
+
+            // 상태 업데이트
+            setUser(userResponse);
+
+            // localStorage도 업데이트
+            localStorage.setItem('user', JSON.stringify(userResponse));
+        } catch (error: any) {
+            console.error('Failed to refresh user data:', error);
+            // 토큰이 유효하지 않으면 로그아웃 처리
+            if (error?.response?.status === 401) {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
+                setUser(null);
             }
-        } else {
-            setUser(null);
         }
     };
 
+    // 초기 로드 시 API 호출하여 최신 정보 가져오기
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        const initAuth = async () => {
+            const token = localStorage.getItem('token');
 
-        if (token && userStr) {
-            try {
-                const userData = JSON.parse(userStr);
-                setUser(userData);
-            } catch (err) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+            if (token) {
+                await refreshUser();
             }
-        }
+            setLoading(false);
+        };
 
-        setLoading(false);
+        initAuth();
     }, []);
 
     useEffect(() => {
-        const handleStorageChange = (e: StorageEvent) => {
+        const handleStorageChange = async (e: StorageEvent) => {
             if (e.key === 'user' || e.key === 'token') {
-                loadUser();
+                const token = localStorage.getItem('token');
+                if (token) {
+                    await refreshUser();
+                } else {
+                    setUser(null);
+                }
             }
         };
 
@@ -168,6 +181,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
 
             if (response.profile) {
                 setUser(response.profile);
+                localStorage.setItem('user', JSON.stringify(response.profile));
                 tempEmail = null;
             }
 
@@ -198,10 +212,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({children}) => {
 
     const clearError = () => {
         setError(null);
-    };
-
-    const refreshUser = () => {
-        loadUser();
     };
 
     const value = {

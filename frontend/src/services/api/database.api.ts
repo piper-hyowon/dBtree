@@ -60,6 +60,43 @@ export const deleteInstance = async (instanceId: string): Promise<void> => {
 };
 
 /**
+ * 인스턴스 중지
+ */
+export const stopInstance = async (instanceId: string): Promise<void> => {
+    try {
+        await apiClient.post(`/db/instances/${instanceId}/stop`);
+        // 204 No Content - 응답 바디 없음
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+};
+
+/**
+ * 인스턴스 재시작
+ */
+export const restartInstance = async (instanceId: string): Promise<void> => {
+    try {
+        await apiClient.post(`/db/instances/${instanceId}/restart`);
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+};
+
+/**
+ * 인스턴스 시작
+ */
+export const startInstance = async (instanceId: string): Promise<void> => {
+    try {
+        await apiClient.post(`/db/instances/${instanceId}/start`);
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+};
+
+/**
  * 프리셋 목록 조회
  */
 export const getPresets = async (): Promise<PresetResponse[]> => {

@@ -1,6 +1,9 @@
 import backupComplete from '../assets/images/character/backup-complete.png';
 import dbError from '../assets/images/character/db-error.png';
 import dbRunning from '../assets/images/character/db-running.png';
+import dbPaused from '../assets/images/character/db-paused.png';
+import dbStopped from '../assets/images/character/db-stopped.png';
+import dbDeleting from '../assets/images/character/db-deleting.png';
 import emptyState from '../assets/images/character/empty-state.png'
 import highUsage from '../assets/images/character/high-usage.png';
 import lowCredits from '../assets/images/character/low-credits.png';
@@ -8,6 +11,7 @@ import maintenance from '../assets/images/character/maintenance.png';
 import richInCredits from '../assets/images/character/rich-credits.png';
 import React from "react";
 import LoadingLemonSVG from "../components/common/LoadingCharacterSVG";
+import {InstanceStatus} from "../types/database.types";
 
 type CharacterImage = string | React.ComponentType<any>;
 
@@ -17,7 +21,9 @@ export const characterImages = {
     loading: LoadingLemonSVG,
     provisioning: LoadingLemonSVG,
     running: dbRunning,
-    stopped: dbError,
+    paused: dbPaused,
+    stopped: dbStopped,
+    deleting: dbDeleting,
     highUsage,
     lowCredits,
     maintenance,
@@ -25,17 +31,20 @@ export const characterImages = {
     default: emptyState
 };
 
-export const getCharacterByStatus = (status: string) => {
+export const getCharacterByStatus = (status: InstanceStatus): string | React.ComponentType => {
     switch (status) {
         case 'running':
             return characterImages.running;
+        case 'stopped':
+            return characterImages.stopped;
+        case 'paused':
+            return characterImages.paused;
         case 'provisioning':
             return characterImages.provisioning;
+        case 'deleting':
+            return characterImages.deleting;
         case 'error':
-        case 'stopped':
             return characterImages.error;
-        case 'maintenance':
-            return characterImages.maintenance;
         default:
             return characterImages.default;
     }

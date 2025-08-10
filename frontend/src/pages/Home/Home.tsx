@@ -14,28 +14,13 @@ import api from "../../services/api";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
-    const {isLoggedIn, logout} = useAuth();
-    const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);
-
-    const loadData = async () => {
-        if (isLoggedIn) {
-            try {
-                setLoading(true);
-                const userResponse = await api.user.getUserProfile()
-
-                setUser(userResponse);
-            } catch (error) {
-                console.error('Failed to load account data:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
+    const {isLoggedIn, logout, user, refreshUser} = useAuth();
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (isLoggedIn) {
+            refreshUser();
+        }
+    }, [isLoggedIn]);
 
     const handleStartNow = () => {
         setShowLoginModal(true);

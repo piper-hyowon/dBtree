@@ -1,5 +1,5 @@
 export type DBType = 'mongodb' | 'redis';
-export type DBSize = 'tiny' | 'small' | 'medium' | 'large' | 'xlarge';
+export type DBSize = 'small' | 'medium' | 'large';
 
 // MongoDB modes
 export type MongoDBMode = 'standalone' | 'replica_set' | 'sharded';
@@ -7,7 +7,7 @@ export type MongoDBMode = 'standalone' | 'replica_set' | 'sharded';
 export type RedisMode = 'basic' | 'sentinel' | 'cluster';
 export type DBMode = MongoDBMode | RedisMode;
 
-export type InstanceStatus = 'provisioning' | 'running' | 'stopped' | 'error' | 'maintenance';
+export type InstanceStatus = 'provisioning' | 'running' | 'stopped' | 'paused' | 'deleting' | 'error' | 'maintenance';
 
 export interface ResourceSpec {
     cpu: number;      // vCPU 개수

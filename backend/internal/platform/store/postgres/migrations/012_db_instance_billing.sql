@@ -1,3 +1,4 @@
+-- TODO: 현재 사용하는 곳 없음
 CREATE TABLE IF NOT EXISTS db_instance_billing
 (
     id                  BIGSERIAL PRIMARY KEY,

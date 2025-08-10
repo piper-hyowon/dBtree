@@ -69,9 +69,9 @@ const LoginModal: React.FC<LoginModalProps> = ({onClose}) => {
                                 }}
                             />
                         </div>
-                        <h2 className="modal-title">
-                            {isNewUser ? "Welcome!" : "Welcome back!"}
-                        </h2>
+                        {/*<h2 className="modal-title">*/}
+                        {/*    {isNewUser ? "Welcome!" : "Welcome back!"}*/}
+                        {/*</h2>*/}
                         <p className="modal-subtitle">
                             {isNewUser ? "처음 오셨네요!" : "또 오셨네요, 반가워요!"}
                         </p>

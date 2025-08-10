@@ -50,7 +50,7 @@ const CredentialsModal: React.FC<CredentialsModalProps> = ({instance, onClose}) 
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content credentials-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>🎉 인스턴스 생성 완료!</h2>
+                    <h2>인스턴스 생성 완료!</h2>
                     <button className="modal-close" onClick={onClose}>×</button>
                 </div>
 

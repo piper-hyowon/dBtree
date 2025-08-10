@@ -1,7 +1,13 @@
 import React, {useState, useRef, useEffect} from 'react';
 import './Dashboard.css';
 import {InstanceResponse, DBType, InstanceStatus} from '../../types/database.types';
-import {getInstances, getInstance, deleteInstance} from '../../services/api/database.api';
+import {
+    getInstances,
+    getInstance,
+    deleteInstance,
+    restartInstance,
+    stopInstance, startInstance
+} from '../../services/api/database.api';
 import ToggleThemeButton from '../../components/common/ToggleThemeButton/ToggleThemeButton';
 import DeleteModal from '../../components/common/DeleteModal/DeleteModal';
 import {getCharacterByStatus, characterImages, isImageComponent} from '../../utils/characterImages';
@@ -28,19 +34,20 @@ const Dashboard: React.FC = () => {
     const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const {showToast} = useToast();
     const {theme} = useTheme();
-    const {user, isLoggedIn, loading: authLoading} = useAuth();
+    const {user, isLoggedIn, loading: authLoading, refreshUser} = useAuth();
     const navigate = useNavigate();
 
-    // 로그인 체크 - loading이 끝난 후에만 체크
+    // 로그인 체크
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
             navigate('/');
         }
     }, [authLoading, isLoggedIn, navigate]);
 
-    // 인스턴스 목록 로드
+    // 컴포넌트 마운트 시 최신 사용자 정보 가져오기
     useEffect(() => {
         if (!authLoading && isLoggedIn) {
+            refreshUser();
             loadInstances();
         }
     }, [authLoading, isLoggedIn]);
@@ -57,7 +64,7 @@ const Dashboard: React.FC = () => {
         if (selectedInstance?.status === 'provisioning') {
             refreshIntervalRef.current = setInterval(async () => {
                 try {
-                    const updated = await getInstance(selectedInstance.id);
+                    const updated = await getInstance(selectedInstance!.id);
                     setSelectedInstance(updated);
 
                     // 목록에서도 업데이트
@@ -114,16 +121,27 @@ const Dashboard: React.FC = () => {
         setCurrentView('create');
     };
 
+    // 인스턴스 생성 성공 시 사용자 정보 새로고침
+    const handleCreateSuccess = async () => {
+        await loadInstances();
+        await refreshUser(); // 레몬 잔액 업데이트
+        setCurrentView('empty');
+    };
+
     const getStatusDot = (status: InstanceStatus) => {
         switch (status) {
             case 'running':
                 return 'status-dot-running';
             case 'stopped':
                 return 'status-dot-stopped';
+            case 'paused':
+                return 'status-dot-paused';
             case 'provisioning':
                 return 'status-dot-provisioning';
             case 'error':
                 return 'status-dot-error';
+            case 'deleting':
+                return 'status-dot-deleting';
             case 'maintenance':
                 return 'status-dot-maintenance';
             default:
@@ -137,8 +155,12 @@ const Dashboard: React.FC = () => {
                 return '실행 중';
             case 'stopped':
                 return '중지됨';
+            case 'paused':
+                return '일시정지 (레몬 부족)';
             case 'provisioning':
                 return '프로비저닝 중';
+            case 'deleting':
+                return '삭제 중';
             case 'error':
                 return '오류';
             case 'maintenance':
@@ -216,12 +238,42 @@ const Dashboard: React.FC = () => {
         showToast('인스턴스 구성 변경 기능을 준비 중입니다', 'info');
     };
 
-    const handleStop = () => {
-        showToast('인스턴스 중지 기능을 준비 중입니다', 'info');
+    const handleStop = async () => {
+        if (!selectedInstance) return;
+        try {
+            await stopInstance(selectedInstance.id);
+            showToast(`${selectedInstance.name}를 중지하겠습니다.`, 'success');
+        } catch (error) {
+            showToast('인스턴스 중지에 실패했습니다', 'error');
+        }
     };
 
-    const handleRestart = () => {
-        showToast('인스턴스 재시작 기능을 준비 중입니다', 'info');
+    const handleRestart = async () => {
+        if (!selectedInstance) return;
+        try {
+            await restartInstance(selectedInstance.id);
+            showToast(`${selectedInstance.name}를 재시작 하겠습니다`, 'success');
+        } catch (error) {
+            showToast('인스턴스 재시작에 실패했습니다', 'error');
+        }
+    };
+
+    const handleStart = async () => {
+        console.log("시작 버튼 클릭")
+        console.log("selectedInstance: ", selectedInstance)
+        if (!selectedInstance) return;
+        try {
+            await startInstance(selectedInstance.id);
+            showToast(`${selectedInstance.name}를 시작 하겠습니다`, 'success');
+
+            const updated = await getInstance(selectedInstance.id);
+            setSelectedInstance(updated);
+            setInstances(prev => prev.map(inst =>
+                inst.id === updated.id ? updated : inst
+            ));
+        } catch (error) {
+            showToast('인스턴스 시작에 실패했습니다', 'error');
+        }
     };
 
     const handleDelete = () => {
@@ -404,7 +456,7 @@ const Dashboard: React.FC = () => {
                         <CreateInstanceWizard
                             currentInstanceCount={instances.length}
                             onSuccess={() => {
-                                loadInstances();
+                                handleCreateSuccess();
                                 setCurrentView('empty');
                             }}
                             onCancel={() => setCurrentView('empty')}
@@ -418,10 +470,7 @@ const Dashboard: React.FC = () => {
                                     {
                                         isImageComponent(getCharacterByStatus(selectedInstance.status)) ? (
                                             <div className="character-svg-wrapper">
-                                                {React.createElement(getCharacterByStatus(selectedInstance.status), {
-                                                    message: "프로비저닝 중...",
-                                                    subMessage: "DB 준비 중"
-                                                })}
+                                                {React.createElement(getCharacterByStatus(selectedInstance.status), {})}
                                             </div>
                                         ) : (
                                             <img
@@ -435,8 +484,13 @@ const Dashboard: React.FC = () => {
                                     <div className="character-bubble">
                                         {selectedInstance.status === 'running' ? '정상 작동 중!' :
                                             selectedInstance.status === 'stopped' ? '휴식 중...' :
-                                                selectedInstance.status === 'provisioning' ? '준비 중!' :
-                                                    '문제 발생!'}
+                                                selectedInstance.status === 'paused' ?
+                                                    (selectedInstance.statusReason?.includes('lemons') ? '레몬이 부족해요!' : '일시정지됨') :
+                                                    selectedInstance.status === 'provisioning' ? '준비 중!' :
+                                                        selectedInstance.status === 'deleting' ? '삭제 중...' :
+                                                            selectedInstance.status === 'error' ? '문제 발생!' :
+                                                                selectedInstance.status === 'maintenance' ? '점검 중' :
+                                                                    '상태 확인 중...'}
                                     </div>
                                 </div>
 
@@ -462,10 +516,50 @@ const Dashboard: React.FC = () => {
                                         </div>
 
                                         <div className="db-actions">
-                                            <button className="action-btn" onClick={handleConfiguration}>구성 변경</button>
-                                            <button className="action-btn" onClick={handleStop}>중지</button>
-                                            <button className="action-btn" onClick={handleRestart}>재시작</button>
-                                            <button className="action-btn danger" onClick={handleDelete}>삭제</button>
+                                            <button
+                                                className="action-btn"
+                                                onClick={handleConfiguration}
+                                                disabled={selectedInstance.status === 'deleting'}
+                                            >
+                                                구성 변경
+                                            </button>
+
+                                            {selectedInstance.status === 'running' && (
+                                                <button className="action-btn" onClick={handleStop}>
+                                                    중지
+                                                </button>
+                                            )}
+
+                                            {(selectedInstance.status === 'stopped') && (
+                                                <button className="action-btn" onClick={handleStart}>
+                                                    시작
+                                                </button>
+                                            )}
+
+                                            {selectedInstance.status === 'running' && (
+                                                <button className="action-btn" onClick={handleRestart}>
+                                                    재시작
+                                                </button>
+                                            )}
+
+                                            <button
+                                                className="action-btn danger"
+                                                onClick={handleDelete}
+                                                disabled={selectedInstance.status === 'deleting'}
+                                            >
+                                                삭제
+                                            </button>
+
+                                            {selectedInstance.status === 'paused' && (
+                                                <div className="paused-notice">
+                                                    <span className="paused-icon">⚠️</span>
+                                                    <span className="paused-text">
+                                                        {selectedInstance.statusReason?.includes('lemons')
+                                                            ? '레몬 충전 후 자동으로 재개됩니다'
+                                                            : '시스템에 의해 일시정지됨'}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 

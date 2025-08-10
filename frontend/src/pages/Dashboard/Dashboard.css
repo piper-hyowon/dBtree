@@ -1283,3 +1283,37 @@
 .lemon-emoji {
     font-size: 1.125rem;
 }
+
+.status-dot-paused {
+    background: #F59E0B;  /* 주황색 */
+}
+
+.status-dot-deleting {
+    background: #DC2626;  /* 빨간색 */
+    animation: pulse 1s infinite;
+}
+
+.badge-status.status-paused {
+    background: #FED7AA;
+    color: #92400E;
+}
+
+.badge-status.status-deleting {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+.paused-notice {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--gray, #fff3cd);
+    color: var(--text-brown, #856404);
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.paused-icon {
+    font-size: 16px;
+}
