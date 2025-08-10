@@ -59,12 +59,12 @@ export const LemonTreeSceneProvider: React.FC<{
         if (!containerRef.current || isInitialized) return;
 
         const container = containerRef.current;
-        console.log("컨테이너 확인:", container);
+        // console.log("컨테이너 확인:", container);
 
-        console.log("Scene initialization started, container size:", {
-            width: container.clientWidth,
-            height: container.clientHeight,
-        });
+        // console.log("Scene initialization started, container size:", {
+        //     width: container.clientWidth,
+        //     height: container.clientHeight,
+        // });
 
         while (container.firstChild) {
             container.removeChild(container.firstChild);
@@ -93,7 +93,7 @@ export const LemonTreeSceneProvider: React.FC<{
             container.appendChild(renderer.domElement);
             rendererRef.current = renderer;
 
-            console.log("렌더러 생성 및 DOM에 추가 완료:", renderer.domElement);
+            // console.log("렌더러 생성 및 DOM에 추가 완료:", renderer.domElement);
 
             renderer.render(scene, camera);
 
@@ -148,25 +148,18 @@ export const LemonTreeSceneProvider: React.FC<{
             setIsInitialized(true);
 
             return () => {
-                console.log("Three.js cleanup running");
                 window.removeEventListener("resize", handleResize);
 
                 if (animationFrameIdRef.current !== null) {
-                    console.log(
-                        "Cancelling animation frame:",
-                        animationFrameIdRef.current
-                    );
                     cancelAnimationFrame(animationFrameIdRef.current);
                     animationFrameIdRef.current = null;
                 }
 
                 if (renderer && container.contains(renderer.domElement)) {
-                    console.log("Removing renderer from container");
                     container.removeChild(renderer.domElement);
                 }
 
                 if (rendererRef.current) {
-                    console.log("Disposing renderer");
                     rendererRef.current.dispose();
                     rendererRef.current = null;
                 }

@@ -41,12 +41,10 @@ const Tree: React.FC = () => {
     groundRef.current = ground;
 
     const loader = new GLTFLoader();
-    console.log("트리 모델 로드 시도...");
 
     loader.load(
       "/models/tree.gltf",
       (gltf) => {
-        console.log("트리 모델 로드 성공!");
         const model = gltf.scene;
         model.rotation.set(0, Math.PI, 0);
         model.position.set(0, 0, 0);
@@ -54,11 +52,11 @@ const Tree: React.FC = () => {
         treeRef.current = model;
       },
       (progress) => {
-        console.log(
-          `모델 로딩 진행률: ${Math.round(
-            (progress.loaded / progress.total) * 100
-          )}%`
-        );
+        // console.log(
+        //   `모델 로딩 진행률: ${Math.round(
+        //     (progress.loaded / progress.total) * 100
+        //   )}%`
+        // );
       },
       (error) => {
         console.error("모델 로드 오류:", error);

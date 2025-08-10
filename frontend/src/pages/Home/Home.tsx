@@ -19,15 +19,17 @@ const Home: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
 
     const loadData = async () => {
-        try {
-            setLoading(true);
-            const userResponse = await api.user.getUserProfile()
+        if (isLoggedIn) {
+            try {
+                setLoading(true);
+                const userResponse = await api.user.getUserProfile()
 
-            setUser(userResponse);
-        } catch (error) {
-            console.error('Failed to load account data:', error);
-        } finally {
-            setLoading(false);
+                setUser(userResponse);
+            } catch (error) {
+                console.error('Failed to load account data:', error);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 

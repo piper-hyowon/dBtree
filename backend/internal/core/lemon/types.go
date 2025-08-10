@@ -52,7 +52,7 @@ type HarvestRules struct {
 }
 
 var DefaultHarvestRules = HarvestRules{
-	BaseAmount:      5,
+	BaseAmount:      3,
 	CooldownPeriod:  1 * time.Hour,
 	MaxStoredLemons: 500,
 

@@ -7,6 +7,7 @@ import {useTheme} from "../../hooks/useTheme";
 import {useLemonTreeScene} from "../../contexts/LemonTreeSceneContext";
 import api from "../../services/api";
 import {useAuth} from "../../contexts/AuthContext";
+import {useToast} from "../../hooks/useToast";
 
 export interface AvailableLemon {
     id: number;
@@ -35,6 +36,8 @@ const Lemons: React.FC<LemonsProps> = ({
 
     const lemonModelRef = useRef<THREE.Group | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    const {showToast} = useToast();
 
     // 퀴즈 게임 상태
     const [activeQuiz, setActiveQuiz] = useState<{
@@ -88,7 +91,8 @@ const Lemons: React.FC<LemonsProps> = ({
 
         // 쿨다운 체크
         if (isLoggedIn && canHarvestStatus && !canHarvestStatus.canHarvest) {
-            alert(`아직 수확할 수 없습니다. ${canHarvestStatus.waitSeconds}초 후 가능`);
+            showToast(`아직 수확할 수 없습니다. ${canHarvestStatus.waitSeconds}초 후 가능`, 'info');
+
             return;
         }
 
@@ -155,11 +159,12 @@ const Lemons: React.FC<LemonsProps> = ({
                         setCurrentTargetLemonId(null);
                         setCurrentAttemptId(null);
                         if (controls) controls.enabled = true;
-                        alert("시간이 초과되었습니다!");
+                        showToast(`시간이 초과되었습니다!`, 'error');
+
                     }, timeoutMs);
                 } else {
                     if (controls) controls.enabled = true;
-                    alert(`틀렸습니다! 정답은 "${response.correctOption + 1}번" 입니다.`);
+                    showToast('틀렸습니다!', 'error');
                 }
             } else {
                 // 데모 모드
@@ -179,11 +184,13 @@ const Lemons: React.FC<LemonsProps> = ({
                         setCurrentTargetLemonId(null);
                         setCurrentAttemptId(null);
                         if (controls) controls.enabled = true;
-                        alert("시간이 초과되었습니다!");
+                        showToast('시간이 초과되었습니다!', 'error');
+
                     }, 5000);
                 } else {
                     if (controls) controls.enabled = true;
-                    alert(`틀렸습니다!`);
+                    showToast('틀렸습니다!', 'error');
+
                 }
             }
         } catch (error) {
@@ -215,7 +222,8 @@ const Lemons: React.FC<LemonsProps> = ({
                 );
 
                 if (response) {
-                    alert(`축하합니다! ${response.harvestAmount} 크레딧을 획득했습니다!\n현재 잔액: ${response.newBalance}`);
+                    showToast('축하합니다! ${response.harvestAmount} 크레딧을 획득했습니다!\n현재 잔액: ${response.newBalance}',
+                        'success');
 
                     const newStatus = await api.quiz.canHarvest();
                     setCanHarvestStatus(newStatus);
@@ -225,7 +233,8 @@ const Lemons: React.FC<LemonsProps> = ({
                 alert("수확 중 오류가 발생했습니다.");
             }
         } else {
-            alert("🎉 수확 성공! \n\n로그인하면 실제로 크레딧을 얻을 수 있습니다.\n지금 로그인하시겠습니까?");
+            showToast('축하합니다! 수확 성공! \n\n로그인하면 실제로 크레딧을 얻을 수 있습니다.\n지금 로그인하시겠습니까?',
+                'success', 5000);
             // TODO: 확인 시 로그인 페이지로 이동?
         }
 
@@ -300,7 +309,6 @@ const Lemons: React.FC<LemonsProps> = ({
         try {
             setIsLoading(true); // 로딩 시작
             const response = await api.home.getLemonTreeStatus();
-            console.log("API 응답:", response);
 
             // state 업데이트
             const lemonCount = response?.availablePositions?.length ?? 0;
@@ -315,7 +323,7 @@ const Lemons: React.FC<LemonsProps> = ({
                 }));
 
                 setLemons(lemonData);
-                console.log("레몬 데이터 로드 성공:", lemonData.length, "개의 레몬");
+                // console.log("레몬 데이터 로드 성공:", lemonData.length, "개의 레몬");
 
                 const loader = new GLTFLoader();
                 lemonData.forEach((lemon) => {

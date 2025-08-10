@@ -27,7 +27,7 @@ const toastConfig = {
     error: {
         character: characterImages.error,
         className: 'toast-error'
-    }
+    },
 };
 
 const Toast: React.FC<ToastProps> = ({
