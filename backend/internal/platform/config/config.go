@@ -19,6 +19,7 @@ type Config struct {
 	UseLocalMemoryStore bool
 	Redis               RedisConfig
 	K8s                 K8sConfig
+	AdminEmail          string
 }
 
 type CORSConfig struct {
@@ -170,6 +171,8 @@ func NewConfig() (*Config, error) {
 	k8sInCluster := getEnvString("K8S_IN_CLUSTER", "false") == "true"
 	k8sConfigPath := getEnvString("KUBECONFIG", "")
 
+	adminEmail := getEnvString("ADMIN_EMAIL", "")
+
 	return &Config{
 		Server: ServerConfig{
 			PublicHost:          publicHost,
@@ -218,6 +221,7 @@ func NewConfig() (*Config, error) {
 			InCluster:      k8sInCluster,
 			KubeConfigPath: k8sConfigPath,
 		},
+		AdminEmail: adminEmail,
 	}, nil
 }
 

@@ -1,0 +1,346 @@
+.support-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+    padding: 20px; /* 모바일에서 여백 확보 */
+}
+
+[data-theme="dark"] .support-modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.support-modal {
+    background: var(--card-background);
+    border-radius: var(--border-radius-xl);
+    width: 100%;
+    max-width: 500px;
+    height: 90vh; /* 고정 높이로 변경 */
+    max-height: 700px; /* 최대 높이 제한 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-hover);
+    border: 1px solid var(--border-light);
+    animation: slideUp 0.3s ease;
+    position: relative;
+}
+
+/* 일러스트 배너 섹션 - 고정 높이 */
+.support-modal-illustration {
+    position: relative;
+    width: 100%;
+    height: 250px; /* 원하시는 높이 */
+    flex-shrink: 0; /* 줄어들지 않도록 */
+    overflow: hidden;
+    background: linear-gradient(135deg,
+    var(--lemon-yellow) 0%,
+    var(--lemon-green) 100%);
+}
+
+.illustration-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 베스트: 살짝 흐리게 + 밝기 조정 */
+    filter: blur(0.5px) brightness(1.1);
+    opacity: 0.75;
+    transform: scale(1.05); /* blur로 인한 edge 방지 */
+}
+
+/* 추가 오버레이로 부드럽게 */
+.support-modal-illustration::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg,
+    rgba(255, 217, 61, 0.2) 0%,
+    rgba(111, 207, 151, 0.15) 100%);
+    z-index: 1;
+}
+
+.illustration-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px;
+    background: linear-gradient(to top,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.3) 50%,
+    transparent 100%);
+    color: white;
+    z-index: 2; /* 오버레이 위에 텍스트 */
+}
+
+.illustration-overlay h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* X 버튼 위치 */
+.support-modal-header {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+}
+
+.close-btn {
+    font-size: 28px;
+    color: white;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    border: none;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(0, 0, 0, 0.5);
+    transform: scale(1.1);
+}
+
+[data-theme="dark"] .close-btn {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 폼 영역 - 스크롤 가능하도록 */
+.support-form {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 폼 그룹들 */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius-standard);
+    font-size: 16px;
+    background: var(--background);
+    color: var(--text-primary);
+    transition: border-color var(--transition-standard), box-shadow var(--transition-standard);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--lemon-green);
+    box-shadow: 0 0 0 3px rgba(111, 207, 151, 0.1);
+}
+
+[data-theme="dark"] .form-group input:focus,
+[data-theme="dark"] .form-group select:focus,
+[data-theme="dark"] .form-group textarea:focus {
+    border-color: var(--lemon-green);
+    box-shadow: 0 0 0 3px rgba(111, 207, 151, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: inherit;
+    min-height: 100px; /* 최소 높이 설정 */
+}
+
+.char-count {
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* 안내 문구 */
+.support-info {
+    background: linear-gradient(135deg,
+    rgba(255, 217, 61, 0.1) 0%,
+    rgba(111, 207, 151, 0.05) 100%);
+    border: 1px solid rgba(255, 217, 61, 0.2);
+    border-radius: var(--border-radius-standard);
+    padding: 16px;
+    margin: 20px 0;
+}
+
+[data-theme="dark"] .support-info {
+    background: linear-gradient(135deg,
+    rgba(255, 217, 61, 0.05) 0%,
+    rgba(111, 207, 151, 0.03) 100%);
+    border-color: rgba(255, 217, 61, 0.15);
+}
+
+.support-info p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+.support-info p + p {
+    margin-top: 8px;
+}
+
+/* 버튼 영역 - 항상 하단에 고정 */
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 20px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--card-background);
+    margin-top: auto; /* 하단으로 밀기 */
+}
+
+.cancel-btn,
+.submit-btn {
+    padding: 10px 24px;
+    border-radius: var(--border-radius-standard);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.cancel-btn {
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.cancel-btn:hover:not(:disabled) {
+    background: var(--neutral-300);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+[data-theme="dark"] .cancel-btn {
+    background: var(--neutral-800);
+    border-color: var(--neutral-700);
+}
+
+[data-theme="dark"] .cancel-btn:hover:not(:disabled) {
+    background: var(--neutral-700);
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, var(--lemon-yellow) 0%, var(--lemon-green) 100%);
+    color: var(--text-brown);
+    font-weight: 700;
+    border: none;
+}
+
+[data-theme="dark"] .submit-btn {
+    color: #FFFFFF;
+}
+
+.submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 217, 61, 0.4);
+}
+
+.cancel-btn:disabled,
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-height: 700px) {
+    .support-modal {
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .support-modal-illustration {
+        height: 180px;
+    }
+
+    .support-form {
+        padding: 16px;
+    }
+
+    .modal-actions {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-modal-overlay {
+        padding: 0;
+    }
+
+    .support-modal {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        max-width: 100%;
+        border-radius: 0;
+    }
+
+    .support-modal-illustration {
+        height: 200px;
+    }
+}

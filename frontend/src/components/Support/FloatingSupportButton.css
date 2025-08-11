@@ -1,0 +1,74 @@
+.floating-support-button {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 90px;
+    height: 90px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform var(--transition-standard), filter var(--transition-standard);
+    z-index: 1000;
+}
+
+.floating-support-button img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+    transition: filter var(--transition-standard);
+}
+
+[data-theme="dark"] .floating-support-button img {
+    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.1));
+}
+
+.floating-support-button:hover {
+    transform: translateY(-5px) scale(1.05);
+}
+
+.floating-support-button:hover img {
+    filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.25));
+}
+
+[data-theme="dark"] .floating-support-button:hover img {
+    filter: drop-shadow(0 8px 20px rgba(255, 255, 255, 0.15));
+}
+
+.support-tooltip {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    background: var(--neutral-800);
+    color: white;
+    padding: 8px 14px;
+    border-radius: var(--border-radius-standard);
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    animation: fadeIn 0.2s ease;
+    box-shadow: var(--shadow);
+}
+
+[data-theme="dark"] .support-tooltip {
+    background: var(--card-background);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+/* 툴팁 화살표 */
+.support-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 35px;
+    border: 6px solid transparent;
+    border-top-color: var(--neutral-800);
+}
+
+[data-theme="dark"] .support-tooltip::after {
+    border-top-color: var(--border);
+}
