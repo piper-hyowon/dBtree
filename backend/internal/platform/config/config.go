@@ -172,6 +172,9 @@ func NewConfig() (*Config, error) {
 	k8sConfigPath := getEnvString("KUBECONFIG", "")
 
 	adminEmail := getEnvString("ADMIN_EMAIL", "")
+	if adminEmail == "" {
+		return nil, fmt.Errorf("ADMIN_EMAIL 환경변수 확인")
+	}
 
 	return &Config{
 		Server: ServerConfig{
