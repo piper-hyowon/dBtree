@@ -1,7 +1,7 @@
 [English README](./README.en.md)
 ### 🌳 dBtree: 🍋 레몬나무에서 무료 데이터베이스를 수확하세요!
 
-[서비스 미리보기](https://dbtree.vercel.app/)
+[Live](https://www.dbtree.cloud)
 
 **개발 기간**: 2025-02 ~ (현재)
 
