@@ -43,7 +43,8 @@ import (
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal(".env 파일 없음")
+		//log.Fatal(".env 파일 없음")
+		log.Println(".env 파일 없음 - 환경 변수 사용")
 	}
 	appConfig, err := config.NewConfig()
 	if err != nil {
