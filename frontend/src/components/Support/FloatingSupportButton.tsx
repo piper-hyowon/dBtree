@@ -15,7 +15,7 @@ const FloatingSupportButton: React.FC = () => {
                 onMouseLeave={() => setIsHovered(false)}
                 onClick={() => setIsModalOpen(true)}
             >
-                <img src={PigeonFloatingIcon} width={90} height={90}/>
+                <img src={PigeonFloatingIcon} width={90} height={90} alt="Support" />
                 {isHovered && (
                     <span className="support-tooltip">도움이 필요하신가요?</span>
                 )}
