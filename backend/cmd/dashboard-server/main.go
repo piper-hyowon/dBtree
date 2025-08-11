@@ -249,7 +249,7 @@ func main() {
         <hr>
         <h3>문의 내용</h3>
         <p><strong>제목:</strong> %s</p>
-        <p>%s</p0>
+        <p>%s</p>
         `, u.Email, req.Subject, req.Message)
 
 		go func() {
