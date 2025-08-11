@@ -9,8 +9,7 @@ import LemonTreeScene from "../../components/LemonTreeScene/LemonTreeScene";
 import FloatingGuideText from "../../components/common/FloatingGuideText/FloatingGuideText";
 import {useAuth} from "../../contexts/AuthContext";
 import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
-import {User} from "../../services/api/auth.api";
-import api from "../../services/api";
+import FloatingSupportButton from "../../components/Support/FloatingSupportButton";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -140,6 +139,7 @@ const Home: React.FC = () => {
             <footer className="footer">
                 <p>© 2025 dBtree</p>
             </footer>
+            <FloatingSupportButton/>
 
             {showLoginModal && <LoginModal onClose={handleCloseModal}/>}
         </div>

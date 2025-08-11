@@ -185,6 +185,82 @@ func main() {
 	r.GET("/stats/transactions", authMiddleware.RequireAuth(statsHandler.GetUserTransactions))
 	r.GET("/stats/summary/instances", authMiddleware.RequireAuth(statsHandler.GetUserInstances))
 
+	r.POST("/support/inquiry", authMiddleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Category string `json:"category"`
+			Subject  string `json:"subject"`
+			Message  string `json:"message"`
+			Context  struct {
+				UserEmail    string `json:"userEmail"`
+				LemonBalance int    `json:"lemonBalance"`
+				Timestamp    string `json:"timestamp"`
+				UserAgent    string `json:"userAgent"`
+				CurrentPage  string `json:"currentPage"`
+			} `json:"context"`
+		}
+
+		if !rest.DecodeJSONRequest(w, r, &req, logger) {
+			return
+		}
+
+		u, err := rest.GetUserFromContext(r.Context())
+		if err != nil {
+			rest.HandleError(w, err, logger)
+			return
+		}
+
+		subject := fmt.Sprintf("[dBtree 문의] %s - %s", req.Category, req.Subject)
+
+		htmlBody := fmt.Sprintf(`
+        <h2>새로운 문의가 접수되었습니다</h2>
+        <hr>
+        <h3>문의 정보</h3>
+        <p><strong>카테고리:</strong> %s</p>
+        <p><strong>제목:</strong> %s</p>
+        <p><strong>사용자:</strong> %s (ID: %s)</p>
+        <p><strong>레몬 잔액:</strong> %d</p>
+        <hr>
+        <h3>문의 내용</h3>
+        <p>%s</p>
+        <hr>
+        <h3>컨텍스트 정보</h3>
+        <p><strong>접수 시간:</strong> %s</p>
+        <p><strong>현재 페이지:</strong> %s</p>
+        <p><strong>User Agent:</strong> %s</p>
+    `, req.Category, req.Subject, u.Email, u.ID,
+			req.Context.LemonBalance, req.Message,
+			req.Context.Timestamp, req.Context.CurrentPage,
+			req.Context.UserAgent)
+
+		// 이메일 발송
+		ctx := r.Context()
+		if err := emailService.Send(ctx, appConfig.AdminEmail, subject, htmlBody); err != nil {
+			logger.Printf("문의 이메일 발송 실패: %v", err)
+			rest.HandleError(w, err, logger)
+			return
+		}
+
+		// 관리자에게 발송 후, 사용자에게도 확인 메일 발송
+		userSubject := "dBtree 문의가 접수되었습니다"
+		userHtmlBody := fmt.Sprintf(`
+		<h2>문의가 접수되었습니다</h2>
+        <p>안녕하세요, %s님</p>
+        <p>문의해 주셔서 감사합니다. 24시간 내에 답변 드리겠습니다.</p>
+        <hr>
+        <h3>문의 내용</h3>
+        <p><strong>제목:</strong> %s</p>
+        <p>%s</p>
+        `, u.Email, req.Subject, req.Message)
+
+		go func() {
+			if err := emailService.Send(context.Background(), u.Email, userSubject, userHtmlBody); err != nil {
+				logger.Printf("사용자 확인 이메일 발송 실패: %v", err)
+			}
+		}()
+
+		rest.SendSuccessResponse(w, http.StatusNoContent, nil)
+	}))
+
 	server := rest.NewServer(appConfig, r, logger)
 
 	go cleanupSessions(sessionStore, appConfig.Session.CleanupIntervalHours, logger)
