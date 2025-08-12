@@ -25,19 +25,24 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-image:
-            radial-gradient(circle at 20% 80%, rgba(255, 217, 61, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(111, 207, 151, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(255, 193, 7, 0.08) 0%, transparent 50%);
+    background-image: radial-gradient(circle at 20% 80%, rgba(255, 217, 61, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(111, 207, 151, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 193, 7, 0.08) 0%, transparent 50%);
     animation: backgroundShift 20s ease-in-out infinite;
     pointer-events: none;
     z-index: -1;
 }
 
 @keyframes backgroundShift {
-    0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
-    33% { transform: translateX(-20px) translateY(-10px) rotate(1deg); }
-    66% { transform: translateX(20px) translateY(10px) rotate(-1deg); }
+    0%, 100% {
+        transform: translateX(0) translateY(0) rotate(0deg);
+    }
+    33% {
+        transform: translateX(-20px) translateY(-10px) rotate(1deg);
+    }
+    66% {
+        transform: translateX(20px) translateY(10px) rotate(-1deg);
+    }
 }
 
 /* Header with enhanced glassmorphism */
@@ -95,8 +100,12 @@
 }
 
 @keyframes shimmer {
-    0%, 100% { filter: hue-rotate(0deg); }
-    50% { filter: hue-rotate(10deg); }
+    0%, 100% {
+        filter: hue-rotate(0deg);
+    }
+    50% {
+        filter: hue-rotate(10deg);
+    }
 }
 
 .header-separator {
@@ -115,8 +124,14 @@
 }
 
 @keyframes slideInLeft {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* Enhanced user info with glassmorphism */
@@ -137,8 +152,14 @@
 }
 
 @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(20px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 [data-theme="dark"] .user-info {
@@ -198,8 +219,12 @@
 }
 
 @keyframes profilePulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 217, 61, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(255, 217, 61, 0); }
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 217, 61, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 217, 61, 0);
+    }
 }
 
 .user-email:hover img {
@@ -248,8 +273,12 @@
 }
 
 @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
 }
 
 /* Main Container */
@@ -266,17 +295,22 @@
 }
 
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .character-header-section {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 24px;
-    box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     display: flex;
@@ -287,16 +321,21 @@
 }
 
 @keyframes slideInScale {
-    from { opacity: 0; transform: scale(0.9) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 [data-theme="dark"] .character-header-section {
     background: rgba(30, 30, 30, 0.1);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .character-section {
@@ -396,8 +435,14 @@
 }
 
 @keyframes badgeSlide {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .badge:hover {
@@ -425,8 +470,14 @@
 }
 
 @keyframes staggerIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .user-stat-item {
@@ -489,9 +540,8 @@
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: 20px;
-    box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -499,23 +549,27 @@
 }
 
 @keyframes cardSlideIn {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .section-card:hover {
     transform: translateY(-2px);
-    box-shadow:
-            0 16px 40px rgba(0, 0, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 [data-theme="dark"] .section-card {
     background: rgba(30, 30, 30, 0.1);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .section-header {
@@ -603,8 +657,14 @@
 }
 
 @keyframes badgeSlideIn {
-    from { opacity: 0; transform: translateX(-20px) scale(0.9); }
-    to { opacity: 1; transform: translateX(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateX(-20px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
 }
 
 .achievement-badge:hover {
@@ -697,8 +757,12 @@
 }
 
 @keyframes chartShimmer {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+    0%, 100% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 .harvest-chart {
@@ -734,8 +798,14 @@
 }
 
 @keyframes drawLine {
-    from { stroke-dasharray: 1000; stroke-dashoffset: 1000; }
-    to { stroke-dasharray: 1000; stroke-dashoffset: 0; }
+    from {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+    }
+    to {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 0;
+    }
 }
 
 .chart-area {
@@ -744,8 +814,12 @@
 }
 
 @keyframes fillArea {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .harvest-point {
@@ -759,17 +833,43 @@
     animation-fill-mode: both;
 }
 
-.harvest-point:nth-child(1) { animation-delay: 0.1s; }
-.harvest-point:nth-child(2) { animation-delay: 0.2s; }
-.harvest-point:nth-child(3) { animation-delay: 0.3s; }
-.harvest-point:nth-child(4) { animation-delay: 0.4s; }
-.harvest-point:nth-child(5) { animation-delay: 0.5s; }
-.harvest-point:nth-child(6) { animation-delay: 0.6s; }
-.harvest-point:nth-child(7) { animation-delay: 0.7s; }
+.harvest-point:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.harvest-point:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.harvest-point:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.harvest-point:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.harvest-point:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.harvest-point:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+.harvest-point:nth-child(7) {
+    animation-delay: 0.7s;
+}
 
 @keyframes pointPop {
-    from { opacity: 0; transform: scale(0.5) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from {
+        opacity: 0;
+        transform: scale(0.5) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .chart-dot {
@@ -1068,8 +1168,12 @@
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
 }
 
 /* Responsive Design */
@@ -1155,5 +1259,58 @@
 
     .harvest-chart-container {
         height: 160px;
+    }
+}
+
+.account-actions {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.delete-account-btn-simple {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.8;
+}
+
+.delete-account-btn-simple:hover {
+    border-color: var(--status-error);
+    color: var(--status-error);
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.delete-account-btn-simple:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+    .account-actions {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+    }
+
+    .delete-account-btn-simple {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .account-actions {
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+
+    .delete-account-btn-simple {
+        font-size: 0.6875rem;
+        padding: 0.4rem 0.8rem;
     }
 }

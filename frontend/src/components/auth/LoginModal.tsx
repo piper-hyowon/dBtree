@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
+import dbtreeLogo from "../../assets/images/dbtree_logo.png";
 import EmailForm from "./EmailForm";
 import OtpForm from "./OtpForm";
 import CharacterNewUser from "../../assets/images/character/new-user.svg";

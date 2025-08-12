@@ -119,9 +119,23 @@ export const isAuthenticated = (): boolean => {
     return true;
 };
 
+/**
+ * 탈퇴
+ */
+export const deleteAccount = async (): Promise<void> => {
+    try {
+        const response = await apiClient.delete('/user');
+        return response.data;
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+};
+
 export default {
     sendOTP,
     verifyOTP,
     logout,
-    isAuthenticated
+    isAuthenticated,
+    deleteAccount,
 };

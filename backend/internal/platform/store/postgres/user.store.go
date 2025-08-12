@@ -18,7 +18,7 @@ type UserStore struct {
 func (s *UserStore) TotalUserCount(ctx context.Context) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM users WHERE is_deleted = false`,
+		`SELECT COUNT(*) FROM users`,
 	).Scan(&count)
 	return count, err
 }
@@ -46,16 +46,16 @@ func (s *UserStore) TopLemonHolders(ctx context.Context, limit int) ([]*user.Use
 
 	var users []*user.User
 	for rows.Next() {
-		user := &user.User{}
+		usr := &user.User{}
 		var lastHarvest sql.NullTime
 
 		err := rows.Scan(
-			&user.ID,
-			&user.Email,
-			&user.LemonBalance,
+			&usr.ID,
+			&usr.Email,
+			&usr.LemonBalance,
 			&lastHarvest,
-			&user.CreatedAt,
-			&user.UpdatedAt,
+			&usr.CreatedAt,
+			&usr.UpdatedAt,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err)
@@ -63,10 +63,10 @@ func (s *UserStore) TopLemonHolders(ctx context.Context, limit int) ([]*user.Use
 
 		// NULL 처리
 		if lastHarvest.Valid {
-			user.LastHarvestAt = &lastHarvest.Time
+			usr.LastHarvestAt = &lastHarvest.Time
 		}
 
-		users = append(users, user)
+		users = append(users, usr)
 	}
 
 	if err = rows.Err(); err != nil {

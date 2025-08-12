@@ -5,6 +5,42 @@
     background: var(--background);
 }
 
+
+[data-theme="dark"] .header {
+    background: var(--card);
+    border-bottom-color: var(--border);
+}
+
+/* Logo Container */
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+/* Logo Text Style */
+.logo-text-home {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    letter-spacing: -0.02em;
+    transition: all 0.3s ease;
+}
+
+.logo-text:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.logo-b-home {
+    font-size: 2.4rem;
+    background: linear-gradient(135deg, var(--lemon-yellow) 0%, var(--lemon-green) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+}
+
 /* Header */
 .header {
     background: white;
@@ -16,31 +52,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-[data-theme="dark"] .header {
-    background: var(--card);
-    border-bottom-color: var(--border);
-}
-
-.logo-container {
-    display: flex;
-    align-items: center;
-}
-
-.logo {
-    height: 180px;
-    transition: transform var(--transition-standard);
-}
-
-.logo:hover {
-    transform: scale(1.02);
-}
-
-.nav {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
 }
 
 /* User Info Section  */

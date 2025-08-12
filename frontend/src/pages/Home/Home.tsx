@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import "./Home.css";
-import dbtreeLogo from "../../assets/images/dbtree_logo.svg";
+import dbtreeLogo from "../../assets/images/dbtree_logo.png";
 import accountIcon from "../../assets/images/character/account-icon.png";
 import ToggleThemeButton from "../../components/common/ToggleThemeButton/ToggleThemeButton";
 import LoginModal from "../../components/auth/LoginModal";
@@ -47,6 +47,9 @@ const Home: React.FC = () => {
             <header className="header">
                 <div className="logo-container">
                     <img src={dbtreeLogo} alt="dBtree Logo" className="logo"/>
+                    <div className="logo-text-home">
+                        d<span className="logo-b-home">B</span>tree
+                    </div>
                 </div>
                 <nav className="nav">
                     {isLoggedIn ? (

@@ -4,6 +4,7 @@ import api from "../../services/api";
 import {User} from "../../services/api/auth.api";
 import {DailyHarvest, TransactionWithInstance, UserInstanceSummary} from "../../services/api/account.api";
 import ToggleThemeButton from '../../components/common/ToggleThemeButton/ToggleThemeButton';
+import AccountDeleteModal from '../../components/common/AccountDeleteModal/AccountDeleteModal';
 import {useNavigate} from 'react-router-dom';
 import accountIcon from "../../assets/images/character/account-icon.png";
 import welcomeBadge from "../../assets/images/badges/badge_welcome.png";
@@ -27,6 +28,7 @@ const AccountPage: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     const navigate = useNavigate();
 
@@ -222,7 +224,7 @@ const AccountPage: React.FC = () => {
                     <div className="user-info">
                         <button
                             className="user-email"
-                            onClick={() => navigate('/account')}
+                            onClick={() => navigate('/dashboard')}
                             title="대시보드로 이동"
                         >
                             <img src={accountIcon} alt="account icon"/>
@@ -251,10 +253,6 @@ const AccountPage: React.FC = () => {
                         <div className="user-basic-info">
                             <h2 className="user-name">{user?.email}</h2>
                             {user?.lastHarvestAt ? `마지막 수확 ${user?.lastHarvestAt}` : ''}
-                            {/*<div className="user-badges">*/}
-                            {/*    <span className="badge badge-member">프리미엄 멤버</span>*/}
-                            {/*    <span className="badge badge-active">활성 사용자</span>*/}
-                            {/*</div>*/}
                         </div>
 
                         <div className="user-stats-grid">
@@ -276,6 +274,16 @@ const AccountPage: React.FC = () => {
                                 <div className="stat-label">가입일</div>
                             </div>
                         </div>
+
+                        <div className="account-actions">
+                            <button
+                                className="delete-account-btn-simple"
+                                onClick={() => setShowDeleteModal(true)}
+                                title="계정을 삭제하면 모든 데이터가 영구 삭제됩니다"
+                            >
+                                계정 삭제
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -285,7 +293,7 @@ const AccountPage: React.FC = () => {
                         className="section-header"
                         onClick={() => toggleSection('achievements')}
                     >
-                        <h3 className="section-title">🏆 업적 뱃지</h3>
+                        <h3 className="section-title">업적 뱃지</h3>
                         <button className="collapse-btn">
                             {collapsedSections.has('achievements') ? '▶' : '▼'}
                         </button>
@@ -309,10 +317,8 @@ const AccountPage: React.FC = () => {
                                         alt={achievement.name}
                                         className="achievement-icon"
                                         onError={(e) => {
-                                            // 이미지 로드 실패시 fallback
                                             console.log(`${achievement.name} 로드 실패`)
-                                            e.currentTarget.src = 'data:image/s' +
-                                                'vg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjRkZEOTNEIi8+Cjwvc3ZnPgo=';
+                                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSIjRkZEOTNEIi8+Cjwvc3ZnPgo=';
                                         }}
                                     />
                                     <div className="achievement-info">
@@ -377,6 +383,37 @@ const AccountPage: React.FC = () => {
                                         </div>
                                     ))}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 계정 설정 섹션 - 탈퇴 버튼 포함 (버튼은 여기 하나만 있음!) */}
+                <div className="section-card account-settings-section">
+                    <div
+                        className="section-header"
+                        onClick={() => toggleSection('settings')}
+                    >
+                        <h3 className="section-title">계정 설정</h3>
+                        <button className="collapse-btn">
+                            {collapsedSections.has('settings') ? '▶' : '▼'}
+                        </button>
+                    </div>
+                    {!collapsedSections.has('settings') && (
+                        <div className="section-content compact">
+                            <div className="danger-zone">
+                                <div className="danger-zone-header">
+                                    <h4 className="danger-zone-title">계정 삭제</h4>
+                                    <p className="danger-zone-description">
+                                        이 작업은 되돌릴 수 없으며, 모든 데이터가 영구 삭제됩니다.
+                                    </p>
+                                </div>
+                                <button
+                                    className="delete-account-btn"
+                                    onClick={() => setShowDeleteModal(true)}
+                                >
+                                    계정 삭제
+                                </button>
                             </div>
                         </div>
                     )}
@@ -492,6 +529,13 @@ const AccountPage: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <AccountDeleteModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                userEmail={user?.email}
+                lemonBalance={user?.lemonBalance}
+            />
         </div>
     );
 };
