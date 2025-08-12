@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"github.com/piper-hyowon/dBtree/internal/core/auth"
 	"github.com/piper-hyowon/dBtree/internal/core/email"
 	"github.com/piper-hyowon/dBtree/internal/core/errors"
@@ -221,8 +222,13 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 	}
 
 	u, err := s.userStore.FindByEmail(ctx, email)
-	if err != nil || u == nil {
-		isNewUser, err := s.userStore.CreateIfNotExists(ctx, email)
+	if err != nil {
+		return nil, "", errors.Wrap(err)
+	}
+
+	// 신규 사용자인 경우 생성
+	if u == nil {
+		_, err := s.userStore.CreateIfNotExists(ctx, email)
 		if err != nil {
 			return nil, "", errors.Wrap(err)
 		}
@@ -232,18 +238,33 @@ func (s *service) VerifyOTP(ctx context.Context, email string, code string) (*us
 			return nil, "", errors.Wrap(err)
 		}
 
-		if isNewUser {
-			err := s.emailService.SendWelcome(ctx, email)
-			if err != nil {
-				s.logger.Printf("failed to send welcome email: %v", err)
-			}
-			err = s.lemonService.GiveWelcomeLemon(ctx, u.ID)
-			if err != nil {
-				// TODO:
-			}
+		if u == nil {
+			return nil, "", errors.NewInternalError(fmt.Errorf("failed to create user for email: %s", email))
 		}
-
 	}
+
+	if !u.WelcomeBonusGiven {
+		err = s.lemonService.GiveWelcomeLemon(ctx, u.ID)
+		if err != nil {
+			s.logger.Printf("ERROR: Failed to give welcome lemon to user %s (ID: %s): %v",
+				u.Email, u.ID, err)
+		} else {
+			if err := s.userStore.UpdateWelcomeBonusStatus(ctx, u.ID, true); err != nil {
+				s.logger.Printf("ERROR: Failed to update welcome bonus status for user %s: %v", u.ID, err)
+			} else {
+				s.logger.Printf("Updated welcome bonus status for user %s", u.ID)
+			}
+
+			go func() {
+				if err := s.emailService.SendWelcome(context.Background(), email); err != nil {
+					s.logger.Printf("Failed to send welcome email to %s: %v", email, err)
+				} else {
+					s.logger.Printf("Welcome email sent to %s", email)
+				}
+			}()
+		}
+	}
+
 	return u, token, nil
 }
 

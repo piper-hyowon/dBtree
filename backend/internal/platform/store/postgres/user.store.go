@@ -220,3 +220,13 @@ func (s *UserStore) Delete(ctx context.Context, id string) error {
 
 	return tx.Commit()
 }
+
+func (s *UserStore) UpdateWelcomeBonusStatus(ctx context.Context, userID string, given bool) error {
+	query := `
+        UPDATE users 
+        SET welcome_bonus_given = $1, updated_at = NOW() 
+        WHERE id = $2
+    `
+	_, err := s.db.ExecContext(ctx, query, given, userID)
+	return err
+}

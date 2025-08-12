@@ -1,3 +1,7 @@
+-- DROP TABLE IF EXISTS user_lemon_transactions CASCADE;
+
+-- DROP SEQUENCE IF EXISTS user_lemon_transactions_db_instance_id_seq;
+
 CREATE TABLE IF NOT EXISTS user_lemon_transactions
 (
     id             UUID PRIMARY KEY                  DEFAULT gen_random_uuid(),
@@ -8,7 +12,7 @@ CREATE TABLE IF NOT EXISTS user_lemon_transactions
     status         transaction_status       NOT NULL,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     note           TEXT,
-    db_instance_id BIGSERIAL
+    db_instance_id BIGINT
 );
 
 -- 인덱스
@@ -20,4 +24,3 @@ CREATE INDEX IF NOT EXISTS idx_lemon_transactions_db_instance ON user_lemon_tran
 
 COMMENT ON COLUMN user_lemon_transactions.action_type IS 'harvest: 레몬 수확, instance_create: 인스턴스 생성 비용, instance_maintain: 유지 비용, welcome_bonus: 가입 보너스, instance_create_refund: 환불';
 COMMENT ON COLUMN user_lemon_transactions.status IS 'successful: 성공, failed: 실패';
-

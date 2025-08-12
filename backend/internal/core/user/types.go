@@ -12,6 +12,7 @@ type User struct {
 	LastHarvestAt     *time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	WelcomeBonusGiven bool
 }
 
 func (u *User) ToProfileResponse() ProfileResponse {

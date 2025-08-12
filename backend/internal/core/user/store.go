@@ -15,4 +15,6 @@ type Store interface {
 	TotalUserCount(ctx context.Context) (int, error)
 
 	TopLemonHolders(ctx context.Context, limit int) ([]*User, error)
+
+	UpdateWelcomeBonusStatus(ctx context.Context, userID string, given bool) error
 }
