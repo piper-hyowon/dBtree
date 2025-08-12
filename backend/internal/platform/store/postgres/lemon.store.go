@@ -105,6 +105,24 @@ func (s *LemonStore) CreateTransaction(ctx context.Context, tx *lemon.Transactio
 		if err != nil {
 			return errors.Wrap(err)
 		}
+
+		if tx.ActionType == lemon.ActionWelcomeBonus {
+			updateQuery := `
+			UPDATE users 
+			SET welcome_bonus_given = true
+			WHERE id = $1
+		`
+
+			_, err = dbTx.ExecContext(
+				ctx,
+				updateQuery,
+				tx.UserID,
+			)
+
+			if err != nil {
+				return errors.Wrap(err)
+			}
+		}
 	}
 
 	if err = dbTx.Commit(); err != nil {

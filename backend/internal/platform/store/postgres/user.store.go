@@ -86,7 +86,7 @@ func NewUserStore(db *sql.DB) user.Store {
 
 func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, error) {
 	query := `SELECT id, email, lemon_balance, last_harvest_at, created_at, updated_at,
-       total_earned_lemons, total_spent_lemons
+       total_earned_lemons, total_spent_lemons, welcome_bonus_given
               FROM users 
               WHERE email = $1 AND is_deleted = FALSE`
 
@@ -101,6 +101,7 @@ func (s *UserStore) FindByEmail(ctx context.Context, email string) (*user.User, 
 		&u.UpdatedAt,
 		&u.TotalEarnedLemons,
 		&u.TotalSpentLemons,
+		&u.WelcomeBonusGiven,
 	)
 
 	if err != nil {
@@ -149,6 +150,7 @@ func (s *UserStore) FindById(ctx context.Context, id string) (*user.User, error)
 	return &u, nil
 }
 
+// CreateIfNotExists 반환 (isNewUser, err)
 func (s *UserStore) CreateIfNotExists(ctx context.Context, email string) (bool, error) {
 	exists, err := s.emailExists(ctx, email)
 	if err != nil {
