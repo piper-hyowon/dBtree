@@ -534,13 +534,20 @@ func (p *MongoDBProvisioner) getImage(instance *dbtreev1.DBInstance) string {
 }
 
 func (p *MongoDBProvisioner) getResourceRequirements(instance *dbtreev1.DBInstance) corev1.ResourceRequirements {
+	// CPU string을 Quantity로 파싱
+	cpuQuantity := instance.Spec.Resources.GetCPUQuantity()
+
+	// CPU limit은 request의 2배
+	cpuLimitMillicores := cpuQuantity.MilliValue() * 2
+	cpuLimit := resource.NewMilliQuantity(cpuLimitMillicores, resource.DecimalSI)
+
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", instance.Spec.Resources.CPU*1000)),
+			corev1.ResourceCPU:    cpuQuantity,
 			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", instance.Spec.Resources.Memory)),
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", instance.Spec.Resources.CPU*1000)),
+			corev1.ResourceCPU:    *cpuLimit,
 			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", instance.Spec.Resources.Memory)),
 		},
 	}
@@ -579,30 +586,119 @@ net:
   bindIp: 0.0.0.0
 `
 
-	// Add security if auth is enabled
+	// WiredTiger cache size 설정
+	var cacheSize float64
+
+	// 1. Custom config에 캐시 설정이 있으면 우선 사용
+	if config != nil && config.WiredTigerCache > 0 {
+		cacheSize = float64(config.WiredTigerCache)
+	} else {
+		// 2. 없으면 사이즈별 기본값 사용
+		switch instance.Spec.Size {
+		case dbtreev1.DBSizeTiny:
+			cacheSize = 0.1 // 100MB (256MB 메모리의 약 40%)
+		case dbtreev1.DBSizeSmall:
+			cacheSize = 0.25 // 250MB (512MB 메모리의 약 50%)
+		case dbtreev1.DBSizeMedium:
+			cacheSize = 1.0 // 1GB (2GB 메모리의 50%)
+		case dbtreev1.DBSizeLarge:
+			cacheSize = 2.0 // 2GB (4GB 메모리의 50%)
+		default:
+			// 메모리의 50% 사용 (MongoDB 기본값)
+			// 최소 0.1GB 보장
+			memoryGB := float64(instance.Spec.Resources.Memory) / 1024.0
+			cacheSize = memoryGB * 0.5
+			if cacheSize < 0.1 {
+				cacheSize = 0.1
+			}
+		}
+	}
+
+	// WiredTiger 설정 추가
+	mongoConf += fmt.Sprintf(`storage:
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: %.2f
+    collectionConfig:
+      blockCompressor: snappy
+    indexConfig:
+      prefixCompression: true
+`, cacheSize)
+
+	// Security 설정 (옵션)
 	if config == nil || config.AuthEnabled {
-		// TODO:
-		mongoConf += `# security:
-  # authorization: enabled
+		// 기본적으로 인증 활성화 (현재는 주석 처리)
+		mongoConf += `
+# Security (uncomment to enable)
+# security:
+#   authorization: enabled
 `
 	}
 
-	// Add WiredTiger cache size if specified
-	if config != nil && config.WiredTigerCache > 0 {
-		mongoConf += fmt.Sprintf(`  wiredTiger:
-    engineConfig:
-      cacheSizeGB: %d
-`, config.WiredTigerCache)
-	}
-
-	// Add replication config if needed
+	// Replication 설정 (Replica Set 모드일 때)
 	if instance.Spec.Mode == dbtreev1.DBModeReplicaSet {
-		mongoConf += `replication:
+		mongoConf += `
+# Replication
+replication:
   replSetName: rs0
-setParameter:
   enableMajorityReadConcern: true
 `
 	}
+
+	// Sharding 설정 (Sharded 모드일 때)
+	if instance.Spec.Mode == dbtreev1.DBModeSharded {
+		mongoConf += `
+# Sharding
+sharding:
+  clusterRole: shardsvr
+  archiveMovedChunks: false
+`
+	}
+
+	// Operation Profiling (성능 모니터링)
+	mongoConf += `
+# Operation Profiling
+operationProfiling:
+  mode: off
+  slowOpThresholdMs: 100
+`
+
+	// 사이즈별 추가 최적화
+	switch instance.Spec.Size {
+	case dbtreev1.DBSizeTiny:
+		// Tiny: 매우 제한적인 리소스
+		mongoConf += `
+# Tiny size optimizations
+setParameter:
+  internalQueryExecMaxBlockingSortBytes: 33554432  # 32MB (기본값의 1/3)
+  maxIndexBuildMemoryUsageMegabytes: 100           # 100MB
+`
+	case dbtreev1.DBSizeSmall:
+		// Small: 약간의 최적화
+		mongoConf += `
+# Small size optimizations
+setParameter:
+  internalQueryExecMaxBlockingSortBytes: 67108864  # 64MB (기본값의 2/3)
+  maxIndexBuildMemoryUsageMegabytes: 200           # 200MB
+`
+	case dbtreev1.DBSizeMedium, dbtreev1.DBSizeLarge:
+		// Medium/Large: 기본값 사용
+		mongoConf += `
+# Standard settings
+setParameter:
+  internalQueryExecMaxBlockingSortBytes: 104857600  # 100MB (기본값)
+  maxIndexBuildMemoryUsageMegabytes: 500            # 500MB
+`
+	}
+
+	// Journal 설정 (모든 사이즈 공통)
+	mongoConf += `
+# Journal
+storage:
+  journal:
+    enabled: true
+    commitIntervalMs: 100
+`
 
 	return mongoConf
 }

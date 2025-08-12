@@ -241,10 +241,10 @@
 .instructions-content {
     background-color: var(--modal-background);
     color: var(--text-primary);
-    border-radius: var(--border-radius-standard);
-    box-shadow: var(--shadow);
-    padding: 25px;
-    max-width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    padding: 24px;
+    max-width: 420px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
@@ -256,58 +256,89 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    border-bottom: 2px solid var(--color-primary-light);
-    padding-bottom: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--color-primary-light, #A8E6C1);
+    gap: 16px;
 }
 
 .modal-header h3 {
     color: var(--color-primary);
     margin: 0;
-    font-size: 1.4rem;
-}
-
-.close-button-icon {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 24px;
-    cursor: pointer;
-    padding: 0;
-    margin: 0;
-    line-height: 1;
-    transition: color 0.2s ease;
+    font-size: 1.25rem;
+    font-weight: 600;
 }
 
 .close-button-icon:hover {
+    background-color: rgba(0, 0, 0, 0.05);
     color: var(--text-primary);
 }
 
-.modal-footer {
+[data-theme="dark"] .close-button-icon:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.instructions-content ol {
+    margin: 0;
+    padding-left: 20px;
+    line-height: 1.8;
+}
+
+.instructions-content li {
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+
+.tip-container {
     margin-top: 20px;
-    text-align: right;
+    padding: 12px 16px;
+    background-color: rgba(111, 207, 151, 0.1);
+    border-left: 3px solid var(--color-primary);
+    border-radius: 6px;
+}
+
+.tip {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.modal-footer {
+    margin-top: 24px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .close-button {
     background-color: var(--color-primary);
     color: white;
     border: none;
-    border-radius: var(--border-radius-standard);
-    padding: 8px 15px;
+    border-radius: 8px;
+    padding: 10px 24px;
     cursor: pointer;
-    transition: var(--transition-standard);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .close-button:hover {
     background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(111, 207, 151, 0.3);
 }
 
+.close-button:active {
+    transform: translateY(0);
+}
 
 /* 도움말 버튼 */
 .instructions-button-container {
     position: absolute;
-    bottom: 15px;
-    right: 15px;
+    bottom: 20px;
+    right: 20px;
     z-index: 100;
 }
 
@@ -316,24 +347,69 @@
     color: white;
     border: none;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: var(--transition-standard);
-    font-size: 20px;
-    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    font-size: 18px;
+    font-weight: 600;
 }
 
 .instructions-button:hover {
     background-color: var(--color-primary-dark);
-    transform: scale(1.05);
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .button-content {
     position: relative;
-    top: -1px;
+    top: 0;
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+    .instructions-content {
+        padding: 20px;
+        max-width: 95%;
+    }
+
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .close-button {
+        padding: 8px 20px;
+        font-size: 0.8125rem;
+    }
+
+    .instructions-button {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
 }

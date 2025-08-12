@@ -388,37 +388,6 @@ const AccountPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* 계정 설정 섹션 - 탈퇴 버튼 포함 (버튼은 여기 하나만 있음!) */}
-                <div className="section-card account-settings-section">
-                    <div
-                        className="section-header"
-                        onClick={() => toggleSection('settings')}
-                    >
-                        <h3 className="section-title">계정 설정</h3>
-                        <button className="collapse-btn">
-                            {collapsedSections.has('settings') ? '▶' : '▼'}
-                        </button>
-                    </div>
-                    {!collapsedSections.has('settings') && (
-                        <div className="section-content compact">
-                            <div className="danger-zone">
-                                <div className="danger-zone-header">
-                                    <h4 className="danger-zone-title">계정 삭제</h4>
-                                    <p className="danger-zone-description">
-                                        이 작업은 되돌릴 수 없으며, 모든 데이터가 영구 삭제됩니다.
-                                    </p>
-                                </div>
-                                <button
-                                    className="delete-account-btn"
-                                    onClick={() => setShowDeleteModal(true)}
-                                >
-                                    계정 삭제
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
                 {/* 레몬 입출금 내역 - 테이블 형태 */}
                 <div className="section-card">
                     <div className="section-header">

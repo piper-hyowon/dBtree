@@ -116,10 +116,11 @@ spec:
                 description: Compute resources
                 properties:
                   cpu:
-                    description: CPU in cores (matches backend)
-                    format: int32
-                    minimum: 1
-                    type: integer
+                    description: |-
+                      CPU in cores as string (e.g., "0.25", "0.5", "1", "2")
+                      Supports fractional values like "250m" (millicores) or "0.25" (cores)
+                    pattern: ^([0-9]+\.?[0-9]*|[0-9]*\.?[0-9]+)([m]?)$
+                    type: string
                   disk:
                     description: Disk in GB (matches backend)
                     format: int32
@@ -152,6 +153,7 @@ spec:
               size:
                 description: Instance size
                 enum:
+                - tiny
                 - small
                 - medium
                 - large

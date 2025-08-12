@@ -698,7 +698,7 @@ func (s *service) updateK8sResource(ctx context.Context, instance *dbservice.DBI
 	// 스펙 업데이트
 	spec := existing.Object["spec"].(map[string]interface{})
 	spec["resources"] = map[string]interface{}{
-		"cpu":    instance.Resources.CPU,
+		"cpu":    k8s.ConvertCPUToString(instance.Resources.CPU),
 		"memory": instance.Resources.Memory,
 		"disk":   instance.Resources.Disk,
 	}

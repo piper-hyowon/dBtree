@@ -83,7 +83,7 @@ $$;
 DO
 $$
     BEGIN
-        CREATE TYPE db_size AS ENUM ('small', 'medium', 'large');
+        CREATE TYPE db_size AS ENUM ('tiny', 'small', 'medium', 'large');
     EXCEPTION
         WHEN duplicate_object THEN null;
     END

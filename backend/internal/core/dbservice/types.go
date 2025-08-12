@@ -15,6 +15,7 @@ const (
 type DBSize string
 
 const (
+	SizeTiny   DBSize = "tiny"
 	SizeSmall  DBSize = "small"
 	SizeMedium DBSize = "medium"
 	SizeLarge  DBSize = "large"
@@ -64,15 +65,18 @@ const (
 )
 
 type ResourceSpec struct {
-	CPU    int `json:"cpu" validate:"required,min=1,max=16"`
-	Memory int `json:"memory" validate:"required,min=128,max=65536"` // MB
-	Disk   int `json:"disk" validate:"required,min=1,max=1000"`      // GB
+	CPU    float64 `json:"cpu" validate:"required,min=0.1,max=16"`
+	Memory int     `json:"memory" validate:"required,min=128,max=65536"` // MB
+	Disk   int     `json:"disk" validate:"required,min=1,max=1000"`      // GB
 }
 
 func (r ResourceSpec) CalculateSize() DBSize {
-	if r.Memory <= 512 && r.CPU <= 1 {
+	// CPU와 메모리 기준으로 사이즈 결정
+	if r.CPU <= 0.25 && r.Memory <= 256 {
+		return SizeTiny
+	} else if r.CPU <= 0.5 && r.Memory <= 512 {
 		return SizeSmall
-	} else if r.Memory <= 2048 && r.CPU <= 2 {
+	} else if r.CPU <= 1 && r.Memory <= 2048 {
 		return SizeMedium
 	}
 	return SizeLarge
@@ -281,34 +285,40 @@ type InstanceMetrics struct {
 
 // CalculateCustomCost 프리셋이 아닐경우 직접 계산
 func CalculateCustomCost(dbType DBType, resources ResourceSpec) LemonCost {
-	var base int
+	var base float64
 
 	// 메모리 기반 비용
 	switch dbType {
 	case Redis:
-		base = resources.Memory / 512 // 512MB당 1레몬
+		base = float64(resources.Memory) / 512 // 512MB당 1레몬
 	case MongoDB:
-		base = resources.Memory / 1024 * 3 // 1GB당 3레몬
+		base = float64(resources.Memory) / 1024 * 3 // 1GB당 3레몬
 	}
 
-	// CPU 추가 비용 (1 vCPU 초과분에 대해)
-	if resources.CPU > 1 {
-		base += (resources.CPU - 1) * 2
+	// CPU 추가 비용 (0.5 vCPU 초과분에 대해)
+	if resources.CPU > 0.5 {
+		base += (resources.CPU - 0.5) * 2
 	}
 
 	// 디스크 추가 비용 (10GB 초과분에 대해)
 	if resources.Disk > 10 {
-		base += (resources.Disk - 10) / 10
+		base += float64(resources.Disk-10) / 10
 	}
 
 	// 최소값 보장
-	if base < 1 {
-		base = 1
+	if base < 0.5 {
+		base = 0.5
+	}
+
+	// 정수로 변환
+	hourlyLemons := int(base)
+	if hourlyLemons < 1 {
+		hourlyLemons = 1
 	}
 
 	return LemonCost{
-		CreationCost: base * 10,
-		HourlyLemons: base,
+		CreationCost: hourlyLemons * 10,
+		HourlyLemons: hourlyLemons,
 	}
 }
 

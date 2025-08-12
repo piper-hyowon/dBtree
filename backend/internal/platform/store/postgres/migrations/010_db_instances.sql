@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS db_instances
     created_from_preset   VARCHAR(100),
 
     -- 리소스 (프리셋에서 복사되거나 커스텀 입력)
-    cpu                   INTEGER CHECK (cpu > 0)            NOT NULL,
+    cpu                   DECIMAL(4, 2) CHECK (cpu > 0)      NOT NULL,
     memory                INTEGER CHECK (memory > 0)         NOT NULL, -- MB
     disk                  INTEGER CHECK (disk > 0)           NOT NULL, -- GB
 

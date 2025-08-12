@@ -19,6 +19,7 @@ package v1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -36,10 +37,11 @@ const (
 )
 
 // DBSize represents the instance size
-// +kubebuilder:validation:Enum=small;medium;large
+// +kubebuilder:validation:Enum=tiny;small;medium;large
 type DBSize string
 
 const (
+	DBSizeTiny   DBSize = "tiny"
 	DBSizeSmall  DBSize = "small"
 	DBSizeMedium DBSize = "medium"
 	DBSizeLarge  DBSize = "large"
@@ -81,9 +83,10 @@ const (
 
 // ResourceSpec matches backend's ResourceSpec
 type ResourceSpec struct {
-	// CPU in cores (matches backend)
-	// +kubebuilder:validation:Minimum=1
-	CPU int32 `json:"cpu"`
+	// CPU in cores as string (e.g., "0.25", "0.5", "1", "2")
+	// Supports fractional values like "250m" (millicores) or "0.25" (cores)
+	// +kubebuilder:validation:Pattern="^([0-9]+\\.?[0-9]*|[0-9]*\\.?[0-9]+)([m]?)$"
+	CPU string `json:"cpu"`
 
 	// Memory in MB (matches backend)
 	// +kubebuilder:validation:Minimum=128
@@ -92,6 +95,26 @@ type ResourceSpec struct {
 	// Disk in GB (matches backend)
 	// +kubebuilder:validation:Minimum=1
 	Disk int32 `json:"disk"`
+}
+
+// GetCPUQuantity returns CPU as resource.Quantity for Kubernetes
+func (r *ResourceSpec) GetCPUQuantity() resource.Quantity {
+	// Parse CPU string to Quantity
+	// Supports: "0.25", "250m", "1", "1000m" etc.
+	qty, _ := resource.ParseQuantity(r.CPU)
+	return qty
+}
+
+// GetCPUMillicores returns CPU in millicores
+func (r *ResourceSpec) GetCPUMillicores() int64 {
+	qty := r.GetCPUQuantity()
+	return qty.MilliValue()
+}
+
+// GetCPUCores returns CPU as float64 cores
+func (r *ResourceSpec) GetCPUCores() float64 {
+	qty := r.GetCPUQuantity()
+	return float64(qty.MilliValue()) / 1000
 }
 
 // BackupConfig matches backend's BackupConfig

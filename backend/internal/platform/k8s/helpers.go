@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"fmt"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -19,7 +20,7 @@ type DBInstanceParams struct {
 }
 
 type ResourceSpec struct {
-	CPU    int
+	CPU    float64
 	Memory int
 	Disk   int
 }
@@ -28,6 +29,16 @@ type BackupSpec struct {
 	Enabled       bool
 	Schedule      string
 	RetentionDays int
+}
+
+// ConvertCPUToString converts float64 CPU to string for CRD
+func ConvertCPUToString(cpu float64) string {
+	if cpu < 1 {
+		// 1 미만은 밀리코어로 표현 (0.25 → "250m")
+		return fmt.Sprintf("%dm", int(cpu*1000))
+	}
+	// 1 이상은 소수점 포함 문자열로 (1.5 → "1.5")
+	return fmt.Sprintf("%.2f", cpu)
 }
 
 func BuildDBInstanceSpec(params DBInstanceParams) map[string]interface{} {
@@ -41,11 +52,15 @@ func BuildDBInstanceSpec(params DBInstanceParams) map[string]interface{} {
 			"name": params.SecretRef,
 		},
 		"resources": map[string]interface{}{
-			"cpu":    params.Resources.CPU,
+			"cpu":    ConvertCPUToString(params.Resources.CPU),
 			"memory": params.Resources.Memory,
 			"disk":   params.Resources.Disk,
 		},
 		"userId": params.UserID,
+	}
+
+	if params.CreatedFromPreset != nil {
+		spec["createdFromPreset"] = *params.CreatedFromPreset
 	}
 
 	backupSpec := map[string]interface{}{

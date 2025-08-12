@@ -93,7 +93,6 @@ const LemonTreeSceneContent = () => {
                                 onClick={() => setShowinstructions(false)}
                                 aria-label="닫기"
                             >
-                                ×
                             </button>
                         </div>
                         <ol>

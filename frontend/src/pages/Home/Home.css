@@ -52,7 +52,93 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
 }
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-shrink: 0;
+}
+
+.nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: flex-end;
+    max-width: 700px;
+}
+
+/* Nav Actions - 버튼 줄바꿈 방지 */
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.375rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--neutral-200);
+    border-radius: 18px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    flex-shrink: 0; /* 줄어들지 않도록 */
+}
+
+.nav-actions .nav-button {
+    border: none;
+    box-shadow: none;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+    min-width: fit-content; /* 텍스트에 맞는 최소 너비 보장 */
+}
+
+/* User Info Section */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--neutral-200);
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+    flex: 0 1 auto; /* 필요한 만큼만 공간 차지 */
+}
+
+/* 반응형 조정 */
+@media (max-width: 992px) {
+    .header {
+        gap: 1.5rem; /* 중간 화면에서 gap 줄이기 */
+    }
+
+    .nav {
+        max-width: 600px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        padding: 1rem;
+        gap: 1rem; /* 작은 화면에서 gap 더 줄이기 */
+    }
+
+    .nav {
+        gap: 0.5rem;
+        max-width: none; /* 작은 화면에서는 제한 해제 */
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        gap: 0.5rem; /* 모바일에서 최소 gap */
+    }
+}
+
 
 /* User Info Section  */
 .user-info {

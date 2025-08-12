@@ -455,17 +455,21 @@ func (p *RedisProvisioner) getImage(instance *dbtreev1.DBInstance) string {
 }
 
 func (p *RedisProvisioner) getResourceRequirements(instance *dbtreev1.DBInstance) corev1.ResourceRequirements {
-	// Calculate memory with some overhead for Redis
-	memoryMi := instance.Spec.Resources.Memory
+	// CPU string을 Quantity로 파싱
+	cpuQuantity := instance.Spec.Resources.GetCPUQuantity()
+
+	// CPU limit은 request의 2배
+	cpuLimitMillicores := cpuQuantity.MilliValue() * 2
+	cpuLimit := resource.NewMilliQuantity(cpuLimitMillicores, resource.DecimalSI)
 
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", instance.Spec.Resources.CPU*1000)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", memoryMi)),
+			corev1.ResourceCPU:    cpuQuantity,
+			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", instance.Spec.Resources.Memory)),
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%dm", instance.Spec.Resources.CPU*1000)),
-			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", memoryMi)),
+			corev1.ResourceCPU:    *cpuLimit,
+			corev1.ResourceMemory: resource.MustParse(fmt.Sprintf("%dMi", instance.Spec.Resources.Memory)),
 		},
 	}
 }
@@ -531,34 +535,35 @@ func (p *RedisProvisioner) getCommand(instance *dbtreev1.DBInstance) []string {
 }
 
 func (p *RedisProvisioner) generateRedisConfig(instance *dbtreev1.DBInstance) string {
-	// Parse custom config
-	redisConfig, _ := utils.ParseRedisConfig(instance.Spec.Config)
+	// 사이즈별 maxmemory 설정
+	var maxMemory int
+	switch instance.Spec.Size {
+	case dbtreev1.DBSizeTiny:
+		maxMemory = 200 // 200MB (256MB 중 시스템용 56MB 제외)
+	case dbtreev1.DBSizeSmall:
+		maxMemory = 450 // 450MB
+	case dbtreev1.DBSizeMedium:
+		maxMemory = 1800 // 1.8GB
+	case dbtreev1.DBSizeLarge:
+		maxMemory = 3600 // 3.6GB
+	default:
+		// 메모리의 90% 사용
+		maxMemory = int(float64(instance.Spec.Resources.Memory) * 0.9)
+	}
 
-	config := `# Redis configuration
-port 6379
+	redisConf := fmt.Sprintf(`# Redis configuration
 bind 0.0.0.0
 protected-mode yes
+port 6379
 tcp-backlog 511
 timeout 0
 tcp-keepalive 300
-`
 
-	// Add persistence configuration
-	if redisConfig != nil && redisConfig.Persistence {
-		if redisConfig.PersistenceType == "AOF" {
-			config += `
-# AOF Persistence
-appendonly yes
-appendfilename "appendonly.aof"
-appendfsync everysec
-no-appendfsync-on-rewrite no
-auto-aof-rewrite-percentage 100
-auto-aof-rewrite-min-size 64mb
-`
-		} else {
-			// RDB persistence (default)
-			config += `
-# RDB Persistence
+# Memory
+maxmemory %dmb
+maxmemory-policy allkeys-lru
+
+# Persistence
 save 900 1
 save 300 10
 save 60 10000
@@ -566,40 +571,20 @@ stop-writes-on-bgsave-error yes
 rdbcompression yes
 rdbchecksum yes
 dbfilename dump.rdb
-`
-		}
-	}
+dir /data
 
-	// Add max memory policy
-	config += fmt.Sprintf(`
-# Memory management
-maxmemory %dmb
-`, instance.Spec.Resources.Memory)
+# Logging
+loglevel notice
+logfile ""
+`, maxMemory)
 
-	if redisConfig != nil && redisConfig.MaxMemoryPolicy != "" {
-		config += fmt.Sprintf("maxmemory-policy %s\n", redisConfig.MaxMemoryPolicy)
-	} else {
-		config += "maxmemory-policy allkeys-lru\n"
-	}
-
-	// Add cluster/sentinel specific configs
-	switch instance.Spec.Mode {
-	case dbtreev1.DBModeCluster:
-		config += `
-# Cluster
-cluster-enabled yes
-cluster-config-file nodes.conf
-cluster-node-timeout 5000
-`
-	}
-
-	return config
+	return redisConf
 }
 
 func (p *RedisProvisioner) isPersistenceEnabled(instance *dbtreev1.DBInstance) bool {
 	config, _ := utils.ParseRedisConfig(instance.Spec.Config)
 	if config != nil {
-		return config.Persistence
+		return true
 	}
 	return true // Default to enabled
 }
