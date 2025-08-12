@@ -85,6 +85,7 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 		technicalTermsJSON []byte
 		defaultConfigJSON  []byte
 		useCasesArr        pq.StringArray
+		cpu                float64
 	)
 
 	err := scanner.Scan(
@@ -98,7 +99,7 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 		&preset.FriendlyDescription,
 		&technicalTermsJSON,
 		&useCasesArr,
-		&preset.Resources.CPU,
+		&cpu,
 		&preset.Resources.Memory,
 		&preset.Resources.Disk,
 		&preset.Cost.CreationCost,
@@ -109,6 +110,8 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 	if err != nil {
 		return nil, err
 	}
+
+	preset.Resources.CPU = cpu
 
 	// JSONB 필드 파싱
 	if err := s.parseJSONFields(&preset, technicalTermsJSON, defaultConfigJSON); err != nil {
