@@ -41,6 +41,9 @@ func errorCodeToStatusCode(code errors.ErrorCode) int {
 	case errors.ErrInstanceNotReady:
 		return http.StatusServiceUnavailable
 
+	case errors.ErrResourceExhausted, errors.ErrSystemCapacity:
+		return http.StatusInsufficientStorage
+
 	default:
 		return http.StatusInternalServerError
 	}

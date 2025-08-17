@@ -58,6 +58,9 @@ const (
 	ErrInstanceNotReady        ErrorCode = 1704
 
 	ErrLimitExceeded ErrorCode = 1805
+
+	ErrResourceExhausted ErrorCode = 1900
+	ErrSystemCapacity    ErrorCode = 1901
 )
 
 var errorStrings = map[ErrorCode]string{
@@ -94,6 +97,8 @@ var errorStrings = map[ErrorCode]string{
 	ErrInvalidResourceSpec:     "invalid_resource_spec",
 	ErrInstanceNotReady:        "instance_not_ready",
 	ErrLimitExceeded:           "limit_exceeded",
+	ErrResourceExhausted:       "resource_exhausted",
+	ErrSystemCapacity:          "system_capacity_exceeded",
 }
 
 func (c ErrorCode) String() string {
