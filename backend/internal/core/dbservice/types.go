@@ -218,7 +218,8 @@ type DBPreset struct {
 	Cost                LemonCost
 	DefaultConfig       map[string]interface{}
 	SortOrder           int
-	IsActive            bool
+	Available           bool // 현재 리소스 상황에서 사용 가능 여부
+	UnavailableReason   string
 }
 
 func (p *DBPreset) ToResponse() PresetResponse {
@@ -237,6 +238,8 @@ func (p *DBPreset) ToResponse() PresetResponse {
 		Cost:                p.Cost.ToResponse(),
 		DefaultConfig:       p.DefaultConfig,
 		SortOrder:           p.SortOrder,
+		Available:           p.Available,
+		UnavailableReason:   p.UnavailableReason,
 	}
 }
 

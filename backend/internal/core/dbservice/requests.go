@@ -95,6 +95,8 @@ type PresetResponse struct {
 	Cost                CostResponse           `json:"cost"`
 	DefaultConfig       map[string]interface{} `json:"defaultConfig,omitempty"`
 	SortOrder           int                    `json:"sortOrder"`
+	Available           bool                   `json:"available"`
+	UnavailableReason   string                 `json:"unavailableReason,omitempty"`
 }
 
 // 예상 비용

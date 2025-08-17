@@ -28,9 +28,9 @@ func (s *PresetStore) Find(ctx context.Context, id string) (*dbservice.DBPreset,
         SELECT 
             id, type, size, mode, name, icon, description, friendly_description,
             technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
-            default_config, sort_order
+            default_config, sort_order, available, unavailable_reason
         FROM db_presets
-        WHERE id = $1 AND is_active = true
+        WHERE id = $1
     `
 
 	row := s.db.QueryRowContext(ctx, query, id)
@@ -52,7 +52,7 @@ func (s *PresetStore) ListByType(ctx context.Context, dbType dbservice.DBType) (
             technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
             default_config, sort_order
         FROM db_presets 
-        WHERE type = $1 AND is_active = true
+        WHERE type = $1
         ORDER BY sort_order, id
     `
 
@@ -86,6 +86,7 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 		defaultConfigJSON  []byte
 		useCasesArr        pq.StringArray
 		cpu                float64
+		unavailableReason  sql.NullString
 	)
 
 	err := scanner.Scan(
@@ -106,12 +107,15 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 		&preset.Cost.HourlyLemons,
 		&defaultConfigJSON,
 		&preset.SortOrder,
+		&preset.Available,
+		&unavailableReason,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	preset.Resources.CPU = cpu
+	preset.UnavailableReason = unavailableReason.String
 
 	// JSONB 필드 파싱
 	if err := s.parseJSONFields(&preset, technicalTermsJSON, defaultConfigJSON); err != nil {
@@ -119,7 +123,6 @@ func (s *PresetStore) scanPreset(scanner interface{ Scan(...interface{}) error }
 	}
 
 	preset.UseCases = []string(useCasesArr)
-	preset.IsActive = true
 
 	return &preset, nil
 }

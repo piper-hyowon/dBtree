@@ -23,9 +23,10 @@ CREATE TABLE IF NOT EXISTS db_presets
     -- 기본 설정
     default_config       JSONB                              NOT NULL,
 
-    -- 정렬 & 활성화
+    -- 정렬 & 사용 가능 여부
     sort_order           INTEGER                            NOT NULL DEFAULT 0,
-    is_active            BOOLEAN                            NOT NULL DEFAULT true,
+    available            BOOLEAN                            NOT NULL DEFAULT true,
+    unavailable_reason   TEXT,
 
     created_at           TIMESTAMP WITH TIME ZONE           NOT NULL DEFAULT NOW()
 );
