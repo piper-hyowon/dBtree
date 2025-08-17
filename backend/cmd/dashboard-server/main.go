@@ -17,6 +17,8 @@ import (
 	"github.com/piper-hyowon/dBtree/internal/platform/rest/router"
 	"github.com/piper-hyowon/dBtree/internal/quiz"
 	quizRest "github.com/piper-hyowon/dBtree/internal/quiz/rest"
+	"github.com/piper-hyowon/dBtree/internal/resource"
+	resourceRest "github.com/piper-hyowon/dBtree/internal/resource/rest"
 	"github.com/piper-hyowon/dBtree/internal/scheduler"
 	"github.com/piper-hyowon/dBtree/internal/stats"
 	statsRest "github.com/piper-hyowon/dBtree/internal/stats/rest"
@@ -114,6 +116,9 @@ func main() {
 	quizService := quiz.NewService(quizStore, lemonStore, logger)
 	quizHandler := quizRest.NewHandler(quizService, lemonService, logger)
 
+	resourceManager := resource.NewManager(dbiStore, logger)
+	resourceHandler := resourceRest.NewHandler(resourceManager, logger)
+
 	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
 		userStore, k8sClient, portStore, logger)
 	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
@@ -122,6 +127,8 @@ func main() {
 	statsHandler := statsRest.NewHandler(statsService, logger)
 
 	r := router.New(logger)
+
+	r.GET("/system/resources", resourceHandler.GetSystemResources)
 
 	r.POST("/db/instances", authMiddleware.RequireAuth(dbsHandler.CreateInstance))
 	r.GET("/db/instances", authMiddleware.RequireAuth(dbsHandler.ListInstances))
