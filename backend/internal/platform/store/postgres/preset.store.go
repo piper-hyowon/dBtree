@@ -50,7 +50,7 @@ func (s *PresetStore) ListByType(ctx context.Context, dbType dbservice.DBType) (
         SELECT 
             id, type, size, mode, name, icon, description, friendly_description,
             technical_terms, use_cases, cpu, memory, disk, creation_cost, hourly_cost,
-            default_config, sort_order
+            default_config, sort_order, available, unavailable_reason
         FROM db_presets 
         WHERE type = $1
         ORDER BY sort_order, id

@@ -84,6 +84,8 @@ export interface PresetResponse {
     cost: CostResponse;
     defaultConfig?: Record<string, any>;
     sortOrder: number;
+    available: boolean;
+    unavailableReason?: string;
 }
 
 export interface EstimateCostRequest {

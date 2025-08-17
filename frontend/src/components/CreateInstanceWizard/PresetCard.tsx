@@ -45,6 +45,8 @@ interface PresetCardProps {
 }
 
 const PresetCard: React.FC<PresetCardProps> = ({preset, selected, onSelect}) => {
+    const isAvailable = preset.available ?? true; // default 는 true
+
     const getModeDisplayName = (mode: string): string => {
         switch (mode) {
             case 'standalone':
@@ -69,9 +71,17 @@ const PresetCard: React.FC<PresetCardProps> = ({preset, selected, onSelect}) => 
 
     return (
         <div
-            className={`preset-card ${selected ? 'selected' : ''}`}
+            className={`preset-card ${selected ? 'selected' : ''} ${!isAvailable ? 'disabled' : ''}`}
             onClick={onSelect}
         >
+            {!isAvailable && (
+                <div className="preset-unavailable-overlay">
+                    <div className="unavailable-badge">Coming Soon</div>
+                    <div className="unavailable-reason">
+                        {preset.unavailableReason || '서버 리소스 확장 후 지원 예정입니다'}
+                    </div>
+                </div>
+            )}
             {selected && (
                 <div className="preset-selected-indicator">
                     <span className="checkmark">✓</span>
