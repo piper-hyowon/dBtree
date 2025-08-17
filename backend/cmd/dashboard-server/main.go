@@ -120,7 +120,7 @@ func main() {
 	resourceHandler := resourceRest.NewHandler(resourceManager, logger)
 
 	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
-		userStore, k8sClient, portStore, logger)
+		userStore, k8sClient, portStore, resourceManager, logger)
 	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
 
 	statsService := stats.NewService(lemonStore, userStore, dbiStore, quizStore, logger)
@@ -287,7 +287,7 @@ func main() {
 		lemonService,
 		k8sClient,
 		logger,
-		1*time.Minute, // 1시간마다 실행 TODO: 테스트하느라 1분
+		1*time.Hour, // 1시간마다 실행
 	)
 
 	lemonScheduler.Start()

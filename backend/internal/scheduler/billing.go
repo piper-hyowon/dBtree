@@ -258,8 +258,7 @@ func (s *BillingScheduler) checkPausedInstances(ctx context.Context) {
 	s.logger.Printf("일시정지된 인스턴스: %d개", len(pausedInstances))
 
 	// 1시간 이상 경과한 것만 처리
-	//oneHourAgo := time.Now().Add(-1 * time.Hour)
-	oneHourAgo := time.Now().Add(-2 * time.Minute) // TODO:
+	oneHourAgo := time.Now().Add(-1 * time.Hour)
 	now := time.Now()
 
 	for _, instance := range pausedInstances {

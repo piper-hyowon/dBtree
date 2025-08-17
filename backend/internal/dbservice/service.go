@@ -3,6 +3,7 @@ package dbservice
 import (
 	"context"
 	"fmt"
+	"github.com/piper-hyowon/dBtree/internal/core/resource"
 	"github.com/piper-hyowon/dBtree/internal/utils/crypto"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,14 +23,15 @@ import (
 )
 
 type service struct {
-	publicHost   string
-	dbiStore     dbservice.DBInstanceStore
-	lemonService lemon.Service
-	presetStore  dbservice.PresetStore
-	userStore    user.Store
-	k8sClient    k8s.Client
-	portStore    dbservice.PortStore
-	logger       *log.Logger
+	publicHost      string
+	dbiStore        dbservice.DBInstanceStore
+	lemonService    lemon.Service
+	presetStore     dbservice.PresetStore
+	userStore       user.Store
+	k8sClient       k8s.Client
+	portStore       dbservice.PortStore
+	resourceManager resource.Manager
+	logger          *log.Logger
 }
 
 func (s *service) ListInstances(ctx context.Context, userID string) ([]*dbservice.DBInstance, error) {
@@ -363,21 +365,24 @@ func NewService(
 	userStore user.Store,
 	k8sClient k8s.Client,
 	portStore dbservice.PortStore,
+	resourceManager resource.Manager,
 	logger *log.Logger,
 ) dbservice.Service {
 	return &service{
-		publicHost:   publicHost,
-		dbiStore:     dbiStore,
-		presetStore:  presetStore,
-		lemonService: lemonService,
-		userStore:    userStore,
-		k8sClient:    k8sClient,
-		portStore:    portStore,
-		logger:       logger,
+		publicHost:      publicHost,
+		dbiStore:        dbiStore,
+		presetStore:     presetStore,
+		lemonService:    lemonService,
+		userStore:       userStore,
+		k8sClient:       k8sClient,
+		portStore:       portStore,
+		resourceManager: resourceManager,
+		logger:          logger,
 	}
 }
 
 func (s *service) CreateInstance(ctx context.Context, userID string, userLemon int, req *dbservice.CreateInstanceRequest) (*dbservice.CreateInstanceResponse, error) {
+	// 최대 보유 가능 개수 추가 확인
 	existingInstances, err := s.dbiStore.CountActive(ctx, userID)
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -411,6 +416,22 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 		if preset == nil {
 			return nil, errors.NewResourceNotFoundError("preset", *req.PresetID)
 		}
+		if !preset.Available {
+			return nil, errors.NewInvalidParameterError("preset", preset.UnavailableReason)
+		}
+
+		// 리소스 체크
+		sysResource := resource.SystemResourceSpec{
+			CPU:    preset.Resources.CPU,
+			Memory: preset.Resources.Memory,
+		}
+		canAllocate, reason, err := s.resourceManager.CanAllocate(ctx, sysResource)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+		if !canAllocate {
+			return nil, errors.NewSystemCapacityError(reason)
+		}
 
 		instance = &dbservice.DBInstance{
 			ExternalID:        uuid.New().String(),
@@ -432,6 +453,19 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 		// 커스텀 스펙
 		if req.Type == nil || req.Resources == nil {
 			return nil, errors.NewInvalidParameterError("type,resources", "required")
+		}
+
+		// 리소스 체크
+		sysResource := resource.SystemResourceSpec{
+			CPU:    req.Resources.CPU,
+			Memory: req.Resources.Memory,
+		}
+		canAllocate, reason, err := s.resourceManager.CanAllocate(ctx, sysResource)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+		if !canAllocate {
+			return nil, errors.NewSystemCapacityError(reason)
 		}
 
 		// 모드 기본값 설정
