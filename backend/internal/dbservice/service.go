@@ -202,6 +202,11 @@ func (s *service) DeleteInstance(ctx context.Context, userID, instanceID string)
 	}
 
 	if err := s.dbiStore.Delete(ctx, instanceID); err != nil {
+		// 이미 없는 경우는 성공으로 처리
+		if errors.Is(errors.NewResourceNotFoundError("instance", instanceID), err) {
+			s.logger.Printf("Instance %s already deleted", instanceID)
+			return nil
+		}
 		return errors.Wrap(err)
 	}
 
@@ -346,11 +351,6 @@ func (s *service) RestoreFromBackup(ctx context.Context, userID, instanceID stri
 }
 
 func (s *service) InstanceMetrics(ctx context.Context, instanceID string) (*dbservice.InstanceMetrics, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (s *service) EstimateCost(ctx context.Context, req *dbservice.EstimateCostRequest) (*dbservice.EstimateCostResponse, error) {
 	//TODO implement me
 	panic("implement me")
 }

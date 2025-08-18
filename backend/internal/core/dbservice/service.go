@@ -31,8 +31,7 @@ type Service interface {
 
 	InstanceMetrics(ctx context.Context, instanceID string) (*InstanceMetrics, error)
 
-	// Presets & Cost
+	// Presets
 
 	ListPresets(ctx context.Context) ([]*DBPreset, error)
-	EstimateCost(ctx context.Context, req *EstimateCostRequest) (*EstimateCostResponse, error)
 }
