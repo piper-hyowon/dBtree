@@ -10,6 +10,7 @@ import FloatingGuideText from "../../components/common/FloatingGuideText/Floatin
 import {useAuth} from "../../contexts/AuthContext";
 import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
 import FloatingSupportButton from "../../components/Support/FloatingSupportButton";
+import SystemResourceStatus from "../../components/SystemResourceStatus/SystemResourceStatus";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -94,6 +95,8 @@ const Home: React.FC = () => {
                     <ToggleThemeButton/>
                 </nav>
             </header>
+
+            <SystemResourceStatus/>
 
             {/* 히어로 섹션 */}
             <section className="hero-section">

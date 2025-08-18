@@ -23,6 +23,34 @@ export interface TreeStatusResponse {
     nextRegrowthTime?: string;
 }
 
+export interface SystemResourceSpec {
+    cpu: number;
+    memory: number;
+}
+
+export interface SystemResources {
+    total: SystemResourceSpec;
+    reserved: SystemResourceSpec;
+    available: SystemResourceSpec;
+    used: SystemResourceSpec;
+}
+
+export interface InstanceResources {
+    instanceId: string;
+    instanceName: string;
+    resources: SystemResourceSpec;
+    status: string;
+}
+
+export interface SystemResourceStatusResponse {
+    system: SystemResources;
+    instances: InstanceResources[] | null;
+    activeCount: number;
+    canCreateTiny: boolean;
+    canCreateSmall: boolean;
+    canCreateMedium: boolean;
+}
+
 export const getGlobalStats = async (): Promise<GlobalStatsResponse> => {
     try {
         const response = await apiClient.get<GlobalStatsResponse>('/stats/global');
@@ -53,8 +81,19 @@ export const getLemonTreeStatus = async (): Promise<TreeStatusResponse> => {
     }
 }
 
+export const getSystemResources = async (): Promise<SystemResourceStatusResponse> => {
+    try {
+        const response = await apiClient.get<SystemResourceStatusResponse>('/system/resources');
+        return response.data;
+    } catch (error) {
+        handleApiError(error);
+        throw error;
+    }
+};
+
 export default {
     getGlobalStats,
     getLeaderboardMini,
     getLemonTreeStatus,
+    getSystemResources,
 };
