@@ -28,7 +28,7 @@ type CORSConfig struct {
 }
 
 type ServerConfig struct {
-	PublicHost          string
+	PublicDBHost        string
 	Port                int
 	ReadTimeoutSeconds  int
 	WriteTimeoutSeconds int
@@ -79,7 +79,7 @@ func NewConfig() (*Config, error) {
 	debugLogging := getEnvString("DEBUG_LOGGING", "false") == "true"
 	useLocalMemoryStore := getEnvString("USE_LOCAL_MEMORY_STORE", "true") == "true"
 	port, err := getEnvInt("SERVER_PORT", 8080)
-	publicHost := getEnvString("SERVER_PUBLIC_HOST", "localhost") // TODO?
+	publicDBHost := getEnvString("SERVER_PUBLIC_DB_HOST", "localhost") // TODO?
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func NewConfig() (*Config, error) {
 
 	return &Config{
 		Server: ServerConfig{
-			PublicHost:          publicHost,
+			PublicDBHost:        publicDBHost,
 			Port:                port,
 			ReadTimeoutSeconds:  readTimeout,
 			WriteTimeoutSeconds: writeTimeout,

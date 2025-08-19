@@ -119,9 +119,9 @@ func main() {
 	resourceManager := resource.NewManager(dbiStore, logger)
 	resourceHandler := resourceRest.NewHandler(resourceManager, logger)
 
-	dbsService := dbservice.NewService(appConfig.Server.PublicHost, dbiStore, presetStore, lemonService,
+	dbsService := dbservice.NewService(appConfig.Server.PublicDBHost, dbiStore, presetStore, lemonService,
 		userStore, k8sClient, portStore, resourceManager, logger)
-	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicHost, dbsService, portStore, logger)
+	dbsHandler := dbsRest.NewHandler(appConfig.Server.PublicDBHost, dbsService, portStore, logger)
 
 	statsService := stats.NewService(lemonStore, userStore, dbiStore, quizStore, logger)
 	statsHandler := statsRest.NewHandler(statsService, logger)

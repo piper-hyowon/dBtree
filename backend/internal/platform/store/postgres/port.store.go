@@ -36,6 +36,10 @@ func (s *PortStore) AllocatePort(ctx context.Context, instanceID string) (int, e
 
 	// 사용 가능한 첫 번째 포트 찾기
 	for port := MinNodePort; port <= MaxNodePort; port++ {
+		if dbservice.ReservedPorts[port] {
+			continue
+		}
+
 		_, err := s.db.ExecContext(ctx,
 			"INSERT INTO port_allocations (instance_id, port) VALUES ($1, $2)",
 			instanceID, port)

@@ -12,20 +12,20 @@ import (
 )
 
 type Handler struct {
-	publicHost string
-	dbService  coredbservice.Service
-	portStore  coredbservice.PortStore
-	logger     *log.Logger
+	publicDBHost string
+	dbService    coredbservice.Service
+	portStore    coredbservice.PortStore
+	logger       *log.Logger
 }
 
 func NewHandler(
-	publicHost string, dbService coredbservice.Service, portStore coredbservice.PortStore, logger *log.Logger,
+	publicDBHost string, dbService coredbservice.Service, portStore coredbservice.PortStore, logger *log.Logger,
 ) *Handler {
 	return &Handler{
-		publicHost: publicHost,
-		dbService:  dbService,
-		portStore:  portStore,
-		logger:     logger,
+		publicDBHost: publicDBHost,
+		dbService:    dbService,
+		portStore:    portStore,
+		logger:       logger,
 	}
 }
 
@@ -81,18 +81,18 @@ func (h *Handler) GetInstanceWithSync(w http.ResponseWriter, r *http.Request) {
 
 	response := instance.ToResponse()
 	if port, err := h.portStore.GetPort(r.Context(), instance.ExternalID); err == nil && port > 0 {
-		response.ExternalHost = h.publicHost
+		response.ExternalHost = h.publicDBHost
 		response.ExternalPort = port
 
 		// URI 템플릿 직접 생성
 		if instance.Type == coredbservice.MongoDB {
 			response.ExternalURITemplate = fmt.Sprintf(
 				"mongodb://{USERNAME}:{PASSWORD}@%s:%d/%s?authSource=admin",
-				h.publicHost, port, instance.Name)
+				h.publicDBHost, port, instance.Name)
 		} else if instance.Type == coredbservice.Redis {
 			response.ExternalURITemplate = fmt.Sprintf(
 				"redis://:{PASSWORD}@%s:%d",
-				h.publicHost, port)
+				h.publicDBHost, port)
 		}
 	}
 	rest.SendSuccessResponse(w, http.StatusOK, response)

@@ -7,10 +7,10 @@ INSERT INTO db_presets (id, type, size, mode, name, icon, description,
                         cpu, memory, disk, creation_cost, hourly_cost,
                         default_config, sort_order, available, unavailable_reason)
 VALUES
--- MongoDB Tiny (0.1 vCPU, 256MB, 5GB)
+-- MongoDB Tiny (0.1 vCPU, 512MB, 5GB)
 ('mongodb-standalone-tiny', 'mongodb', 'tiny', 'standalone',
  'MongoDB Tiny', '🔬',
- 'Tiny MongoDB 7.0 인스턴스 - 0.1 vCPU, 256MB RAM, 5GB SSD',
+ 'Tiny MongoDB 7.0 인스턴스 - 0.1 vCPU, 512MB RAM, 5GB SSD',
  '가장 작은 MongoDB 인스턴스예요. 개발이나 학습용으로 적합하며, 간단한 테스트나 프로토타입 개발에 충분해요.',
  '{
    "MongoDB": "문서 지향 NoSQL 데이터베이스",
@@ -18,7 +18,7 @@ VALUES
    "WiredTiger": "기본 스토리지 엔진"
  }'::jsonb,
  ARRAY ['개발 환경', '학습용', '프로토타입', 'CI/CD 테스트'],
- 0.1, 256, 5, 5, 1,
+ 0.1, 512, 5, 5, 1,
  '{
    "version": "7.0",
    "wiredTigerCacheSizeGB": 0.1,
@@ -26,10 +26,10 @@ VALUES
  }'::jsonb,
  5, true, NULL),
 
--- MongoDB Small (0.25 vCPU, 512MB, 10GB)
+-- MongoDB Small (0.25 vCPU, 768, 10GB)
 ('mongodb-standalone-small', 'mongodb', 'small', 'standalone',
  'MongoDB Small', '📦',
- 'Small MongoDB 7.0 인스턴스 - 0.25 vCPU, 512MB RAM, 10GB SSD',
+ 'Small MongoDB 7.0 인스턴스 - 0.25 vCPU, 768MB RAM, 10GB SSD',
  '소규모 애플리케이션에 적합한 MongoDB 인스턴스예요. 개인 프로젝트나 스타트업 MVP에 충분한 성능을 제공해요.',
  '{
    "MongoDB": "문서 지향 NoSQL 데이터베이스",
@@ -37,7 +37,7 @@ VALUES
    "WiredTiger": "문서 레벨 잠금과 압축을 지원하는 스토리지 엔진"
  }'::jsonb,
  ARRAY ['소규모 프로덕션', 'MVP', '개인 프로젝트', '블로그'],
- 0.25, 512, 10, 10, 2,
+ 0.25, 768, 10, 10, 2,
  '{
    "version": "7.0",
    "wiredTigerCacheSizeGB": 0.25,

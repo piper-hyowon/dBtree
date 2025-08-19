@@ -17,7 +17,8 @@ $$
             'harvest',
             'instance_create',
             'instance_maintain',
-            'instance_create_refund'
+            'instance_create_refund',
+            'bonus'
             );
     EXCEPTION
         WHEN duplicate_object THEN null;

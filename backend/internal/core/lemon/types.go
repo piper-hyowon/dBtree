@@ -22,6 +22,7 @@ const (
 	ActionInstanceCreate       ActionType = "instance_create"        // DB 인스턴스 생성
 	ActionInstanceMaintain     ActionType = "instance_maintain"      // 인스턴스 유지 비용
 	ActionInstanceCreateRefund ActionType = "instance_create_refund" // 인스턴스 생성 실패 환불
+	ActionBonus                ActionType = "bonus"
 )
 
 type Status string
