@@ -20,7 +20,12 @@
 <img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/35037c91-c8bc-413b-aa58-90212e461c35" />
 
 
-<img width="915" height="543" alt="image" src="https://github.com/user-attachments/assets/8deeaf40-50f2-467a-8126-9dc264af18cc" />
+<img width="700"  alt="image" src="https://github.com/user-attachments/assets/22e36627-c083-48a8-885a-5d2da4c61fd0" />
+
+
+## 배포 
+<img width="700" alt="image" src="https://github.com/user-attachments/assets/abfcf27f-933f-4b41-b12c-a9c92a1c15c7" />
+
 
 
 #### Architecture: Hexagonal Architecture
