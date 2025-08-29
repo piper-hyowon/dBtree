@@ -30,7 +30,6 @@
     align-items: center;
     justify-content: center;
     background-color: rgba(255, 255, 255, 0.7);
-
     font-size: 18px;
     font-weight: bold;
     z-index: 100;
@@ -96,7 +95,7 @@
     transform: translateY(1px);
 }
 
-/* 로딩  */
+/* 로딩 상태 */
 .quiz-loading {
     position: absolute;
     top: 50%;
@@ -150,77 +149,53 @@
     }
 }
 
-@keyframes move-target {
-    0% {
-        top: 20%;
-        left: 20%;
-    }
-
-    25% {
-        top: 20%;
-        left: 70%;
-    }
-
-    50% {
-        top: 70%;
-        left: 70%;
-    }
-
-    75% {
-        top: 70%;
-        left: 20%;
-    }
-
-    100% {
-        top: 20%;
-        left: 20%;
-    }
+.target-overlay {
+    position: fixed;
+    bottom: 350px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1001;
+    pointer-events: none;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+.target-header {
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
 }
 
-@keyframes slideUp {
-    from {
-        transform: translate(-50%, -40%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translate(-50%, -50%);
-        opacity: 1;
-    }
+.target-header h3 {
+    margin: 0;
+    color: #FFD700;
+    font-size: 14px;
+    font-weight: 500;
 }
 
-@keyframes pulse {
-    from {
-        opacity: 0.8;
-    }
-
-    to {
-        opacity: 1;
-    }
+.timer-bar {
+    width: 80px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
 }
 
-@keyframes loadingDots {
-    0% {
-        content: ".";
-    }
+.timer-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    transition: width 0.1s linear;
+}
 
-    33% {
-        content: "..";
-    }
-
-    66% {
-        content: "...";
-    }
+.timer-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #FFA500;
+    min-width: 35px;
+    text-align: right;
 }
 
 /* 도움말 모달 */
@@ -249,7 +224,6 @@
     max-height: 80vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease;
-    position: relative;
 }
 
 .modal-header {
@@ -269,15 +243,6 @@
     font-weight: 600;
 }
 
-.close-button-icon:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    color: var(--text-primary);
-}
-
-[data-theme="dark"] .close-button-icon:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
 .instructions-content ol {
     margin: 0;
     padding-left: 20px;
@@ -288,7 +253,6 @@
     margin-bottom: 12px;
     font-size: 0.95rem;
 }
-
 
 .tip-container {
     margin-top: 20px;
@@ -321,17 +285,12 @@
     font-size: 0.875rem;
     font-weight: 500;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
 .close-button:hover {
     background-color: var(--color-primary-dark);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(111, 207, 151, 0.3);
-}
-
-.close-button:active {
-    transform: translateY(0);
 }
 
 /* 도움말 버튼 */
@@ -365,11 +324,6 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.button-content {
-    position: relative;
-    top: 0;
-}
-
 /* 애니메이션 */
 @keyframes fadeIn {
     from {
@@ -382,12 +336,65 @@
 
 @keyframes slideUp {
     from {
-        transform: translateY(20px);
+        transform: translate(-50%, -40%);
         opacity: 0;
     }
     to {
-        transform: translateY(0);
+        transform: translate(-50%, -50%);
         opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    from {
+        opacity: 0.8;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes loadingDots {
+    0% {
+        content: ".";
+    }
+    33% {
+        content: "..";
+    }
+    66% {
+        content: "...";
+    }
+}
+
+@keyframes targetGlow {
+    from {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    }
+    to {
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.9);
+    }
+}
+
+@keyframes move-target {
+    0% {
+        top: 20%;
+        left: 20%;
+    }
+    25% {
+        top: 20%;
+        left: 70%;
+    }
+    50% {
+        top: 70%;
+        left: 70%;
+    }
+    75% {
+        top: 70%;
+        left: 20%;
+    }
+    100% {
+        top: 20%;
+        left: 20%;
     }
 }
 
@@ -411,5 +418,26 @@
         width: 40px;
         height: 40px;
         font-size: 16px;
+    }
+
+    .target-overlay {
+        bottom: 100px;
+    }
+
+    .target-header {
+        padding: 6px 12px;
+        gap: 8px;
+    }
+
+    .target-header h3 {
+        font-size: 12px;
+    }
+
+    .timer-bar {
+        width: 60px;
+    }
+
+    .timer-text {
+        font-size: 12px;
     }
 }

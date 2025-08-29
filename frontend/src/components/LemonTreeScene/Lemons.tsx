@@ -62,6 +62,19 @@ const Lemons: React.FC<LemonsProps> = ({
     const animationFrameRef = useRef<number | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+    const [timeRemaining, setTimeRemaining] = useState<number>(0);
+
+    // 타이머 업데이트
+    useEffect(() => {
+        if (showTarget && timeRemaining > 0) {
+            const interval = setInterval(() => {
+                setTimeRemaining(prev => Math.max(0, prev - 100));
+            }, 100);
+
+            return () => clearInterval(interval);
+        }
+    }, [showTarget, timeRemaining]);
+
     useEffect(() => {
         const checkHarvestAvailability = async () => {
             if (!isLoggedIn) {
@@ -154,10 +167,12 @@ const Lemons: React.FC<LemonsProps> = ({
                     setShowTarget(true);
 
                     const timeoutMs = new Date(response.harvestTimeoutAt).getTime() - Date.now();
+                    setTimeRemaining(timeoutMs);
                     timerRef.current = setTimeout(() => {
                         setShowTarget(false);
                         setCurrentTargetLemonId(null);
                         setCurrentAttemptId(null);
+                        setTimeRemaining(0); // 타임아웃 시 리셋
                         if (controls) controls.enabled = true;
                         showToast(`시간이 초과되었습니다!`, 'error');
 
@@ -177,12 +192,14 @@ const Lemons: React.FC<LemonsProps> = ({
                     setCurrentTargetLemonId(activeQuiz.lemonId);
                     setCurrentAttemptId(DEMO_QUIZ.attemptID);
                     setShowTarget(true);
+                    setTimeRemaining(5000);
 
                     // 데모는 5초 타임아웃
                     timerRef.current = setTimeout(() => {
                         setShowTarget(false);
                         setCurrentTargetLemonId(null);
                         setCurrentAttemptId(null);
+                        setTimeRemaining(0); // 타임아웃 시 리셋
                         if (controls) controls.enabled = true;
                         showToast('시간이 초과되었습니다!', 'error');
 
@@ -208,6 +225,7 @@ const Lemons: React.FC<LemonsProps> = ({
         }
 
         setShowTarget(false);
+        setTimeRemaining(0);
 
         if (timerRef.current) {
             clearTimeout(timerRef.current);
@@ -495,7 +513,24 @@ const Lemons: React.FC<LemonsProps> = ({
 
             {/* HTML 타겟 */}
             {showTarget && (
-                <div className="html-target" onClick={handleHTMLTargetClick}/>
+                <>
+                    <div className="html-target" onClick={handleHTMLTargetClick}/>
+
+                    <div className="target-overlay">
+                        <div className="target-header">
+                            <h3>클릭!</h3>
+                            <div className="timer-bar">
+                                <div
+                                    className="timer-fill"
+                                    style={{width: `${(timeRemaining / 5000) * 100}%`}}
+                                />
+                            </div>
+                            <span className="timer-text">
+                    {(timeRemaining / 1000).toFixed(1)}s
+                </span>
+                        </div>
+                    </div>
+                </>
             )}
 
             {isLoggedIn && canHarvestStatus && !canHarvestStatus.canHarvest && (
