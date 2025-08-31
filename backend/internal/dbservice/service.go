@@ -23,7 +23,7 @@ import (
 )
 
 type service struct {
-	publicHost      string
+	publicDBHost    string
 	dbiStore        dbservice.DBInstanceStore
 	lemonService    lemon.Service
 	presetStore     dbservice.PresetStore
@@ -358,7 +358,7 @@ func (s *service) InstanceMetrics(ctx context.Context, instanceID string) (*dbse
 var _ dbservice.Service = (*service)(nil)
 
 func NewService(
-	publicHost string,
+	publicDBHost string,
 	dbiStore dbservice.DBInstanceStore,
 	presetStore dbservice.PresetStore,
 	lemonService lemon.Service,
@@ -369,7 +369,7 @@ func NewService(
 	logger *log.Logger,
 ) dbservice.Service {
 	return &service{
-		publicHost:      publicHost,
+		publicDBHost:    publicDBHost,
 		dbiStore:        dbiStore,
 		presetStore:     presetStore,
 		lemonService:    lemonService,
@@ -567,9 +567,9 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 		} else {
 			// NodePort 서비스 생성
 			selector := map[string]string{
-				"app":                      instance.Name,
-				"dbtree.cloud/instance-id": instance.ExternalID,
-			}
+				"app":                        instance.Name,
+				"app.kubernetes.io/instance": instance.Name,
+			} // operator가 설정하는 label과 일치시키기
 
 			dbPort := int32(27017) // MongoDB default
 			if instance.Type == dbservice.Redis {
@@ -610,7 +610,7 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 
 	// 외부 접속 정보 추가
 	if externalPort > 0 {
-		externalHost := s.publicHost
+		externalHost := s.publicDBHost
 		credentials.ExternalHost = externalHost
 		credentials.ExternalPort = externalPort
 		if instance.Type == dbservice.MongoDB {

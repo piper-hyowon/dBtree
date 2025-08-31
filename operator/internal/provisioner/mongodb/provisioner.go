@@ -398,35 +398,21 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 							},
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"mongosh",
-											"--eval",
-											"db.adminCommand('ping')",
-											"--quiet",
-										},
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt32(27017),
 									},
 								},
-								InitialDelaySeconds: 30,
+								InitialDelaySeconds: 40,
 								PeriodSeconds:       10,
-								TimeoutSeconds:      5,
-								FailureThreshold:    6,
 							},
 							ReadinessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
-									Exec: &corev1.ExecAction{
-										Command: []string{
-											"mongosh",
-											"--eval",
-											"db.adminCommand('ping')",
-											"--quiet",
-										},
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt32(27017),
 									},
 								},
-								InitialDelaySeconds: 30, // 처음 30초는 체크 안 함
-								PeriodSeconds:       10, // 10초마다 체크
-								TimeoutSeconds:      5,  // 타임아웃
-								FailureThreshold:    6,  // 실패 허용
+								InitialDelaySeconds: 40,
+								PeriodSeconds:       10,
 							},
 						},
 					},
@@ -541,6 +527,11 @@ func (p *MongoDBProvisioner) getResourceRequirements(instance *dbtreev1.DBInstan
 	cpuLimitMillicores := cpuQuantity.MilliValue() * 2
 	cpuLimit := resource.NewMilliQuantity(cpuLimitMillicores, resource.DecimalSI)
 
+	memoryMi := instance.Spec.Resources.Memory
+	if memoryMi < 512 {
+		memoryMi = 512
+	}
+
 	return corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    cpuQuantity,
@@ -593,24 +584,13 @@ net:
 	if config != nil && config.WiredTigerCache > 0 {
 		cacheSize = float64(config.WiredTigerCache)
 	} else {
-		// 2. 없으면 사이즈별 기본값 사용
-		switch instance.Spec.Size {
-		case dbtreev1.DBSizeTiny:
-			cacheSize = 0.1 // 100MB (256MB 메모리의 약 40%)
-		case dbtreev1.DBSizeSmall:
-			cacheSize = 0.25 // 250MB (512MB 메모리의 약 50%)
-		case dbtreev1.DBSizeMedium:
-			cacheSize = 1.0 // 1GB (2GB 메모리의 50%)
-		case dbtreev1.DBSizeLarge:
-			cacheSize = 2.0 // 2GB (4GB 메모리의 50%)
-		default:
-			// 메모리의 50% 사용 (MongoDB 기본값)
-			// 최소 0.1GB 보장
-			memoryGB := float64(instance.Spec.Resources.Memory) / 1024.0
-			cacheSize = memoryGB * 0.5
-			if cacheSize < 0.1 {
-				cacheSize = 0.1
-			}
+		// 메모리의 40% 사용 (MongoDB 기본값은 50%)
+		memoryGB := float64(instance.Spec.Resources.Memory) / 1024.0
+		cacheSize = memoryGB * 0.4
+
+		// 최소값 보장
+		if cacheSize < 0.1 {
+			cacheSize = 0.1
 		}
 	}
 

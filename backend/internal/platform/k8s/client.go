@@ -268,6 +268,10 @@ func (c *client) DBInstance(ctx context.Context, namespace, name string) (*unstr
 }
 
 func (c *client) CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error {
+	if _, exists := selector["app.kubernetes.io/instance"]; !exists {
+		selector["app.kubernetes.io/instance"] = name
+	}
+
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name + "-external",
