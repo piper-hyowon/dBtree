@@ -54,66 +54,54 @@ internal/
 ```
 
 
-**1. 모든 인터페이스를 `core` 패키지에 집중**
-- 순환 참조를 구조적으로 방지
-- 의존성 방향의 단일화
-```
-  adapter ──▶ core/{domain} ◀── implementation
-  ▲
-  │
-  infrastructure
-```
+- 모든 인터페이스를 `core` 패키지에 집중
+- 컴파일 타임 인터페이스 검증
+- 명시적 의존성 주입(main.go)
+
+### 레몬 수확 미리보기
+<img width="620" height="257" alt="image" src="https://github.com/user-attachments/assets/8fda58a0-a658-45e9-b942-c4056447418b" />
+
+- Redis SETNX로 유저별 퀴즈 중복 시작 방지
+- PostgreSQL FOR UPDATE로 레몬 행 레벨 락 획득하여 동시 클릭 경쟁 해결
+- 트랜잭션 내에서 레몬 상태 변경 + 유저 잔액 업데이트 원자적 처리
+- 정답 후 5초 내 가장 빠른 1명만 수확 성공, 나머지는 실패 처리
+
+
+### DB 인스턴스 생성
+<img width="354" height="202" alt="image" src="https://github.com/user-attachments/assets/799c75db-fe9f-438b-b2cc-ad10863cdbbd" />
+
+- 유저별 최대 2개 인스턴스 생성 제한
+- PostgreSQL UNIQUE 제약으로 NodePort(30000~31999) 충돌 방지
+- K8s 리소스 생성 실패 시 레몬/포트 롤백
 
 
 ```go
-// 도메인 간 직접 참조 (X)
-import "github.com/piper-hyowon/dBtree/internal/lemon"
+defer func() {
+	if err != nil {
+		if lemonDeducted {
+			s.lemonService.AddLemons(ctx, userID, cost, ActionInstanceCreateRefund)
+		}
+		if portAllocated {
+			_ = s.portStore.ReleasePort(ctx, instance.ExternalID)
+		}
+	}
+}()
 
-// core 인터페이스만 참조(O)
-import "github.com/piper-hyowon/dBtree/internal/core/lemon"
 ```
 
-**2. 컴파일 타임 인터페이스 검증**
-```go
-var _ quiz.Store = (*QuizStore)(nil)
-```
+### 리소스 모니터링
+<img width="321" height="171" alt="image" src="https://github.com/user-attachments/assets/a907862f-8d7a-42fc-b386-e20e1790f2e8" />
+
+- 전체 가용 자원 및 사용량 실시간 표시
+- 생성 가능한 크기(Tiny/Small/Medium) 체크
+- 생성 전 가용 자원 검증
+
+### 레몬 트랜잭션 내역
+<img width="548" height="292" alt="image" src="https://github.com/user-attachments/assets/bd3e4738-be51-4a68-a253-1a2136abbc60" />
 
 
-**3. 도메인별 저장소 전략**
-```go
-// 단일 저장소: 영속성만 필요한 경우
-userStore := user.NewStore(db)  // PostgreSQL only
-
-// 복합 저장소: 상태와 영속성 분리가 필요한 경우
-quizStore := quiz.NewStore(cache, db)  // Redis + PostgreSQL
-```
-
-**4. 도메인 객체의 비즈니스 규칙 캡슐화**
-```go
-func (o *OTP) Verify(code string) bool {
-    if time.Now().UTC().After(o.ExpiresAt) {
-        return false
-    }
-}
-```
 
 
-**5. 명시적 의존성 주입**
-```go
-// main.go 에서 명시적 의존성 주입
-sessionStore := auth.NewSessionStore(appConfig.UseLocalMemoryStore, pgClient.DB())
-userStore := user.NewStore(appConfig.UseLocalMemoryStore, pgClient.DB())
-lemonStore := lemon.NewLemonStore(appConfig.UseLocalMemoryStore, pgClient.DB())
-quizStore := quiz.NewStore(redisClient.Redis(), pgClient.DB())
 
-authService := auth.NewService(
-sessionStore,
-emailService,
-userStore,
-logger,
-)
-
-authHandler := authRest.NewHandler(authService, logger)
-```
 
 
