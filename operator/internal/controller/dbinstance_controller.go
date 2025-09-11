@@ -176,10 +176,17 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 
 	// Wait for pods to be ready
 	sts := &appsv1.StatefulSet{}
-	if err := r.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, types.NamespacedName{
 		Name:      instance.GetStatefulSetName(),
 		Namespace: instance.GetUserNamespace(),
-	}, sts); err != nil {
+	}, sts)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// StatefulSet이 생성 대기
+			log.Info("StatefulSet not found yet, waiting for creation")
+			return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		}
 		log.Error(err, "Failed to get StatefulSet")
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
@@ -364,7 +371,7 @@ func (r *DBInstanceReconciler) handleError(ctx context.Context, instance *dbtree
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-// handleDeletion cleans up resources TODO: configmap/haha-config, secret/haha-secret, 이게 안 지워짐
+// handleDeletion cleans up resources
 func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbtreev1.DBInstance) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
@@ -406,7 +413,33 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			}
 		}
 
-		// 3. PVC 삭제
+		// 3. ConfigMap 삭제
+		configMap := &corev1.ConfigMap{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.Name + "-config",
+			Namespace: namespace,
+		}, configMap); err == nil {
+			if err := r.Delete(ctx, configMap); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete ConfigMap", "name", configMap.Name)
+			} else {
+				log.Info("Deleted ConfigMap", "name", configMap.Name)
+			}
+		}
+
+		// 4. Secret 삭제
+		secret := &corev1.Secret{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      instance.Name + "-secret",
+			Namespace: namespace,
+		}, secret); err == nil {
+			if err := r.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(err, "Failed to delete Secret", "name", secret.Name)
+			} else {
+				log.Info("Deleted Secret", "name", secret.Name)
+			}
+		}
+
+		// 5. PVC 삭제
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(namespace),
@@ -419,11 +452,13 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 			for _, pvc := range pvcList.Items {
 				if err := r.Delete(ctx, &pvc); err != nil && !apierrors.IsNotFound(err) {
 					log.Error(err, "Failed to delete PVC", "name", pvc.Name)
+				} else {
+					log.Info("Deleted PVC", "name", pvc.Name)
 				}
 			}
 		}
 
-		// 4. NetworkPolicy 삭제
+		// 6. NetworkPolicy 삭제
 		netpol := &networkingv1.NetworkPolicy{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Name:      instance.GetNetworkPolicyName(),
@@ -431,10 +466,12 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 		}, netpol); err == nil {
 			if err := r.Delete(ctx, netpol); err != nil && !apierrors.IsNotFound(err) {
 				log.Error(err, "Failed to delete NetworkPolicy")
+			} else {
+				log.Info("Deleted NetworkPolicy", "name", netpol.Name)
 			}
 		}
 
-		// 5. Backup CronJob 삭제
+		// 7. Backup CronJob 삭제
 		cronJob := &batchv1.CronJob{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Name:      instance.GetBackupCronJobName(),
@@ -442,10 +479,12 @@ func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbt
 		}, cronJob); err == nil {
 			if err := r.Delete(ctx, cronJob); err != nil && !apierrors.IsNotFound(err) {
 				log.Error(err, "Failed to delete backup CronJob")
+			} else {
+				log.Info("Deleted backup CronJob", "name", cronJob.Name)
 			}
 		}
 
-		// 6. Provisioner를 통한 추가 정리
+		// 8. Provisioner를 통한 추가 정리
 		prov := r.getProvisioner(instance.Spec.Type)
 		if prov != nil {
 			if err := prov.Delete(ctx, instance); err != nil {
