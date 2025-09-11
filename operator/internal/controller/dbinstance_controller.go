@@ -160,11 +160,11 @@ func (r *DBInstanceReconciler) handleProvisioning(ctx context.Context, instance 
 		return r.setErrorCondition(ctx, instance, "ProvisioningFailed", err.Error())
 	}
 
-	// Create NetworkPolicy
-	if err := r.createNetworkPolicy(ctx, instance); err != nil {
-		log.Error(err, "Failed to create NetworkPolicy")
-		return r.setErrorCondition(ctx, instance, "NetworkPolicyCreationFailed", err.Error())
-	}
+	//// Create NetworkPolicy
+	//if err := r.createNetworkPolicy(ctx, instance); err != nil {
+	//	log.Error(err, "Failed to create NetworkPolicy")
+	//	return r.setErrorCondition(ctx, instance, "NetworkPolicyCreationFailed", err.Error())
+	//}
 
 	// Create backup CronJob if enabled
 	if instance.NeedsBackup() {
@@ -364,7 +364,7 @@ func (r *DBInstanceReconciler) handleError(ctx context.Context, instance *dbtree
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-// handleDeletion cleans up resources
+// handleDeletion cleans up resources TODO: configmap/haha-config, secret/haha-secret, 이게 안 지워짐
 func (r *DBInstanceReconciler) handleDeletion(ctx context.Context, instance *dbtreev1.DBInstance) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 
