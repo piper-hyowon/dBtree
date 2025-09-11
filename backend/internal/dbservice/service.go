@@ -585,42 +585,15 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 	}
 
 	if instance.ExternalPort > 0 {
-		selector := map[string]string{
-			"app":                        instance.Name,
-			"app.kubernetes.io/instance": instance.Name,
-		}
-
-		dbPort := int32(27017)
-		if instance.Type == dbservice.Redis {
-			dbPort = 6379
-		}
-
-		// IngressRouteTCP 생성
-		err = s.k8sClient.CreateIngressRoute(
-			ctx,
-			instance.K8sNamespace,
-			instance.Name,
-			s.publicDBHost,
-			dbPort,
-			selector,
-		)
-
-		if err != nil {
-			s.logger.Printf("WARNING: IngressRoute 생성 실패: %v", err)
+		credentials.ExternalHost = s.publicDBHost
+		credentials.ExternalPort = instance.ExternalPort
+		if instance.Type == dbservice.MongoDB {
+			credentials.ExternalURI = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=admin",
+				username, password, s.publicDBHost, instance.ExternalPort, req.Name)
 		} else {
-			// IngressRoute 성공시 외부 접근 정보 설정
-			credentials.ExternalHost = s.publicDBHost
-			credentials.ExternalPort = instance.ExternalPort
-			if instance.Type == dbservice.MongoDB {
-				credentials.ExternalURI = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=admin",
-					username, password, s.publicDBHost, instance.ExternalPort, req.Name)
-			} else {
-				credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
-					instance.Type, username, password,
-					s.publicDBHost, instance.ExternalPort, req.Name)
-			}
-			s.logger.Printf("DEBUG: IngressRoute 생성 완료, 외부 접근: %s:%d",
-				s.publicDBHost, instance.ExternalPort)
+			credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
+				instance.Type, username, password,
+				s.publicDBHost, instance.ExternalPort, req.Name)
 		}
 	}
 

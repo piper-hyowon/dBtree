@@ -292,13 +292,14 @@ func (p *MongoDBProvisioner) createService(ctx context.Context, instance *dbtree
 			Labels:    p.getLabels(instance),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
+			Type:     corev1.ServiceTypeNodePort,
 			Selector: p.getLabels(instance),
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "mongodb",
 					Port:       mongoDBPort,
 					TargetPort: intstr.FromInt32(mongoDBPort),
+					NodePort:   instance.Spec.ExternalPort,
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},

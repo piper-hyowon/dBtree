@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"log"
 	"path/filepath"
 	"time"
@@ -39,9 +38,6 @@ type Client interface {
 	DBInstance(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error)
 
 	PatchDBInstanceStatus(ctx context.Context, namespace, name string, state string, reason string) error
-
-	CreateExternalService(ctx context.Context, namespace, name string, targetPort, externalPort int32, selector map[string]string) error
-	CreateIngressRoute(ctx context.Context, namespace, name, host string, targetPort int32, selector map[string]string) error
 
 	GetMongoDBStatus(ctx context.Context, namespace, name string) (*MongoDBStatus, error)
 }
@@ -268,37 +264,6 @@ func (c *client) DBInstance(ctx context.Context, namespace, name string) (*unstr
 	return instance, nil
 }
 
-func (c *client) CreateExternalService(ctx context.Context, namespace, name string, targetPort, externalPort int32, selector map[string]string) error {
-	c.logger.Printf("DEBUG CreateExternalService: targetPort=%d, externalPort=%d", targetPort, externalPort)
-
-	if _, exists := selector["app.kubernetes.io/instance"]; !exists {
-		selector["app.kubernetes.io/instance"] = name
-	}
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name + "-external",
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeNodePort,
-			Ports: []corev1.ServicePort{{
-				Port:       targetPort,
-				TargetPort: intstr.FromInt32(targetPort),
-				NodePort:   externalPort,
-			}},
-			Selector: selector,
-		},
-	}
-
-	c.logger.Printf("DEBUG Service Spec: Port=%d, TargetPort=%v",
-		service.Spec.Ports[0].Port,
-		service.Spec.Ports[0].TargetPort)
-
-	_, err := c.clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
-	return err
-}
-
 func (c *client) PatchDBInstanceStatus(ctx context.Context, namespace, name string, state string, reason string) error {
 	// lastUpdated 필드 제거 - CRD에 정의되지 않은 필드
 	patch := []byte(fmt.Sprintf(`{"status":{"state":"%s","statusReason":"%s"}}`, state, reason))
@@ -312,40 +277,4 @@ func (c *client) PatchDBInstanceStatus(ctx context.Context, namespace, name stri
 
 	c.logger.Printf("Patched DBInstance status: %s/%s to %s", namespace, name, state)
 	return nil
-}
-
-func (c *client) CreateIngressRoute(ctx context.Context, namespace, name, host string, targetPort int32, selector map[string]string) error {
-	ingressRoute := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "traefik.containo.us/v1alpha1",
-			"kind":       "IngressRoute",
-			"metadata": map[string]interface{}{
-				"name":      name + "-tcp",
-				"namespace": namespace,
-			},
-			"spec": map[string]interface{}{
-				"entryPoints": []string{"mongodb"}, // TCP 전용 entrypoint
-				"routes": []map[string]interface{}{
-					{
-						"match": fmt.Sprintf("HostSNI(`*`)"), // TCP는 Host 매칭 다름
-						"services": []map[string]interface{}{
-							{
-								"name": name + "-svc",
-								"port": targetPort,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	gvr := schema.GroupVersionResource{
-		Group:    "traefik.containo.us",
-		Version:  "v1alpha1",
-		Resource: "ingressroutetcps",
-	}
-
-	_, err := c.dynamic.Resource(gvr).Namespace(namespace).Create(ctx, ingressRoute, metav1.CreateOptions{})
-	return err
 }
