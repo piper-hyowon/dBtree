@@ -40,7 +40,8 @@ type Client interface {
 
 	PatchDBInstanceStatus(ctx context.Context, namespace, name string, state string, reason string) error
 
-	CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error
+	CreateExternalService(ctx context.Context, namespace, name string, targetPort, externalPort int32, selector map[string]string) error
+	CreateIngressRoute(ctx context.Context, namespace, name, host string, targetPort int32, selector map[string]string) error
 
 	GetMongoDBStatus(ctx context.Context, namespace, name string) (*MongoDBStatus, error)
 }
@@ -267,7 +268,9 @@ func (c *client) DBInstance(ctx context.Context, namespace, name string) (*unstr
 	return instance, nil
 }
 
-func (c *client) CreateNodePortService(ctx context.Context, namespace, name string, targetPort, nodePort int32, selector map[string]string) error {
+func (c *client) CreateExternalService(ctx context.Context, namespace, name string, targetPort, externalPort int32, selector map[string]string) error {
+	c.logger.Printf("DEBUG CreateExternalService: targetPort=%d, externalPort=%d", targetPort, externalPort)
+
 	if _, exists := selector["app.kubernetes.io/instance"]; !exists {
 		selector["app.kubernetes.io/instance"] = name
 	}
@@ -282,11 +285,15 @@ func (c *client) CreateNodePortService(ctx context.Context, namespace, name stri
 			Ports: []corev1.ServicePort{{
 				Port:       targetPort,
 				TargetPort: intstr.FromInt32(targetPort),
-				NodePort:   nodePort,
+				NodePort:   externalPort,
 			}},
 			Selector: selector,
 		},
 	}
+
+	c.logger.Printf("DEBUG Service Spec: Port=%d, TargetPort=%v",
+		service.Spec.Ports[0].Port,
+		service.Spec.Ports[0].TargetPort)
 
 	_, err := c.clientset.CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	return err
@@ -305,4 +312,40 @@ func (c *client) PatchDBInstanceStatus(ctx context.Context, namespace, name stri
 
 	c.logger.Printf("Patched DBInstance status: %s/%s to %s", namespace, name, state)
 	return nil
+}
+
+func (c *client) CreateIngressRoute(ctx context.Context, namespace, name, host string, targetPort int32, selector map[string]string) error {
+	ingressRoute := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "traefik.containo.us/v1alpha1",
+			"kind":       "IngressRoute",
+			"metadata": map[string]interface{}{
+				"name":      name + "-tcp",
+				"namespace": namespace,
+			},
+			"spec": map[string]interface{}{
+				"entryPoints": []string{"mongodb"}, // TCP 전용 entrypoint
+				"routes": []map[string]interface{}{
+					{
+						"match": fmt.Sprintf("HostSNI(`*`)"), // TCP는 Host 매칭 다름
+						"services": []map[string]interface{}{
+							{
+								"name": name + "-svc",
+								"port": targetPort,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gvr := schema.GroupVersionResource{
+		Group:    "traefik.containo.us",
+		Version:  "v1alpha1",
+		Resource: "ingressroutetcps",
+	}
+
+	_, err := c.dynamic.Resource(gvr).Namespace(namespace).Create(ctx, ingressRoute, metav1.CreateOptions{})
+	return err
 }

@@ -353,7 +353,8 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 								{
 									Name:          "mongodb",
 									ContainerPort: mongoDBPort,
-									Protocol:      corev1.ProtocolTCP,
+									//HostPort:      instance.Spec.ExternalPort,
+									Protocol: corev1.ProtocolTCP,
 								},
 							},
 							Resources: p.getResourceRequirements(instance),
@@ -570,8 +571,6 @@ systemLog:
   destination: file
   path: /var/log/mongodb/mongod.log
   logAppend: true
-storage:
-  dbPath: /data/db
 net:
   port: 27017
   bindIp: 0.0.0.0
@@ -596,6 +595,10 @@ net:
 
 	// WiredTiger 설정 추가
 	mongoConf += fmt.Sprintf(`storage:
+  dbPath: /data/db
+  journal:
+	enabled: true
+	commitIntervalMs: 100
   wiredTiger:
     engineConfig:
       cacheSizeGB: %.2f
@@ -670,15 +673,6 @@ setParameter:
   maxIndexBuildMemoryUsageMegabytes: 500            # 500MB
 `
 	}
-
-	// Journal 설정 (모든 사이즈 공통)
-	mongoConf += `
-# Journal
-storage:
-  journal:
-    enabled: true
-    commitIntervalMs: 100
-`
 
 	return mongoConf
 }

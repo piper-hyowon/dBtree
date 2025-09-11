@@ -97,6 +97,9 @@ spec:
               externalId:
                 description: ExternalID from backend (백엔드의 DBInstance.ExternalID)
                 type: string
+              externalPort:
+                format: int32
+                type: integer
               mode:
                 description: Deployment mode
                 enum:
@@ -246,6 +249,9 @@ spec:
               endpoint:
                 description: Connection endpoint
                 type: string
+              externalPort:
+                format: int32
+                type: integer
               k8sNamespace:
                 description: 'K8s namespace (backend: K8sNamespace)'
                 type: string

@@ -527,99 +527,100 @@ func (s *service) CreateInstance(ctx context.Context, userID string, userLemon i
 
 	// 환불 보장을 위한 defer
 	lemonDeducted := false
+	portAllocated := false
 	defer func() {
-		if err != nil && lemonDeducted {
-			refundErr := s.lemonService.AddLemons(ctx, userID, instance.Cost.CreationCost,
-				lemon.ActionInstanceCreateRefund, fmt.Sprintf("실패: %v", err), &instance.ID)
-			if refundErr != nil {
-				s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, instanceID: %d, amount: %d, error: %v",
-					userID, instance.ID, instance.Cost.CreationCost, refundErr)
-				// TODO: 환불 실패 기록 테이블에 저장
+		if err != nil {
+			if lemonDeducted {
+				refundErr := s.lemonService.AddLemons(ctx, userID, instance.Cost.CreationCost,
+					lemon.ActionInstanceCreateRefund, fmt.Sprintf("실패: %v", err), &instance.ID)
+				if refundErr != nil {
+					s.logger.Printf("CRITICAL: 환불 실패 - userID: %s, instanceID: %d, amount: %d, error: %v",
+						userID, instance.ID, instance.Cost.CreationCost, refundErr)
+					// TODO: 환불 실패 기록 테이블에 저장
+				}
+			}
+			if portAllocated {
+				_ = s.portStore.ReleasePort(ctx, instance.ExternalID)
 			}
 		}
 	}()
 
-	// 2. 레몬 차감(트랜잭션 기록할때 instance.ID 함께!)
+	// 2. 레몬 차감
 	if err := s.lemonService.DeductLemons(ctx, userID, instance.Cost.CreationCost,
 		lemon.ActionInstanceCreate, fmt.Sprintf("인스턴스 %s 생성", instance.Name), &instance.ID); err != nil {
-		// 레몬 차감 실패시 인스턴스 삭제
 		_ = s.dbiStore.Delete(ctx, instance.ExternalID)
 		return nil, errors.Wrap(err)
 	}
 	lemonDeducted = true
 
-	// 3. K8s 리소스 생성
-	secretData, err := s.provisionK8sResources(ctx, instance)
-	if err != nil {
-		// 인스턴스 상태를 Error로 변경
-		_ = s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusError, "K8s provisioning failed")
-		// defer에서 환불 처리됨
-		return nil, errors.Wrapf(err, "failed to provision k8s resources")
-	}
-	username, password := string(secretData["username"]), string(secretData["password"])
-
-	// 4. 외부 접속 설정 (에러가 나도 인스턴스는 이미 생성됨)
-	var externalPort int
+	// 3. 포트 할당 (K8s 리소스 생성 전에!)
 	if s.portStore != nil {
 		port, err := s.portStore.AllocatePort(ctx, instance.ExternalID)
 		if err != nil {
 			s.logger.Printf("WARNING: 외부 포트 할당 실패: %v", err)
 		} else {
-			// NodePort 서비스 생성
-			selector := map[string]string{
-				"app":                        instance.Name,
-				"app.kubernetes.io/instance": instance.Name,
-			} // operator가 설정하는 label과 일치시키기
+			s.logger.Printf("DEBUG: Port %d allocated successfully", port)
+			instance.ExternalPort = port
+			portAllocated = true
 
-			dbPort := int32(27017) // MongoDB default
-			if instance.Type == dbservice.Redis {
-				dbPort = 6379
-			}
-
-			err = s.k8sClient.CreateNodePortService(
-				ctx,
-				instance.K8sNamespace,
-				instance.Name,
-				dbPort,
-				int32(port),
-				selector,
-			)
-
-			if err != nil {
-				s.logger.Printf("WARNING: NodePort 서비스 생성 실패: %v", err)
-				// 포트 할당 롤백
-				_ = s.portStore.ReleasePort(ctx, instance.ExternalID)
-			} else {
-				externalPort = port
-				instance.ExternalPort = port
-				instance.Endpoint = fmt.Sprintf("%s.%s.svc.cluster.local", instance.Name, instance.K8sNamespace)
-
-				// DB 업데이트
-				if err := s.dbiStore.Update(ctx, instance); err != nil {
-					s.logger.Printf("Failed to update port info in DB: %v", err)
-				}
+			// DB 업데이트
+			if err := s.dbiStore.Update(ctx, instance); err != nil {
+				s.logger.Printf("Failed to update port info in DB: %v", err)
 			}
 		}
 	}
 
-	// 5. Credentials 생성
+	// 4. K8s 리소스 생성 (이제 instance.ExternalPort가 설정된 상태)
+	secretData, err := s.provisionK8sResources(ctx, instance)
+	if err != nil {
+		_ = s.dbiStore.UpdateStatus(ctx, instance.ID, dbservice.StatusError, "K8s provisioning failed")
+		return nil, errors.Wrapf(err, "failed to provision k8s resources")
+	}
+	username, password := string(secretData["username"]), string(secretData["password"])
+
+	// 5. 외부 접근 설정
 	credentials := &dbservice.Credentials{
 		Username: username,
 		Password: password,
 	}
 
-	// 외부 접속 정보 추가
-	if externalPort > 0 {
-		externalHost := s.publicDBHost
-		credentials.ExternalHost = externalHost
-		credentials.ExternalPort = externalPort
-		if instance.Type == dbservice.MongoDB {
-			credentials.ExternalURI = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=%s",
-				username, password, externalHost, externalPort, req.Name, username)
+	if instance.ExternalPort > 0 {
+		selector := map[string]string{
+			"app":                        instance.Name,
+			"app.kubernetes.io/instance": instance.Name,
+		}
+
+		dbPort := int32(27017)
+		if instance.Type == dbservice.Redis {
+			dbPort = 6379
+		}
+
+		// IngressRouteTCP 생성
+		err = s.k8sClient.CreateIngressRoute(
+			ctx,
+			instance.K8sNamespace,
+			instance.Name,
+			s.publicDBHost,
+			dbPort,
+			selector,
+		)
+
+		if err != nil {
+			s.logger.Printf("WARNING: IngressRoute 생성 실패: %v", err)
 		} else {
-			credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
-				instance.Type, username, password,
-				externalHost, externalPort, req.Name)
+			// IngressRoute 성공시 외부 접근 정보 설정
+			credentials.ExternalHost = s.publicDBHost
+			credentials.ExternalPort = instance.ExternalPort
+			if instance.Type == dbservice.MongoDB {
+				credentials.ExternalURI = fmt.Sprintf("mongodb://%s:%s@%s:%d/%s?authSource=admin",
+					username, password, s.publicDBHost, instance.ExternalPort, req.Name)
+			} else {
+				credentials.ExternalURI = fmt.Sprintf("%s://%s:%s@%s:%d/%s",
+					instance.Type, username, password,
+					s.publicDBHost, instance.ExternalPort, req.Name)
+			}
+			s.logger.Printf("DEBUG: IngressRoute 생성 완료, 외부 접근: %s:%d",
+				s.publicDBHost, instance.ExternalPort)
 		}
 	}
 
@@ -656,6 +657,8 @@ func (s *service) provisionK8sResources(ctx context.Context, instance *dbservice
 }
 
 func (s *service) createDBInstanceCRD(ctx context.Context, instance *dbservice.DBInstance) error {
+	s.logger.Printf("DEBUG: Creating CRD - instance.ExternalPort: %d", instance.ExternalPort)
+
 	params := k8s.DBInstanceParams{
 		Name:              instance.Name,
 		Type:              string(instance.Type),
@@ -675,11 +678,16 @@ func (s *service) createDBInstanceCRD(ctx context.Context, instance *dbservice.D
 			Schedule:      instance.BackupConfig.Schedule,
 			RetentionDays: instance.BackupConfig.RetentionDays,
 		},
-		Config: instance.Config,
+		Config:       instance.Config,
+		ExternalPort: int32(instance.ExternalPort),
 	}
+
+	s.logger.Printf("DEBUG: DBInstanceParams.ExternalPort: %d", params.ExternalPort)
 
 	// CRD 생성
 	spec := k8s.BuildDBInstanceSpec(params)
+	s.logger.Printf("DEBUG: spec map: %+v", spec)
+
 	labels := map[string]string{
 		"app.kubernetes.io/managed-by": "dbtree",
 		"dbtree.cloud/user-id":         instance.UserID,

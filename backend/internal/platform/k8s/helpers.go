@@ -17,6 +17,7 @@ type DBInstanceParams struct {
 	Resources         ResourceSpec
 	Backup            BackupSpec
 	Config            map[string]interface{}
+	ExternalPort      int32
 }
 
 type ResourceSpec struct {
@@ -56,7 +57,8 @@ func BuildDBInstanceSpec(params DBInstanceParams) map[string]interface{} {
 			"memory": params.Resources.Memory,
 			"disk":   params.Resources.Disk,
 		},
-		"userId": params.UserID,
+		"userId":       params.UserID,
+		"externalPort": params.ExternalPort,
 	}
 
 	if params.CreatedFromPreset != nil {

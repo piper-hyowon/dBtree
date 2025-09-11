@@ -202,6 +202,8 @@ type DBInstanceSpec struct {
 	// ExternalID from backend (백엔드의 DBInstance.ExternalID)
 	// +kubebuilder:validation:Required
 	ExternalID string `json:"externalId"`
+
+	ExternalPort int32 `json:"externalPort,omitempty"`
 }
 
 // InstanceMetrics matches backend's metrics fields
@@ -252,6 +254,8 @@ type DBInstanceStatus struct {
 	// Service port
 	// +optional
 	Port int32 `json:"port,omitempty"`
+
+	ExternalPort int32 `json:"externalPort,omitempty"`
 
 	// Reference to credentials secret
 	// +optional
