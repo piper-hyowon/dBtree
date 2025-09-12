@@ -32,6 +32,7 @@
 ## 배포 
 <img width="700" alt="image" src="https://github.com/user-attachments/assets/abfcf27f-933f-4b41-b12c-a9c92a1c15c7" />
 
+배포 방법은 [manifests/Deployment.md](./manifests/deployment.md)를 참조
 
 
 #### Architecture: Hexagonal Architecture

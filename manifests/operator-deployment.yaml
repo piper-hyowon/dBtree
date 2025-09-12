@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dbtree-operator
+  namespace: default
+  labels:
+    app: dbtree-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dbtree-operator
+  template:
+    metadata:
+      labels:
+        app: dbtree-operator
+    spec:
+      serviceAccountName: dbtree-operator
+      containers:
+        - name: manager
+          image: hyowon0/dbtree-operator:v1.1.6
+          imagePullPolicy: Always
+          command:
+            - /manager
+          args:
+            - --leader-elect
+          env:
+            - name: WATCH_NAMESPACE
+              value: "" # 모든 namespace 감시
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
