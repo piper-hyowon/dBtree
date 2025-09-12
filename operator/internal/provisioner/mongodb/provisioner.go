@@ -333,112 +333,26 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      instance.GetStatefulSetName(),
 			Namespace: namespace,
-			Labels:    p.getLabels(instance),
 		},
-		Spec: appsv1.StatefulSetSpec{
-			ServiceName: instance.GetServiceName(),
-			Replicas:    &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: p.getLabels(instance),
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: p.getLabels(instance),
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "mongodb",
-							Image: p.getImage(instance),
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "mongodb",
-									ContainerPort: mongoDBPort,
-									//HostPort:      instance.Spec.ExternalPort,
-									Protocol: corev1.ProtocolTCP,
-								},
-							},
-							Resources: p.getResourceRequirements(instance),
-							Env: []corev1.EnvVar{
-								{
-									Name: "MONGO_INITDB_ROOT_USERNAME",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: instance.Spec.SecretRef.Name,
-											},
-											Key: "username",
-										},
-									},
-								},
-								{
-									Name: "MONGO_INITDB_ROOT_PASSWORD",
-									ValueFrom: &corev1.EnvVarSource{
-										SecretKeyRef: &corev1.SecretKeySelector{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: instance.Spec.SecretRef.Name,
-											},
-											Key: "password",
-										},
-									},
-								},
-								{
-									Name:  "MONGO_INITDB_DATABASE",
-									Value: "admin",
-								},
-							},
+	}
 
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "data",
-									MountPath: "/data/db",
-								},
-								{
-									Name:      "config",
-									MountPath: "/etc/mongod",
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt32(27017),
-									},
-								},
-								InitialDelaySeconds: 40,
-								PeriodSeconds:       10,
-							},
-							ReadinessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt32(27017),
-									},
-								},
-								InitialDelaySeconds: 40,
-								PeriodSeconds:       10,
-							},
-						},
-					},
-					Volumes: []corev1.Volume{
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: instance.GetConfigMapName(),
-									},
-									Items: []corev1.KeyToPath{
-										{
-											Key:  "mongod.conf",
-											Path: "mongod.conf",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+	// Create or update
+	_, err := controllerutil.CreateOrUpdate(ctx, p.client, sts, func() error {
+		// Labels 설정
+		sts.Labels = p.getLabels(instance)
+
+		// Owner reference 설정
+		if err := controllerutil.SetControllerReference(instance, sts, p.scheme); err != nil {
+			return err
+		}
+
+		// StatefulSet의 불변 필드는 생성 시에만 설정
+		if sts.CreationTimestamp.IsZero() {
+			sts.Spec.ServiceName = instance.GetServiceName()
+			sts.Spec.Selector = &metav1.LabelSelector{
+				MatchLabels: p.getLabels(instance),
+			}
+			sts.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "data",
@@ -454,19 +368,107 @@ func (p *MongoDBProvisioner) createStatefulSet(ctx context.Context, instance *db
 						},
 					},
 				},
+			}
+		}
+
+		// 변경 가능한 필드들
+		sts.Spec.Replicas = &replicas
+		sts.Spec.Template = corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: p.getLabels(instance),
 			},
-		},
-	}
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "mongodb",
+						Image: p.getImage(instance),
+						Ports: []corev1.ContainerPort{
+							{
+								Name:          "mongodb",
+								ContainerPort: mongoDBPort,
+								Protocol:      corev1.ProtocolTCP,
+							},
+						},
+						Resources: p.getResourceRequirements(instance),
+						Env: []corev1.EnvVar{
+							{
+								Name: "MONGO_INITDB_ROOT_USERNAME",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: instance.Spec.SecretRef.Name,
+										},
+										Key: "username",
+									},
+								},
+							},
+							{
+								Name: "MONGO_INITDB_ROOT_PASSWORD",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: instance.Spec.SecretRef.Name,
+										},
+										Key: "password",
+									},
+								},
+							},
+							{
+								Name:  "MONGO_INITDB_DATABASE",
+								Value: "admin",
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "data",
+								MountPath: "/data/db",
+							},
+							{
+								Name:      "config",
+								MountPath: "/etc/mongod",
+							},
+						},
+						LivenessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								TCPSocket: &corev1.TCPSocketAction{
+									Port: intstr.FromInt32(mongoDBPort),
+								},
+							},
+							InitialDelaySeconds: 40,
+							PeriodSeconds:       10,
+						},
+						ReadinessProbe: &corev1.Probe{
+							ProbeHandler: corev1.ProbeHandler{
+								TCPSocket: &corev1.TCPSocketAction{
+									Port: intstr.FromInt32(mongoDBPort),
+								},
+							},
+							InitialDelaySeconds: 40,
+							PeriodSeconds:       10,
+						},
+					},
+				},
+				Volumes: []corev1.Volume{
+					{
+						Name: "config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: instance.GetConfigMapName(),
+								},
+								Items: []corev1.KeyToPath{
+									{
+										Key:  "mongod.conf",
+										Path: "mongod.conf",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 
-	// Set owner reference
-	if err := controllerutil.SetControllerReference(instance, sts, p.scheme); err != nil {
-		return err
-	}
-
-	// Create or update
-	_, err := controllerutil.CreateOrUpdate(ctx, p.client, sts, func() error {
-		// Update mutable fields
-		sts.Spec.Template.Spec.Containers[0].Resources = p.getResourceRequirements(instance)
 		return nil
 	})
 
