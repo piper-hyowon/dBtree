@@ -11,6 +11,7 @@ import {useAuth} from "../../contexts/AuthContext";
 import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
 import FloatingSupportButton from "../../components/Support/FloatingSupportButton";
 import SystemResourceStatus from "../../components/SystemResourceStatus/SystemResourceStatus";
+import SecurityNotice from "../../components/SecurityNotice/SecurityNotice"; // 추가
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -133,7 +134,7 @@ const Home: React.FC = () => {
                 <div className="lemon-tree-container">
                     <LemonTreeScene/>
                     <FloatingGuideText
-                        text="레몬을 클릭해서 수확해보세요"
+                        text="레몬을 클릭해서 수확해보v세요"
                         emoji="🍋"
                         position="right"
                         variant="default"
@@ -145,7 +146,11 @@ const Home: React.FC = () => {
             <footer className="footer">
                 <p>© 2025 dBtree</p>
             </footer>
+
             <FloatingSupportButton/>
+
+            {/* Security Notice 추가 - 매번 표시 */}
+            <SecurityNotice />
 
             {showLoginModal && <LoginModal onClose={handleCloseModal}/>}
         </div>
