@@ -1,0 +1,258 @@
+.service-pause-banner {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe9e9 100%);
+    border-bottom: 3px solid #ffccd5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+    padding: 16px 20px;
+}
+
+.banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.banner-image {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.banner-right {
+    flex: 1;
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.banner-text-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.banner-title {
+    font-family: "Pretendard", sans-serif;
+    font-size: 26px;
+    font-weight: 900;
+    color: #d63447;
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -1px;
+}
+
+.banner-main-text {
+    font-family: "Pretendard", sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.banner-sub-text {
+    font-family: "Pretendard", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.email-section {
+    flex-shrink: 0;
+}
+
+.notification-box {
+    display: flex;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border: 2px solid #ffccd5;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+.notification-icon {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.notification-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-title {
+    font-family: "Pretendard", sans-serif;
+    font-size: 15px;
+    font-weight: 800;
+    color: #d63447;
+    margin: 0;
+}
+
+.notification-description {
+    font-family: "Pretendard", sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: #555;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.email-button {
+    padding: 8px 14px;
+    background: #d63447;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: "Pretendard", sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.email-button:hover {
+    background: #b82a3a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(214, 52, 71, 0.3);
+}
+
+.email-button:active {
+    transform: translateY(0);
+}
+
+.notification-hint {
+    font-family: "Pretendard", sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    color: #888;
+    margin: 0;
+    text-align: center;
+}
+
+/* 태블릿 */
+@media (max-width: 1024px) {
+    .banner-content {
+        gap: 24px;
+    }
+
+    .banner-image {
+        width: 160px;
+        height: 160px;
+    }
+
+    .banner-right {
+        gap: 20px;
+    }
+
+    .banner-title {
+        font-size: 28px;
+    }
+
+    .banner-main-text {
+        font-size: 16px;
+    }
+
+    .banner-sub-text {
+        font-size: 14px;
+    }
+}
+
+/* 모바일 */
+@media (max-width: 768px) {
+    .service-pause-banner {
+        padding: 20px 16px;
+    }
+
+    .banner-content {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .banner-image {
+        width: 140px;
+        height: 140px;
+    }
+
+    .banner-right {
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .banner-text-section {
+        text-align: center;
+    }
+
+    .banner-title {
+        font-size: 24px;
+    }
+
+    .banner-main-text {
+        font-size: 15px;
+    }
+
+    .banner-sub-text {
+        font-size: 14px;
+    }
+
+    .notification-box {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}
+
+/* 작은 모바일 */
+@media (max-width: 480px) {
+    .service-pause-banner {
+        padding: 16px 12px;
+    }
+
+    .banner-image {
+        width: 120px;
+        height: 120px;
+    }
+
+    .banner-title {
+        font-size: 22px;
+    }
+
+    .banner-main-text {
+        font-size: 14px;
+    }
+
+    .banner-sub-text {
+        font-size: 13px;
+    }
+
+    .notification-icon {
+        font-size: 28px;
+    }
+
+    .notification-title {
+        font-size: 16px;
+    }
+
+    .notification-description {
+        font-size: 13px;
+    }
+
+    .email-button {
+        font-size: 14px;
+        padding: 10px 16px;
+    }
+}

@@ -11,7 +11,8 @@ import {useAuth} from "../../contexts/AuthContext";
 import MiniLeaderboard from "../../components/MiniLeaderboard/MiniLeaderboard";
 import FloatingSupportButton from "../../components/Support/FloatingSupportButton";
 import SystemResourceStatus from "../../components/SystemResourceStatus/SystemResourceStatus";
-import SecurityNotice from "../../components/SecurityNotice/SecurityNotice"; // 추가
+import SecurityNotice from "../../components/SecurityNotice/SecurityNotice";
+import ServicePauseBanner from "../../components/ServicePauseBanner/ServicePauseBanner";
 
 const Home: React.FC = () => {
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -46,6 +47,7 @@ const Home: React.FC = () => {
 
     return (
         <div className="home-container">
+            <ServicePauseBanner/>
             <header className="header">
                 <div className="logo-container">
                     <img src={dbtreeLogo} alt="dBtree Logo" className="logo"/>
